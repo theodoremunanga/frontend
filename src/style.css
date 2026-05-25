@@ -1,0 +1,87 @@
+body {
+  font-family: Arial;
+  background: #5bb1e2;
+}
+
+.navbar {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+}
+
+.card {
+  background: #222;
+  color: white;
+  padding: 20px;
+  margin: 10px;
+  cursor: pointer;
+  border-radius: 10px;
+}
+
+button {
+  padding: 10px;
+  margin: 5px;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(8, 60px);
+  margin: 20px auto;
+}
+
+.square {
+  width: 60px;
+  height: 60px;
+}
+
+.light {
+  background: #eee;
+}
+
+.dark {
+  background: #333;
+}
+
+.piece {
+  width: 80%;
+  height: 80%;
+  border-radius: 50%;
+  margin: auto;
+  margin-top: 6px;
+}
+
+.red {
+  background: red;
+}
+
+.black {
+  background: black;
+}
+
+.piece {
+  width: 80%;
+  height: 80%;
+  border-radius: 50%;
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.input {
+  padding: 12px;
+  border-radius: 10px;
+  background: #1f2937;
+  border: 1px solid #374151;
+  color: white;
+  width: 100%;
+}
+
+.input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  background: #1f2937;
+  border: 1px solid #374151;
+  color: white;
+}
