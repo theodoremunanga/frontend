@@ -14,9 +14,14 @@ const API_URL =
 
 const api = axios.create({
   baseURL: API_URL,
-  timeout: 15000,
+
+  timeout: 20000,
+
+  withCredentials: true,
+
   headers: {
     "Content-Type": "application/json",
+    Accept: "application/json",
   },
 });
 
@@ -27,15 +32,28 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token");
+    const token =
+      localStorage.getItem("token");
 
+    // attach JWT
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization =
+        `Bearer ${token}`;
     }
+
+    console.log(
+      `📡 ${config.method?.toUpperCase()} ${config.url}`
+    );
 
     return config;
   },
+
   (error) => {
+    console.error(
+      "❌ REQUEST ERROR:",
+      error
+    );
+
     return Promise.reject(error);
   }
 );
@@ -46,42 +64,137 @@ api.interceptors.request.use(
 // ======================================================
 
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log(
+      `✅ ${response.status} ${response.config.url}`
+    );
+
+    return response;
+  },
 
   (error) => {
+    // ==================================================
+    // BACKEND OFFLINE / CORS / NETWORK
+    // ==================================================
+
+    if (!error.response) {
+      console.error(
+        "🌐 NETWORK ERROR"
+      );
+
+      console.error(
+        "Possible causes:"
+      );
+
+      console.error(
+        "- Backend Render sleeping"
+      );
+
+      console.error(
+        "- CORS blocked"
+      );
+
+      console.error(
+        "- Invalid API URL"
+      );
+
+      console.error(
+        "- Internet issue"
+      );
+
+      return Promise.reject({
+        success: false,
+
+        message:
+          "Impossible de joindre le serveur",
+      });
+    }
+
+    // ==================================================
+    // ERROR STATUS
+    // ==================================================
+
+    const status =
+      error.response.status;
+
+    console.error(
+      `❌ API ERROR ${status}:`,
+      error.response.data
+    );
+
     // ==================================================
     // SESSION EXPIRÉE / TOKEN INVALID
     // ==================================================
 
-    if (error.response?.status === 401) {
-      console.warn("🔒 Session expirée");
+    if (status === 401) {
+      console.warn(
+        "🔒 Session expirée"
+      );
 
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      localStorage.removeItem(
+        "token"
+      );
 
-      window.location.href = "/";
+      localStorage.removeItem(
+        "user"
+      );
+
+      // prevent redirect loop
+      if (
+        window.location.pathname !==
+        "/"
+      ) {
+        window.location.href = "/";
+      }
     }
 
     // ==================================================
-    // BACKEND OFFLINE
+    // FORBIDDEN
     // ==================================================
 
-    if (
-      error.code === "ERR_NETWORK" ||
-      error.message === "Network Error"
-    ) {
-      console.error("🌐 Impossible de joindre le serveur");
+    if (status === 403) {
+      console.error(
+        "⛔ Accès refusé"
+      );
+    }
+
+    // ==================================================
+    // NOT FOUND
+    // ==================================================
+
+    if (status === 404) {
+      console.error(
+        "📭 Route introuvable"
+      );
+    }
+
+    // ==================================================
+    // SERVER ERROR
+    // ==================================================
+
+    if (status >= 500) {
+      console.error(
+        "🔥 Erreur serveur"
+      );
     }
 
     // ==================================================
     // TIMEOUT
     // ==================================================
 
-    if (error.code === "ECONNABORTED") {
-      console.error("⏳ Temps de réponse dépassé");
+    if (
+      error.code ===
+      "ECONNABORTED"
+    ) {
+      console.error(
+        "⏳ Temps de réponse dépassé"
+      );
     }
 
-    return Promise.reject(error);
+    return Promise.reject(
+      error.response.data ||
+        error
+    );
   }
 );
 
