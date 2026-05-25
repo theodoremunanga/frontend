@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import logo from "../assets/logo.PNG";
+import logo from "../assets/logo.png";
 
 export default function Navbar({ setPage }) {
   const [active, setActive] = useState("accueil");
