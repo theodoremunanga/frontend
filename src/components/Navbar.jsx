@@ -56,6 +56,9 @@ export default function Navbar({
   const mountedRef =
     useRef(true);
 
+  const loadingRef =
+    useRef(false);
+
   // ====================================================
   // LOAD WALLET
   // ====================================================
@@ -64,7 +67,7 @@ export default function Navbar({
     useCallback(async () => {
       try {
         // already loading
-        if (loading) {
+        if (loadingRef.current) {
           return;
         }
 
@@ -87,10 +90,12 @@ export default function Navbar({
           return;
         }
 
+        loadingRef.current = true;
         setLoading(true);
 
+        // ✅ CORRECTION ICI
         const res = await fetch(
-          `${API_URL}/api/wallet/me`,
+          `${API_URL}/wallet/me`,
           {
             method: "GET",
 
@@ -147,13 +152,16 @@ export default function Navbar({
 
         setIsOffline(true);
       } finally {
+        loadingRef.current =
+          false;
+
         if (
           mountedRef.current
         ) {
           setLoading(false);
         }
       }
-    }, [loading]);
+    }, []);
 
   // ====================================================
   // INITIAL LOAD
