@@ -27,30 +27,52 @@ import GestionTournois from "./admin/GestionTournois";
 // CONFIG
 // ======================================================
 
-const API =
-  import.meta.env.VITE_API_URL ||
-  "http://localhost:3000/api";
+const API_URL =
+  import.meta.env.VITE_API_URL;
 
-const SOCKET_URL =
-  API.replace(/\/api$/, "");
+if (!API_URL) {
+  throw new Error(
+    "❌ VITE_API_URL is missing"
+  );
+}
+
+const SOCKET_URL = API_URL;
 
 const NAVBAR_HEIGHT = 70;
 
 const PAGE_SIZE = 10;
+
+const SOCKET_TIMEOUT = 20000;
+
+const MAX_RECONNECT_ATTEMPTS = 10;
 
 // ======================================================
 // AXIOS
 // ======================================================
 
 const api = axios.create({
-  baseURL: API,
+  baseURL: `${API_URL}/api`,
+
   timeout: 15000,
+
+  withCredentials: true,
+
+  headers: {
+    "Content-Type":
+      "application/json",
+  },
 });
+
+// ======================================================
+// REQUEST INTERCEPTOR
+// ======================================================
 
 api.interceptors.request.use(
   (config) => {
     const token =
-      localStorage.getItem("token");
+      localStorage.getItem(
+        "token"
+      );
 
     if (token) {
       config.headers.Authorization =
@@ -58,6 +80,40 @@ api.interceptors.request.use(
     }
 
     return config;
+  },
+
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// ======================================================
+// RESPONSE INTERCEPTOR
+// ======================================================
+
+api.interceptors.response.use(
+  (response) => response,
+
+  (error) => {
+    console.error(
+      "❌ API ERROR:",
+      error
+    );
+
+    // TOKEN EXPIRED
+    if (
+      error.response?.status ===
+      401
+    ) {
+      localStorage.removeItem(
+        "token"
+      );
+
+      window.location.href =
+        "/login";
+    }
+
+    return Promise.reject(error);
   }
 );
 
@@ -307,139 +363,202 @@ export default function AdminDashboard() {
   // SOCKET
   // ======================================================
 
-  useEffect(() => {
-    fetchData();
+ useEffect(() => {
+  fetchData();
 
-    const socket = io(
-      SOCKET_URL,
-      {
-        auth: {
-          token:
-            localStorage.getItem(
-              "token"
-            ),
-        },
+  const token =
+    localStorage.getItem("token");
 
-        transports: [
-          "websocket",
-          "polling",
-        ],
+  const socket = io(
+    SOCKET_URL,
+    {
+      auth: {
+        token,
+      },
 
-        reconnection: true,
+      withCredentials: true,
 
-        reconnectionAttempts:
-          Infinity,
+      transports: [
+        "websocket",
+        "polling",
+      ],
 
-        reconnectionDelay: 1000,
+      reconnection: true,
 
-        timeout: 20000,
+      reconnectionAttempts:
+        MAX_RECONNECT_ATTEMPTS,
 
-        autoConnect: true,
-      }
+      reconnectionDelay: 2000,
+
+      reconnectionDelayMax: 10000,
+
+      timeout:
+        SOCKET_TIMEOUT,
+
+      autoConnect: true,
+    }
+  );
+
+  socketRef.current = socket;
+
+  // ====================================================
+  // CONNECT
+  // ====================================================
+
+  socket.on("connect", () => {
+    setConnected(true);
+
+    pushNotif(
+      "🟢 Temps réel connecté",
+      "success"
     );
 
-    socketRef.current = socket;
+    clearInterval(
+      pingInterval.current
+    );
 
-    socket.on("connect", () => {
-      setConnected(true);
+    pingInterval.current =
+      setInterval(() => {
+        const start =
+          Date.now();
+
+        socket.emit(
+          "ping:test",
+          start
+        );
+      }, 5000);
+  });
+
+  // ====================================================
+  // PING
+  // ====================================================
+
+  socket.on(
+    "pong:test",
+    (start) => {
+      setPing(
+        Date.now() - start
+      );
+    }
+  );
+
+  // ====================================================
+  // DISCONNECT
+  // ====================================================
+
+  socket.on(
+    "disconnect",
+    (reason) => {
+      setConnected(false);
+
+      console.warn(
+        "⚠️ Socket disconnected:",
+        reason
+      );
 
       pushNotif(
-        "🟢 Socket connecté",
-        "success"
+        "🔴 Temps réel déconnecté",
+        "error"
+      );
+    }
+  );
+
+  // ====================================================
+  // CONNECT ERROR
+  // ====================================================
+
+  socket.on(
+    "connect_error",
+    (err) => {
+      console.error(
+        "❌ Socket error:",
+        err.message
       );
 
-      clearInterval(
-        pingInterval.current
+      pushNotif(
+        "❌ Connexion temps réel impossible",
+        "error"
       );
+    }
+  );
 
-      pingInterval.current =
-        setInterval(() => {
-          const start =
-            Date.now();
+  // ====================================================
+  // TRANSACTIONS
+  // ====================================================
 
-          socket.emit(
-            "ping:test",
-            start
-          );
-        }, 4000);
-    });
-
-    socket.on(
-      "pong:test",
-      (start) => {
-        setPing(
-          Date.now() - start
-        );
-      }
-    );
-
-    socket.on(
-      "disconnect",
-      () => {
-        setConnected(false);
-
-        pushNotif(
-          "🔴 Socket déconnecté",
-          "error"
-        );
-      }
-    );
-
-    socket.on(
-      "transaction:new",
-      (tx) => {
-        setTransactions((prev) => [
+  socket.on(
+    "transaction:new",
+    (tx) => {
+      setTransactions(
+        (prev) => [
           tx,
           ...prev,
-        ]);
-
-        pushNotif(
-          "💰 Nouvelle transaction",
-          "success"
-        );
-      }
-    );
-
-    socket.on(
-      "message:new",
-      (message) => {
-        setMessages((prev) => [
-          message,
-          ...prev,
-        ]);
-
-        pushNotif(
-          "💬 Nouveau message",
-          "info"
-        );
-      }
-    );
-
-    socket.on(
-      "match:new",
-      (match) => {
-        setMatches((prev) => [
-          match,
-          ...prev,
-        ]);
-
-        pushNotif(
-          "♟️ Nouveau match",
-          "info"
-        );
-      }
-    );
-
-    return () => {
-      clearInterval(
-        pingInterval.current
+        ]
       );
 
-      socket.removeAllListeners();
+      pushNotif(
+        "💰 Nouvelle transaction",
+        "success"
+      );
+    }
+  );
 
-      socket.disconnect();
-    };
-  }, [fetchData, pushNotif]);
+  // ====================================================
+  // MESSAGES
+  // ====================================================
+
+  socket.on(
+    "message:new",
+    (message) => {
+      setMessages(
+        (prev) => [
+          message,
+          ...prev,
+        ]
+      );
+
+      pushNotif(
+        "💬 Nouveau message",
+        "info"
+      );
+    }
+  );
+
+  // ====================================================
+  // MATCHES
+  // ====================================================
+
+  socket.on(
+    "match:new",
+    (match) => {
+      setMatches(
+        (prev) => [
+          match,
+          ...prev,
+        ]
+      );
+
+      pushNotif(
+        "♟️ Nouveau match",
+        "info"
+      );
+    }
+  );
+
+  // ====================================================
+  // CLEANUP
+  // ====================================================
+
+  return () => {
+    clearInterval(
+      pingInterval.current
+    );
+
+    socket.removeAllListeners();
+
+    socket.disconnect();
+  };
+}, [fetchData, pushNotif]);
 
   // ======================================================
   // RESET PAGE
@@ -467,13 +586,25 @@ export default function AdminDashboard() {
           search.toLowerCase();
 
         return data.filter((item) =>
-          JSON.stringify(item)
+          Object.values(item)
+            .join(" ")
             .toLowerCase()
             .includes(q)
-        );
+         );
       },
       [search]
     );
+
+    const isOffline =
+      !connected;
+        {isOffline && (
+          <div style={{
+            color: "#ef4444",
+            fontWeight: 700
+         }}>
+            ⚠️ Mode hors ligne
+         </div>
+    )}
 
   // ======================================================
   // PAGINATION

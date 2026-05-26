@@ -8,15 +8,33 @@ import styled from "styled-components";
 import axios from "axios";
 
 // ======================================================
-// API CONFIG
+// API URL
+// ======================================================
+
+const API_URL =
+  import.meta.env.VITE_API_URL;
+
+if (!API_URL) {
+  throw new Error(
+    "❌ VITE_API_URL is missing"
+  );
+}
+
+// ======================================================
+// AXIOS INSTANCE
 // ======================================================
 
 const api = axios.create({
-  baseURL:
-    import.meta.env.VITE_API_URL ||
-    "http://localhost:3000/api",
+  baseURL: `${API_URL}/api`,
 
   timeout: 15000,
+
+  withCredentials: true,
+
+  headers: {
+    "Content-Type":
+      "application/json",
+  },
 });
 
 // ======================================================
@@ -26,15 +44,48 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token =
-      localStorage.getItem("token");
+      localStorage.getItem(
+        "token"
+      );
 
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization =
+        `Bearer ${token}`;
     }
 
     return config;
   },
-  (error) => Promise.reject(error)
+
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// ======================================================
+// RESPONSE INTERCEPTOR
+// ======================================================
+
+api.interceptors.response.use(
+  (response) => response,
+
+  (error) => {
+    console.error(
+      "❌ Tournament API Error:",
+      error
+    );
+
+    // session expired
+    if (
+      error.response?.status ===
+      401
+    ) {
+      localStorage.removeItem(
+        "token"
+      );
+    }
+
+    return Promise.reject(error);
+  }
 );
 
 // ======================================================

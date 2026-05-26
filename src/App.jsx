@@ -39,7 +39,7 @@ function WaitingMatch({
         try {
           const res =
             await fetch(
-              `http://localhost:3000/api/match/${matchId}`,
+              `http:/api/match/${matchId}`,
               {
                 headers: {
                   Authorization:

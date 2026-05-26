@@ -1,27 +1,183 @@
 import axios from "axios";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+// ======================================================
+// API URL
+// ======================================================
+const API_URL =
+  import.meta.env.VITE_API_URL;
 
-const api = axios.create({ baseURL: API });
+if (!API_URL) {
+  throw new Error(
+    "❌ VITE_API_URL is missing"
+  );
+}
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
+// ======================================================
+// AXIOS INSTANCE
+// ======================================================
+const api = axios.create({
+  baseURL: `${API_URL}/api`,
+
+  withCredentials: true,
+
+  headers: {
+    "Content-Type":
+      "application/json",
+  },
 });
 
-export default {
-  getStats: () => api.get("/admin/stats").then(r => r.data),
-  getTransactions: () => api.get("/admin/transactions").then(r => r.data),
-  getMatches: () => api.get("/admin/matches").then(r => r.data),
-  getMessages: () => api.get("/admin/messages").then(r => r.data),
+// ======================================================
+// TOKEN INTERCEPTOR
+// ======================================================
+api.interceptors.request.use(
+  (config) => {
+    const token =
+      localStorage.getItem(
+        "token"
+      );
 
-  approveTx: (id, reference) =>
-    api.post("/admin/validate", { transactionId: id, reference }),
+    if (token) {
+      config.headers.Authorization =
+        `Bearer ${token}`;
+    }
 
-  rejectTx: (id, reason) =>
-    api.post("/admin/reject", { transactionId: id, reason }),
+    return config;
+  },
 
-  cancelMatch: (id) =>
-    api.post(`/admin/match/${id}/cancel`),
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// ======================================================
+// RESPONSE INTERCEPTOR
+// ======================================================
+api.interceptors.response.use(
+  (response) => response,
+
+  (error) => {
+    console.error(
+      "❌ API ERROR:",
+      error
+    );
+
+    if (
+      error.response?.status ===
+      401
+    ) {
+      console.warn(
+        "⚠️ Unauthorized"
+      );
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+// ======================================================
+// ADMIN API
+// ======================================================
+const adminApi = {
+  // ====================================================
+  // STATS
+  // ====================================================
+  getStats: async () => {
+    const res =
+      await api.get(
+        "/admin/stats"
+      );
+
+    return res.data;
+  },
+
+  // ====================================================
+  // TRANSACTIONS
+  // ====================================================
+  getTransactions:
+    async () => {
+      const res =
+        await api.get(
+          "/admin/transactions"
+        );
+
+      return res.data;
+    },
+
+  // ====================================================
+  // MATCHES
+  // ====================================================
+  getMatches: async () => {
+    const res =
+      await api.get(
+        "/admin/matches"
+      );
+
+    return res.data;
+  },
+
+  // ====================================================
+  // MESSAGES
+  // ====================================================
+  getMessages:
+    async () => {
+      const res =
+        await api.get(
+          "/admin/messages"
+        );
+
+      return res.data;
+    },
+
+  // ====================================================
+  // APPROVE TRANSACTION
+  // ====================================================
+  approveTx: async (
+    id,
+    reference
+  ) => {
+    const res =
+      await api.post(
+        "/admin/validate",
+        {
+          transactionId: id,
+          reference,
+        }
+      );
+
+    return res.data;
+  },
+
+  // ====================================================
+  // REJECT TRANSACTION
+  // ====================================================
+  rejectTx: async (
+    id,
+    reason
+  ) => {
+    const res =
+      await api.post(
+        "/admin/reject",
+        {
+          transactionId: id,
+          reason,
+        }
+      );
+
+    return res.data;
+  },
+
+  // ====================================================
+  // CANCEL MATCH
+  // ====================================================
+  cancelMatch:
+    async (id) => {
+      const res =
+        await api.post(
+          `/admin/match/${id}/cancel`
+        );
+
+      return res.data;
+    },
 };
+
+export default adminApi;

@@ -10,7 +10,7 @@ export default function Admin() {
   async function load() {
     const token = localStorage.getItem("token");
 
-    const res = await fetch("http://localhost:3000/api/admin/transactions", {
+    const res = await fetch("http://api/admin/transactions", {
       headers: {
         Authorization: "Bearer " + token
       }
@@ -23,7 +23,7 @@ export default function Admin() {
   async function approveDeposit(id) {
     const token = localStorage.getItem("token");
 
-    await fetch(`http://localhost:3000/api/admin/approve-deposit/${id}`, {
+    await fetch(`http://api/admin/approve-deposit/${id}`, {
       method: "POST",
       headers: { Authorization: "Bearer " + token }
     });
