@@ -2,6 +2,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useCallback,
 } from "react";
 
 import styled from "styled-components";
@@ -22,14 +23,22 @@ import {
   Clock3,
   Trash2,
   CheckCheck,
+  RefreshCw,
+  WifiOff,
+  ShieldAlert,
 } from "lucide-react";
 
 // ======================================================
 // API
 // ======================================================
 
-const API =
-  "http://localhost:3000/api/notifications";
+const API = (
+  import.meta.env.VITE_API_URL ||
+  "https://backend-ad3t.onrender.com/api"
+).replace(/\/+$/, "");
+
+const NOTIFICATION_API =
+  `${API}/notifications`;
 
 // ======================================================
 // COMPONENT
@@ -42,60 +51,154 @@ export default function Infos() {
   const [loading, setLoading] =
     useState(true);
 
+  const [refreshing, setRefreshing] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
   const [filter, setFilter] =
     useState("all");
+
+  const [isOffline, setIsOffline] =
+    useState(!navigator.onLine);
+
+  // ======================================================
+  // NETWORK LISTENER
+  // ======================================================
+
+  useEffect(() => {
+    const goOnline = () => {
+      setIsOffline(false);
+    };
+
+    const goOffline = () => {
+      setIsOffline(true);
+    };
+
+    window.addEventListener(
+      "online",
+      goOnline
+    );
+
+    window.addEventListener(
+      "offline",
+      goOffline
+    );
+
+    return () => {
+      window.removeEventListener(
+        "online",
+        goOnline
+      );
+
+      window.removeEventListener(
+        "offline",
+        goOffline
+      );
+    };
+  }, []);
 
   // ======================================================
   // FETCH NOTIFICATIONS
   // ======================================================
 
   const fetchNotifications =
-    async () => {
-      try {
-        setLoading(true);
-
-        const token =
-          localStorage.getItem(
-            "token"
+    useCallback(
+      async (
+        silent = false
+      ) => {
+        if (isOffline) {
+          setError(
+            "⚠️ Vous êtes hors ligne"
           );
 
-        const res =
-          await axios.get(
-            `${API}/my`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
+          return;
+        }
 
-        console.log(
-          "NOTIFICATIONS:",
-          res.data
-        );
+        try {
+          if (!silent) {
+            setLoading(true);
+          }
 
-        // ✅ CORRECTION
-        // l'API retourne directement un tableau
-        if (
-          Array.isArray(res.data)
-        ) {
-          setNotifications(
+          setRefreshing(true);
+
+          setError("");
+
+          const token =
+            localStorage.getItem(
+              "token"
+            );
+
+          if (!token) {
+            throw new Error(
+              "Session invalide"
+            );
+          }
+
+          const res =
+            await axios.get(
+              `${NOTIFICATION_API}/my`,
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+
+          console.log(
+            "🔔 NOTIFICATIONS:",
             res.data
           );
-        } else {
-          setNotifications([]);
-        }
-      } catch (error) {
-        console.log(
-          "Erreur notifications :",
-          error
-        );
 
-        setNotifications([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+          if (
+            Array.isArray(
+              res.data
+            )
+          ) {
+            setNotifications(
+              res.data
+            );
+          } else {
+            setNotifications(
+              []
+            );
+          }
+        } catch (error) {
+          console.error(
+            "❌ Notifications error:",
+            error
+          );
+
+          if (
+            error?.response
+              ?.status === 401
+          ) {
+            localStorage.removeItem(
+              "token"
+            );
+
+            localStorage.removeItem(
+              "user"
+            );
+
+            window.location.href =
+              "/";
+          }
+
+          setError(
+            error?.response?.data
+              ?.error ||
+              "Impossible de charger les notifications"
+          );
+        } finally {
+          setLoading(false);
+
+          setRefreshing(false);
+        }
+      },
+      [isOffline]
+    );
 
   // ======================================================
   // INITIAL LOAD
@@ -103,7 +206,29 @@ export default function Infos() {
 
   useEffect(() => {
     fetchNotifications();
-  }, []);
+  }, [fetchNotifications]);
+
+  // ======================================================
+  // AUTO REFRESH
+  // ======================================================
+
+  useEffect(() => {
+    const interval =
+      setInterval(() => {
+        if (
+          document.visibilityState ===
+            "visible" &&
+          navigator.onLine
+        ) {
+          fetchNotifications(
+            true
+          );
+        }
+      }, 20000);
+
+    return () =>
+      clearInterval(interval);
+  }, [fetchNotifications]);
 
   // ======================================================
   // SOCKET REALTIME
@@ -117,50 +242,67 @@ export default function Infos() {
 
     if (!userId) return;
 
-    // rejoindre room socket
     socket.emit(
       "join_user_room",
       userId
     );
 
     // ==================================================
-    // NEW NOTIFICATION
+    // HANDLERS
     // ==================================================
 
-    const handleNotification = (
-      notification
-    ) => {
-      console.log(
-        "🔔 NEW NOTIFICATION:",
+    const handleNotification =
+      (
         notification
-      );
+      ) => {
+        console.log(
+          "🔔 NEW NOTIFICATION:",
+          notification
+        );
 
-      setNotifications(
-        (prev) => {
-          // anti doublon
-          const exists =
-            prev.some(
-              (n) =>
-                String(n.id) ===
-                String(
-                  notification.id
-                )
-            );
+        setNotifications(
+          (prev) => {
+            const exists =
+              prev.some(
+                (n) =>
+                  String(
+                    n.id
+                  ) ===
+                  String(
+                    notification.id
+                  )
+              );
 
-          if (exists) {
-            return prev;
+            if (exists) {
+              return prev;
+            }
+
+            return [
+              notification,
+              ...prev,
+            ];
           }
+        );
+      };
 
-          return [
-            notification,
-            ...prev,
-          ];
-        }
-      );
-    };
+    const reconnectHandler =
+      () => {
+        console.log(
+          "✅ Socket reconnected"
+        );
+
+        socket.emit(
+          "join_user_room",
+          userId
+        );
+
+        fetchNotifications(
+          true
+        );
+      };
 
     // ==================================================
-    // SOCKET EVENTS
+    // EVENTS
     // ==================================================
 
     socket.on(
@@ -169,24 +311,31 @@ export default function Infos() {
     );
 
     socket.on(
-      "connect",
-      () => {
-        console.log(
-          "✅ Notifications socket connected"
-        );
+      "notification_read",
+      () =>
+        fetchNotifications(
+          true
+        )
+    );
 
-        socket.emit(
-          "join_user_room",
-          userId
-        );
-      }
+    socket.on(
+      "notification_deleted",
+      () =>
+        fetchNotifications(
+          true
+        )
+    );
+
+    socket.on(
+      "connect",
+      reconnectHandler
     );
 
     socket.on(
       "disconnect",
       (reason) => {
         console.log(
-          "❌ Notifications socket disconnected:",
+          "❌ Socket disconnected:",
           reason
         );
       }
@@ -201,8 +350,21 @@ export default function Infos() {
         "new_notification",
         handleNotification
       );
+
+      socket.off(
+        "notification_read"
+      );
+
+      socket.off(
+        "notification_deleted"
+      );
+
+      socket.off(
+        "connect",
+        reconnectHandler
+      );
     };
-  }, []);
+  }, [fetchNotifications]);
 
   // ======================================================
   // FILTERS
@@ -222,7 +384,9 @@ export default function Infos() {
         );
       }
 
-      if (filter === "read") {
+      if (
+        filter === "read"
+      ) {
         return notifications.filter(
           (n) =>
             n.is_read ??
@@ -237,6 +401,19 @@ export default function Infos() {
     ]);
 
   // ======================================================
+  // UNREAD COUNT
+  // ======================================================
+
+  const unreadCount =
+    notifications.filter(
+      (n) =>
+        !(
+          n.is_read ??
+          n.read
+        )
+    ).length;
+
+  // ======================================================
   // MARK AS READ
   // ======================================================
 
@@ -249,7 +426,7 @@ export default function Infos() {
           );
 
         await axios.patch(
-          `${API}/${id}/read`,
+          `${NOTIFICATION_API}/${id}/read`,
           {},
           {
             headers: {
@@ -258,7 +435,6 @@ export default function Infos() {
           }
         );
 
-        // ✅ CORRECTION
         setNotifications(
           (prev) =>
             prev.map((n) =>
@@ -277,7 +453,7 @@ export default function Infos() {
     };
 
   // ======================================================
-  // MARK ALL AS READ
+  // MARK ALL
   // ======================================================
 
   const markAllAsRead =
@@ -289,7 +465,7 @@ export default function Infos() {
           );
 
         await axios.put(
-          `${API}/read-all`,
+          `${NOTIFICATION_API}/read-all`,
           {},
           {
             headers: {
@@ -316,6 +492,14 @@ export default function Infos() {
 
   const deleteNotification =
     async (id) => {
+      const confirmDelete =
+        window.confirm(
+          "Supprimer cette notification ?"
+        );
+
+      if (!confirmDelete)
+        return;
+
       try {
         const token =
           localStorage.getItem(
@@ -323,7 +507,7 @@ export default function Infos() {
           );
 
         await axios.delete(
-          `${API}/${id}`,
+          `${NOTIFICATION_API}/${id}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -335,7 +519,9 @@ export default function Infos() {
           (prev) =>
             prev.filter(
               (n) =>
-                String(n.id) !==
+                String(
+                  n.id
+                ) !==
                 String(id)
             )
         );
@@ -348,80 +534,55 @@ export default function Infos() {
   // ICONS
   // ======================================================
 
-  const getIcon = (type) => {
+  const getIcon = (
+    type
+  ) => {
     switch (type) {
-      // ✅ TYPES BACKEND
       case "TRANSACTION_APPROVED":
+      case "deposit_approved":
         return (
           <ArrowDownCircle size={22} />
         );
 
       case "TRANSACTION_REJECTED":
-        return (
-          <ArrowUpCircle size={22} />
-        );
-
-      case "ADMIN_DEBIT":
-        return (
-          <Wallet size={22} />
-        );
-
-      case "ADMIN_CREDIT":
-        return (
-          <CreditCard size={22} />
-        );
-
-      case "COMPETITION_AVAILABLE":
-        return (
-          <Trophy size={22} />
-        );
-
-      case "MATCH_READY":
-        return (
-          <CheckCircle size={22} />
-        );
-
-      case "MATCH_AVAILABLE":
-        return (
-          <Gamepad2 size={22} />
-        );
-
-      // compatibilité anciens types
-      case "deposit_approved":
-      case "deposit_rejected":
-        return (
-          <ArrowDownCircle size={22} />
-        );
-
-      case "withdraw_approved":
       case "withdraw_rejected":
         return (
           <ArrowUpCircle size={22} />
         );
 
+      case "ADMIN_DEBIT":
       case "admin_debit":
         return (
           <Wallet size={22} />
         );
 
+      case "ADMIN_CREDIT":
       case "admin_credit":
         return (
           <CreditCard size={22} />
         );
 
+      case "COMPETITION_AVAILABLE":
       case "competition_available":
         return (
           <Trophy size={22} />
         );
 
+      case "MATCH_READY":
       case "match_ready":
         return (
           <CheckCircle size={22} />
         );
 
+      case "MATCH_AVAILABLE":
       case "match_available":
         return (
           <Gamepad2 size={22} />
+        );
+
+      case "SECURITY_ALERT":
+        return (
+          <ShieldAlert size={22} />
         );
 
       default:
@@ -432,27 +593,15 @@ export default function Infos() {
   };
 
   // ======================================================
-  // UNREAD COUNT
-  // ======================================================
-
-  const unreadCount =
-    notifications.filter(
-      (n) =>
-        !(
-          n.is_read ??
-          n.read
-        )
-    ).length;
-
-  // ======================================================
   // RENDER
   // ======================================================
 
   return (
     <Container>
+      {/* HEADER */}
       <Header>
         <HeaderLeft>
-          <Bell size={28} />
+          <Bell size={30} />
 
           <div>
             <Title>
@@ -473,6 +622,23 @@ export default function Infos() {
         </HeaderLeft>
 
         <HeaderActions>
+          <RefreshButton
+            onClick={() =>
+              fetchNotifications()
+            }
+            disabled={
+              refreshing
+            }
+          >
+            <RefreshCw
+              size={17}
+            />
+
+            {refreshing
+              ? "Actualisation..."
+              : "Actualiser"}
+          </RefreshButton>
+
           <ActionButton
             onClick={
               markAllAsRead
@@ -486,6 +652,22 @@ export default function Infos() {
         </HeaderActions>
       </Header>
 
+      {/* OFFLINE */}
+      {isOffline && (
+        <OfflineBanner>
+          <WifiOff size={18} />
+          Mode hors ligne
+        </OfflineBanner>
+      )}
+
+      {/* ERROR */}
+      {error && (
+        <ErrorBox>
+          {error}
+        </ErrorBox>
+      )}
+
+      {/* FILTERS */}
       <Filters>
         <FilterButton
           $active={
@@ -514,7 +696,8 @@ export default function Infos() {
 
         <FilterButton
           $active={
-            filter === "read"
+            filter ===
+            "read"
           }
           onClick={() =>
             setFilter("read")
@@ -524,6 +707,7 @@ export default function Infos() {
         </FilterButton>
       </Filters>
 
+      {/* LOADING */}
       {loading ? (
         <LoadingContainer>
           Chargement des notifications...
@@ -640,7 +824,9 @@ export default function Infos() {
 // HELPERS
 // ======================================================
 
-function formatDate(date) {
+function formatDate(
+  date
+) {
   if (!date)
     return "Date inconnue";
 
@@ -666,7 +852,7 @@ const Container =
   styled.div`
     width: 100%;
     min-height: 100vh;
-    background: #0f172a;
+    background: #020617;
     padding: 24px;
     color: white;
   `;
@@ -677,12 +863,8 @@ const Header =
     justify-content: space-between;
     align-items: center;
     margin-bottom: 30px;
-
-    @media (max-width: 768px) {
-      flex-direction: column;
-      gap: 15px;
-      align-items: flex-start;
-    }
+    gap: 20px;
+    flex-wrap: wrap;
   `;
 
 const HeaderLeft =
@@ -694,45 +876,85 @@ const HeaderLeft =
 
 const Title = styled.h2`
   margin: 0;
-  font-size: 28px;
-  font-weight: 700;
+  font-size: 30px;
+  font-weight: 800;
 `;
 
-const Subtitle = styled.p`
-  margin: 4px 0 0;
-  color: #94a3b8;
-`;
+const Subtitle =
+  styled.p`
+    margin: 4px 0 0;
+    color: #94a3b8;
+  `;
 
 const HeaderActions =
   styled.div`
     display: flex;
-    gap: 10px;
+    gap: 12px;
+    flex-wrap: wrap;
   `;
 
 const ActionButton =
   styled.button`
     border: none;
-    background: #2563eb;
+    background: linear-gradient(
+      to right,
+      #2563eb,
+      #1d4ed8
+    );
     color: white;
     padding: 12px 18px;
-    border-radius: 12px;
+    border-radius: 14px;
     display: flex;
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    font-weight: 600;
-
-    &:hover {
-      background: #1d4ed8;
-    }
+    font-weight: 700;
   `;
 
-const Filters = styled.div`
-  display: flex;
-  gap: 12px;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-`;
+const RefreshButton =
+  styled.button`
+    border: none;
+    background: #1e293b;
+    color: white;
+    padding: 12px 18px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-weight: 700;
+  `;
+
+const OfflineBanner =
+  styled.div`
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #7c2d12;
+    padding: 14px 18px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    color: #fdba74;
+    font-weight: 700;
+  `;
+
+const ErrorBox =
+  styled.div`
+    background: #7f1d1d;
+    color: #fecaca;
+    padding: 14px 18px;
+    border-radius: 16px;
+    margin-bottom: 20px;
+    font-weight: 600;
+  `;
+
+const Filters =
+  styled.div`
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  `;
 
 const FilterButton =
   styled.button`
@@ -740,7 +962,7 @@ const FilterButton =
     padding: 10px 18px;
     border-radius: 999px;
     cursor: pointer;
-    font-weight: 600;
+    font-weight: 700;
 
     background: ${({ $active }) =>
       $active
@@ -765,15 +987,15 @@ const NotificationCard =
     background: ${({ $unread }) =>
       $unread
         ? "#172554"
-        : "#111827"};
+        : "#0f172a"};
 
     border: 1px solid
       ${({ $unread }) =>
         $unread
           ? "#3b82f6"
-          : "#1f2937"};
+          : "#1e293b"};
 
-    border-radius: 20px;
+    border-radius: 22px;
     padding: 20px;
   `;
 
@@ -790,9 +1012,9 @@ const UnreadDot =
 
 const IconContainer =
   styled.div`
-    width: 55px;
-    min-width: 55px;
-    height: 55px;
+    width: 56px;
+    min-width: 56px;
+    height: 56px;
     border-radius: 16px;
     display: flex;
     align-items: center;
@@ -805,12 +1027,14 @@ const NotificationContent =
     width: 100%;
   `;
 
-const TopRow = styled.div`
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
-`;
+const TopRow =
+  styled.div`
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  `;
 
 const NotificationTitle =
   styled.h4`
@@ -852,15 +1076,15 @@ const ReadButton =
     background: transparent;
     color: #60a5fa;
     cursor: pointer;
-    font-weight: 600;
+    font-weight: 700;
   `;
 
 const DeleteButton =
   styled.button`
     border: none;
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
     background: #1e293b;
     color: #ef4444;
     cursor: pointer;
@@ -878,6 +1102,7 @@ const EmptyState =
     align-items: center;
     color: #94a3b8;
     text-align: center;
+    gap: 10px;
   `;
 
 const LoadingContainer =

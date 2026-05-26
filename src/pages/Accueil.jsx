@@ -3,7 +3,16 @@ import {
   useEffect,
   useRef,
   useMemo,
+  useCallback,
 } from "react";
+
+import socket from "../socket";
+
+const fetchData = useCallback(
+  async (silent = false) => {
+},
+[API, token, isOffline]
+);
 
 import SponsoredBanner from "../components/ads/SponsoredBanner";
 import AdCarousel from "../components/ads/AdCarousel";
@@ -94,11 +103,20 @@ export default function Accueil({
     localStorage.getItem("role") ||
     "PLAYER";
 
-  const API =
-    (
-      import.meta.env.VITE_API_URL ||
-     "http://localhost:3000/api"
-    ).replace(/\/+$/, "");
+  const offlineBanner = {
+   background:
+     "linear-gradient(to right,#b45309,#d97706)",
+   padding: 14,
+   borderRadius: 14,
+   marginBottom: 20,
+   textAlign: "center",
+   fontWeight: "bold",
+ };
+
+ const API = (
+  import.meta.env.VITE_API_URL ||
+  "https://backend-ad3t.onrender.com/api"
+).replace(/\/+$/, "");
 
   const BASE_URL = API.replace(
     /\/api$/,
@@ -138,90 +156,185 @@ export default function Accueil({
 
     viewedAds.current.add(id);
 
-    await trackAdView(id);
+    try {
+      await trackAdView(id);
+    } catch (err) {
+      console.error(
+        "Track ad failed:",
+        err
+     );
+   }
   };
 
   // ================= LOAD DATA =================
-  const fetchData = async () => {
-    if (!token || isFetching.current)
-      return;
+  const fetchData = async (
+    silent = false
+  ) => {
+   if (!token) return;
 
-    isFetching.current = true;
+   if (isFetching.current) return;
 
-    try {
-      const [openRes, myRes] =
-        await Promise.all([
-          fetch(`${API}/match/open`, {
-            headers: {
-              Authorization:
-                "Bearer " + token,
-            },
-          }),
+   if (isOffline) {
+    setError(
+      "📡 Vous êtes hors ligne"
+    );
+    return;
+   }
 
-          fetch(
-            `${API}/match/my-active`,
-            {
-              headers: {
-                Authorization:
-                  "Bearer " + token,
-              },
-            }
-          ),
-        ]);
+   isFetching.current = true;
 
-      if (
-        openRes.status === 401 ||
-        myRes.status === 401
-      ) {
-        setError("⚠️ Session expirée");
+   if (!silent) {
+    setLoading(true);
+   }
 
-        localStorage.removeItem(
-          "token"
-        );
+   try {
+    const headers = {
+      Authorization:
+        "Bearer " + token,
+    };
 
-        return;
-      }
+    const [
+      openRes,
+      myRes,
+    ] = await Promise.all([
+      fetch(`${API}/match/open`, {
+        headers,
+      }),
 
-      const openData = await openRes
-        .json()
-        .catch(() => ({}));
+      fetch(
+        `${API}/match/my-active`,
+        {
+          headers,
+        }
+      ),
+    ]);
 
-      const myData = await myRes
-        .json()
-        .catch(() => ({}));
+    if (
+      openRes.status === 401 ||
+      myRes.status === 401
+    ) {
+      localStorage.removeItem(
+        "token"
+      );
 
-      if (openRes.ok)
-        setOpenChallenges(
-          openData.matches || []
-        );
-
-      if (myRes.ok)
-        setMyGames(myData.matches || []);
-
-      setError("");
-    } catch (err) {
-      console.error(err);
+      localStorage.removeItem(
+        "user"
+      );
 
       setError(
-        "❌ Connexion instable"
+        "🔒 Session expirée"
       );
-    } finally {
-      isFetching.current = false;
-      setLoading(false);
+
+      return;
     }
-  };
 
-  useEffect(() => {
-    fetchData();
+    const [
+      openData,
+      myData,
+    ] = await Promise.all([
+      openRes
+        .json()
+        .catch(() => ({})),
 
-    const interval = setInterval(
-      fetchData,
-      5000
+      myRes
+        .json()
+        .catch(() => ({})),
+    ]);
+
+    if (openRes.ok) {
+      setOpenChallenges(
+        openData.matches || []
+      );
+    }
+
+    if (myRes.ok) {
+      setMyGames(
+        myData.matches || []
+      );
+    }
+
+    setError("");
+   } catch (err) {
+    console.error(
+      "HOME FETCH ERROR:",
+      err
     );
 
-    return () =>
-      clearInterval(interval);
-  }, []);
+    setError(
+      "❌ Connexion serveur impossible"
+    );
+   } finally {
+    isFetching.current = false;
+    setLoading(false);
+   }
+};
+
+ useEffect(() => {
+  fetchData();
+
+  const interval = setInterval(
+    () => {
+      if (
+        document.visibilityState ===
+        "visible"
+      ) {
+        fetchData(true);
+      }
+    },
+    15000
+  );
+
+  useEffect(() => {
+  if (!isOffline) {
+    fetchData(true);
+  }
+  }, [isOffline, fetchData]);
+
+  return () =>
+    clearInterval(interval);
+}, [fetchData]);
+
+// ================= SOCKET REALTIME =================
+  useEffect(() => {
+    if (!token) return;
+
+     const refreshFeed = () => {
+        fetchData(true);
+    };
+
+    socket.on(
+      "match_created",
+      refreshFeed
+    );
+
+    socket.on(
+     "match_joined",
+     refreshFeed
+   );
+
+   socket.on(
+     "match_finished",
+     refreshFeed
+   );
+
+   return () => {
+     socket.off(
+       "match_created",
+       refreshFeed
+     );
+
+     socket.off(
+       "match_joined",
+       refreshFeed
+     );
+
+     socket.off(
+       "match_finished",
+       refreshFeed
+     );
+   };
+  }, [fetchData, token]);
+
 
   // ================= INPUTS =================
   const updateInput = (
@@ -274,6 +387,12 @@ export default function Accueil({
     match
   ) => {
     if (!match?.id) return;
+
+    if (isOffline) {
+      return setError(
+        "📡 Hors ligne"
+     );
+    }
 
     try {
       const res = await fetch(
@@ -334,6 +453,12 @@ export default function Accueil({
           "🚧 Seul le jeu Dames est disponible actuellement."
         );
       }
+
+      if (isOffline) {
+        return setError(
+          "📡 Hors ligne"
+        );
+     }
 
       const raw =
         getAmount(gameId);
@@ -625,6 +750,12 @@ export default function Accueil({
         {error && (
           <div style={errorStyle}>
             {error}
+          </div>
+        )}
+
+        {isOffline && (
+          <div style={offlineBanner}>
+            📡 Mode hors ligne
           </div>
         )}
 

@@ -3,6 +3,7 @@ import {
   useState,
   useCallback,
   useMemo,
+  useRef,
 } from "react";
 
 import {
@@ -15,48 +16,89 @@ import {
   Reply,
   MoreHorizontal,
   Smile,
+  WifiOff,
+  RefreshCw,
+  Trash2,
+  Flag,
 } from "lucide-react";
+
+import { io } from "socket.io-client";
+
+import api, {
+  SOCKET_URL,
+} from "../services/api";
+
+// ======================================================
+// SOCKET
+// ======================================================
+
+const socket = io(
+  SOCKET_URL,
+  {
+    transports: [
+      "websocket",
+    ],
+    reconnection: true,
+  }
+);
 
 // ======================================================
 // HELPERS
 // ======================================================
 
 function formatTime(date) {
-  if (!date) return "À l’instant";
+
+  if (!date) {
+    return "À l’instant";
+  }
 
   try {
-    const now = new Date();
-    const d = new Date(date);
 
-    const diff = Math.floor(
-      (now - d) / 1000
-    );
+    const now =
+      new Date();
 
-    if (diff < 60)
+    const d =
+      new Date(date);
+
+    const diff =
+      Math.floor(
+        (now - d) / 1000
+      );
+
+    if (diff < 60) {
       return "À l’instant";
+    }
 
-    if (diff < 3600)
+    if (diff < 3600) {
       return `${Math.floor(
         diff / 60
       )} min`;
+    }
 
-    if (diff < 86400)
+    if (diff < 86400) {
       return `${Math.floor(
         diff / 3600
       )} h`;
+    }
 
-    if (diff < 604800)
+    if (diff < 604800) {
       return `${Math.floor(
         diff / 86400
       )} j`;
+    }
 
     return d.toLocaleDateString();
+
   } catch {
+
     return "Maintenant";
   }
 }
 
-function getCommentText(comment) {
+function getCommentText(
+  comment
+) {
+
   return (
     comment?.text ||
     comment?.comment ||
@@ -66,9 +108,13 @@ function getCommentText(comment) {
   );
 }
 
-function getCommentUser(comment) {
+function getCommentUser(
+  comment
+) {
+
   return (
-    comment?.user?.username ||
+    comment?.user
+      ?.username ||
     comment?.username ||
     comment?.author ||
     comment?.name ||
@@ -76,7 +122,10 @@ function getCommentUser(comment) {
   );
 }
 
-function getAvatar(name = "") {
+function getAvatar(
+  name = ""
+) {
+
   return name
     ?.charAt(0)
     ?.toUpperCase();
@@ -91,30 +140,45 @@ function CommentItem({
   currentUser,
   onLike,
   onReply,
+  onDelete,
   replyingTo,
   replyText,
   setReplyText,
   submitReply,
   sendingReply,
 }) {
+
   const username =
-    getCommentUser(comment);
+    getCommentUser(
+      comment
+    );
 
   const text =
-    getCommentText(comment);
+    getCommentText(
+      comment
+    );
 
   const likes =
-    comment?.likes_count || 0;
+    comment?.likes_count ||
+    0;
 
   const liked =
-    comment?.liked || false;
+    comment?.liked ||
+    false;
 
   const replies =
-    comment?.replies || [];
+    comment?.replies ||
+    [];
+
+  const isOwner =
+    currentUser?.id ===
+    comment?.user_id;
 
   return (
     <div className="flex gap-3">
+
       {/* AVATAR */}
+
       <div
         className="
           w-10
@@ -132,12 +196,17 @@ function CommentItem({
           shadow-lg
         "
       >
-        {getAvatar(username)}
+        {getAvatar(
+          username
+        )}
       </div>
 
       {/* CONTENT */}
+
       <div className="flex-1 min-w-0">
+
         {/* BUBBLE */}
+
         <div
           className="
             bg-[#1E293B]
@@ -152,9 +221,13 @@ function CommentItem({
             shadow-lg
           "
         >
+
           {/* HEADER */}
+
           <div className="flex items-start justify-between gap-2">
+
             <div>
+
               <h4
                 className="
                   text-white
@@ -175,22 +248,56 @@ function CommentItem({
                   comment?.created_at
                 )}
               </span>
+
             </div>
 
-            <button
-              className="
-                text-gray-500
-                hover:text-white
-                transition
-              "
-            >
-              <MoreHorizontal
-                size={17}
-              />
-            </button>
+            <div className="flex items-center gap-2">
+
+              <button
+                className="
+                  text-gray-500
+                  hover:text-yellow-400
+                  transition
+                "
+              >
+                <Flag size={16} />
+              </button>
+
+              {isOwner && (
+                <button
+                  onClick={() =>
+                    onDelete(
+                      comment.id
+                    )
+                  }
+                  className="
+                    text-gray-500
+                    hover:text-red-400
+                    transition
+                  "
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
+
+              <button
+                className="
+                  text-gray-500
+                  hover:text-white
+                  transition
+                "
+              >
+                <MoreHorizontal
+                  size={17}
+                />
+              </button>
+
+            </div>
+
           </div>
 
           {/* TEXT */}
+
           <p
             className="
               text-gray-100
@@ -204,7 +311,8 @@ function CommentItem({
             {text}
           </p>
 
-          {/* REACTION BADGE */}
+          {/* REACTIONS */}
+
           {likes > 0 && (
             <div
               className="
@@ -223,6 +331,7 @@ function CommentItem({
                 shadow-xl
               "
             >
+
               <Heart
                 size={12}
                 className="
@@ -240,11 +349,14 @@ function CommentItem({
               >
                 {likes}
               </span>
+
             </div>
           )}
+
         </div>
 
         {/* ACTIONS */}
+
         <div
           className="
             flex
@@ -254,6 +366,7 @@ function CommentItem({
             mt-3
           "
         >
+
           <button
             onClick={() =>
               onLike(comment)
@@ -267,6 +380,7 @@ function CommentItem({
               }
             `}
           >
+
             <Heart
               size={15}
               className={
@@ -277,6 +391,7 @@ function CommentItem({
             />
 
             J’aime
+
           </button>
 
           <button
@@ -294,9 +409,11 @@ function CommentItem({
             <Reply size={15} />
             Répondre
           </button>
+
         </div>
 
-        {/* REPLY INPUT */}
+        {/* REPLY */}
+
         {replyingTo ===
           comment.id && (
           <div
@@ -307,6 +424,7 @@ function CommentItem({
               items-center
             "
           >
+
             <div
               className="
                 w-8
@@ -388,11 +506,14 @@ function CommentItem({
                 />
               )}
             </button>
+
           </div>
         )}
 
         {/* REPLIES */}
-        {replies.length > 0 && (
+
+        {replies.length >
+          0 && (
           <div
             className="
               mt-4
@@ -403,11 +524,13 @@ function CommentItem({
               space-y-4
             "
           >
+
             {replies.map(
               (
                 reply,
                 index
               ) => (
+
                 <div
                   key={
                     reply?.id ||
@@ -415,6 +538,7 @@ function CommentItem({
                   }
                   className="flex gap-2"
                 >
+
                   <div
                     className="
                       w-8
@@ -448,6 +572,7 @@ function CommentItem({
                       flex-1
                     "
                   >
+
                     <div
                       className="
                         flex
@@ -456,6 +581,7 @@ function CommentItem({
                         mb-1
                       "
                     >
+
                       <span
                         className="
                           text-sm
@@ -478,6 +604,7 @@ function CommentItem({
                           reply?.created_at
                         )}
                       </span>
+
                     </div>
 
                     <p
@@ -491,13 +618,18 @@ function CommentItem({
                         reply
                       )}
                     </p>
+
                   </div>
+
                 </div>
               )
             )}
+
           </div>
         )}
+
       </div>
+
     </div>
   );
 }
@@ -510,206 +642,477 @@ export default function AdComments({
   ad,
   currentUser,
 }) {
+
   // ======================================================
   // STATES
   // ======================================================
 
-  const [comments, setComments] =
-    useState([]);
+  const [
+    comments,
+    setComments,
+  ] = useState([]);
 
-  const [loading, setLoading] =
-    useState(false);
+  const [
+    loading,
+    setLoading,
+  ] = useState(false);
 
-  const [sending, setSending] =
-    useState(false);
+  const [
+    sending,
+    setSending,
+  ] = useState(false);
 
-  const [error, setError] =
-    useState("");
+  const [
+    error,
+    setError,
+  ] = useState("");
 
-  const [text, setText] =
-    useState("");
+  const [
+    text,
+    setText,
+  ] = useState("");
 
-  const [showComments, setShowComments] =
-    useState(false);
+  const [
+    showComments,
+    setShowComments,
+  ] = useState(false);
 
-  const [replyingTo, setReplyingTo] =
-    useState(null);
+  const [
+    replyingTo,
+    setReplyingTo,
+  ] = useState(null);
 
-  const [replyText, setReplyText] =
-    useState("");
+  const [
+    replyText,
+    setReplyText,
+  ] = useState("");
 
   const [
     sendingReply,
     setSendingReply,
   ] = useState(false);
 
+  const [
+    refreshing,
+    setRefreshing,
+  ] = useState(false);
+
+  const [
+    isOffline,
+    setIsOffline,
+  ] = useState(
+    !navigator.onLine
+  );
+
+  const textareaRef =
+    useRef(null);
+
   // ======================================================
-  // API
+  // NETWORK EFFECT
   // ======================================================
 
-  const API = useMemo(
-    () =>
-      (
-        import.meta.env
-          .VITE_API_URL ||
-        "http://localhost:3000/api"
-      ).replace(/\/+$/, ""),
-    []
-  );
+  useEffect(() => {
+
+    const goOnline =
+      () =>
+        setIsOffline(
+          false
+        );
+
+    const goOffline =
+      () =>
+        setIsOffline(
+          true
+        );
+
+    window.addEventListener(
+      "online",
+      goOnline
+    );
+
+    window.addEventListener(
+      "offline",
+      goOffline
+    );
+
+    return () => {
+
+      window.removeEventListener(
+        "online",
+        goOnline
+      );
+
+      window.removeEventListener(
+        "offline",
+        goOffline
+      );
+    };
+
+  }, []);
 
   // ======================================================
   // LOAD COMMENTS
   // ======================================================
 
   const loadComments =
-    useCallback(async () => {
-      if (!ad?.id) return;
+    useCallback(
+      async (
+        silent = false
+      ) => {
 
-      try {
-        setLoading(true);
+        if (!ad?.id) {
+          return;
+        }
 
-        const res = await fetch(
-          `${API}/ads/${ad.id}/comments`
-        );
+        if (isOffline) {
 
-        const data =
-          await res.json();
+          setError(
+            "⚠️ Hors ligne"
+          );
 
-        if (!res.ok) {
-          throw new Error(
-            data?.error ||
-              "Erreur chargement commentaires"
+          return;
+        }
+
+        try {
+
+          if (!silent) {
+            setLoading(
+              true
+            );
+          }
+
+          setRefreshing(
+            true
+          );
+
+          setError("");
+
+          const res =
+            await api.get(
+              `/ads/${ad.id}/comments`
+            );
+
+          const data =
+            res.data;
+
+          const list =
+            Array.isArray(
+              data
+            )
+              ? data
+              : data
+                  ?.comments ||
+                [];
+
+          setComments(
+            list.map(
+              (c) => ({
+                ...c,
+
+                text:
+                  c?.text ||
+                  c?.comment ||
+                  c?.content ||
+                  "",
+
+                username:
+                  c?.username ||
+                  c?.user
+                    ?.username ||
+                  "Utilisateur",
+
+                likes_count:
+                  c?.likes_count ||
+                  c?.likes ||
+                  0,
+
+                replies:
+                  c?.replies ||
+                  [],
+              })
+            )
+          );
+
+        } catch (err) {
+
+          console.error(
+            err
+          );
+
+          setError(
+            err?.message ||
+              "Erreur commentaires"
+          );
+
+        } finally {
+
+          setLoading(
+            false
+          );
+
+          setRefreshing(
+            false
           );
         }
 
-        const list =
-          Array.isArray(data)
-            ? data
-            : data?.comments ||
-              [];
-
-        setComments(
-          list.map((c) => ({
-            ...c,
-
-            text:
-              c?.text ||
-              c?.comment ||
-              c?.content ||
-              "",
-
-            username:
-              c?.username ||
-              c?.user
-                ?.username ||
-              "Utilisateur",
-
-            likes_count:
-              c?.likes_count ||
-              c?.likes ||
-              0,
-
-            replies:
-              c?.replies || [],
-          }))
-        );
-      } catch (err) {
-        console.error(err);
-
-        setError(
-          err?.message ||
-            "Erreur commentaires"
-        );
-      } finally {
-        setLoading(false);
-      }
-    }, [API, ad?.id]);
+      },
+      [
+        ad?.id,
+        isOffline,
+      ]
+    );
 
   // ======================================================
-  // EFFECT
+  // INIT
   // ======================================================
 
   useEffect(() => {
+
     loadComments();
-  }, [loadComments]);
+
+    socket.on(
+      "new_comment",
+      (
+        payload
+      ) => {
+
+        if (
+          payload?.ad_id ===
+          ad?.id
+        ) {
+          loadComments(
+            true
+          );
+        }
+      }
+    );
+
+    socket.on(
+      "comment_deleted",
+      (
+        payload
+      ) => {
+
+        if (
+          payload?.ad_id ===
+          ad?.id
+        ) {
+
+          setComments(
+            (
+              prev
+            ) =>
+              prev.filter(
+                (
+                  c
+                ) =>
+                  c.id !==
+                  payload.commentId
+              )
+          );
+        }
+      }
+    );
+
+    const interval =
+      setInterval(() => {
+        loadComments(
+          true
+        );
+      }, 20000);
+
+    return () => {
+
+      socket.off(
+        "new_comment"
+      );
+
+      socket.off(
+        "comment_deleted"
+      );
+
+      clearInterval(
+        interval
+      );
+    };
+
+  }, [
+    ad?.id,
+    loadComments,
+  ]);
+
+  // ======================================================
+  // AUTO RESIZE
+  // ======================================================
+
+  useEffect(() => {
+
+    if (
+      textareaRef.current
+    ) {
+
+      textareaRef.current.style.height =
+        "auto";
+
+      textareaRef.current.style.height =
+        `${textareaRef.current.scrollHeight}px`;
+    }
+
+  }, [text]);
 
   // ======================================================
   // ADD COMMENT
   // ======================================================
 
   async function handleAddComment() {
-    if (!text.trim()) return;
+
+    if (
+      !text.trim()
+    ) {
+      return;
+    }
+
+    if (isOffline) {
+
+      return setError(
+        "⚠️ Connexion indisponible"
+      );
+    }
 
     try {
-      setSending(true);
 
-      const token =
-        localStorage.getItem(
-          "token"
-        );
+      setSending(
+        true
+      );
 
-      const res = await fetch(
-        `${API}/ads/${ad.id}/comments`,
-        {
-          method: "POST",
+      setError("");
 
-          headers: {
-            "Content-Type":
-              "application/json",
-
-            Authorization: `Bearer ${token}`,
-          },
-
-          body: JSON.stringify({
+      const res =
+        await api.post(
+          `/ads/${ad.id}/comments`,
+          {
             comment:
               text.trim(),
-          }),
+          }
+        );
+
+      const data =
+        res.data;
+
+      const newComment =
+        {
+          ...data,
+
+          text:
+            data?.text ||
+            text.trim(),
+
+          username:
+            currentUser
+              ?.username ||
+            "Vous",
+
+          likes_count: 0,
+
+          replies: [],
+        };
+
+      setComments(
+        (
+          prev
+        ) => [
+          newComment,
+          ...prev,
+        ]
+      );
+
+      setText("");
+
+      setShowComments(
+        true
+      );
+
+      socket.emit(
+        "new_comment",
+        {
+          ad_id:
+            ad.id,
         }
       );
 
-      const data =
-        await res.json();
-
-      if (!res.ok) {
-        throw new Error(
-          data?.error ||
-            "Erreur commentaire"
-        );
-      }
-
-      const newComment = {
-        ...data,
-
-        text:
-          data?.text ||
-          text.trim(),
-
-        username:
-          currentUser
-            ?.username ||
-          "Vous",
-
-        likes_count: 0,
-
-        replies: [],
-      };
-
-      setComments((prev) => [
-        newComment,
-        ...prev,
-      ]);
-
-      setText("");
-      setShowComments(true);
     } catch (err) {
-      console.error(err);
+
+      console.error(
+        err
+      );
 
       setError(
         err?.message ||
           "Impossible d’envoyer"
       );
+
     } finally {
-      setSending(false);
+
+      setSending(
+        false
+      );
+    }
+  }
+
+  // ======================================================
+  // DELETE COMMENT
+  // ======================================================
+
+  async function deleteComment(
+    id
+  ) {
+
+    if (
+      !window.confirm(
+        "Supprimer ce commentaire ?"
+      )
+    ) {
+      return;
+    }
+
+    try {
+
+      await api.delete(
+        `/ads/comments/${id}`
+      );
+
+      setComments(
+        (
+          prev
+        ) =>
+          prev.filter(
+            (
+              c
+            ) =>
+              c.id !== id
+          )
+      );
+
+      socket.emit(
+        "comment_deleted",
+        {
+          ad_id:
+            ad.id,
+          commentId:
+            id,
+        }
+      );
+
+    } catch (err) {
+
+      console.error(
+        err
+      );
+
+      setError(
+        err?.message ||
+          "Erreur suppression"
+      );
     }
   }
 
@@ -717,34 +1120,58 @@ export default function AdComments({
   // LIKE
   // ======================================================
 
-  function handleLike(comment) {
-    setComments((prev) =>
-      prev.map((c) => {
-        if (
-          c.id !== comment.id
-        )
-          return c;
+  async function handleLike(
+    comment
+  ) {
 
-        const liked =
-          !c.liked;
+    try {
 
-        return {
-          ...c,
+      setComments(
+        (
+          prev
+        ) =>
+          prev.map(
+            (c) => {
 
-          liked,
+              if (
+                c.id !==
+                comment.id
+              ) {
+                return c;
+              }
 
-          likes_count:
-            liked
-              ? c.likes_count +
-                1
-              : Math.max(
-                  0,
-                  c.likes_count -
-                    1
-                ),
-        };
-      })
-    );
+              const liked =
+                !c.liked;
+
+              return {
+                ...c,
+
+                liked,
+
+                likes_count:
+                  liked
+                    ? c.likes_count +
+                      1
+                    : Math.max(
+                        0,
+                        c.likes_count -
+                          1
+                      ),
+              };
+            }
+          )
+      );
+
+      await api.post(
+        `/ads/comments/${comment.id}/like`
+      );
+
+    } catch (err) {
+
+      console.error(
+        err
+      );
+    }
   }
 
   // ======================================================
@@ -754,53 +1181,86 @@ export default function AdComments({
   async function submitReply(
     commentId
   ) {
-    if (!replyText.trim())
+
+    if (
+      !replyText.trim()
+    ) {
       return;
+    }
 
     try {
-      setSendingReply(true);
 
-      const newReply = {
-        id: Date.now(),
-
-        text: replyText,
-
-        username:
-          currentUser
-            ?.username ||
-          "Vous",
-
-        created_at:
-          new Date().toISOString(),
-      };
-
-      setComments((prev) =>
-        prev.map((c) => {
-          if (
-            c.id !== commentId
-          )
-            return c;
-
-          return {
-            ...c,
-
-            replies: [
-              ...c.replies,
-              newReply,
-            ],
-          };
-        })
+      setSendingReply(
+        true
       );
 
-      setReplyText("");
-      setReplyingTo(null);
+      const res =
+        await api.post(
+          `/ads/comments/${commentId}/reply`,
+          {
+            reply:
+              replyText,
+          }
+        );
+
+      const reply =
+        res.data;
+
+      setComments(
+        (
+          prev
+        ) =>
+          prev.map(
+            (c) => {
+
+              if (
+                c.id !==
+                commentId
+              ) {
+                return c;
+              }
+
+              return {
+                ...c,
+
+                replies: [
+                  ...c.replies,
+                  reply,
+                ],
+              };
+            }
+          )
+      );
+
+      setReplyText(
+        ""
+      );
+
+      setReplyingTo(
+        null
+      );
+
+    } catch (err) {
+
+      console.error(
+        err
+      );
+
+      setError(
+        err?.message ||
+          "Erreur réponse"
+      );
+
     } finally {
-      setSendingReply(false);
+
+      setSendingReply(
+        false
+      );
     }
   }
 
   // ======================================================
-  // TOTAL REACTIONS
+  // TOTAL LIKES
   // ======================================================
 
   const totalLikes =
@@ -810,8 +1270,10 @@ export default function AdComments({
         comment
       ) =>
         acc +
-        (comment.likes_count ||
-          0),
+        (
+          comment.likes_count ||
+          0
+        ),
       0
     );
 
@@ -819,8 +1281,11 @@ export default function AdComments({
   // DISABLED
   // ======================================================
 
-  if (!ad?.comments_enabled)
+  if (
+    !ad?.comments_enabled
+  ) {
     return null;
+  }
 
   // ======================================================
   // UI
@@ -838,7 +1303,9 @@ export default function AdComments({
         shadow-[0_10px_50px_rgba(0,0,0,0.45)]
       "
     >
-      {/* TOP REACTIONS BAR */}
+
+      {/* HEADER */}
+
       <div
         className="
           px-5
@@ -848,14 +1315,19 @@ export default function AdComments({
           flex
           items-center
           justify-between
+          flex-wrap
+          gap-3
         "
       >
+
         {/* LEFT */}
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-3">
+
           <div
             className="
-              w-7
-              h-7
+              w-8
+              h-8
               rounded-full
               bg-pink-500
               flex
@@ -873,55 +1345,130 @@ export default function AdComments({
             />
           </div>
 
-          <span
+          <div>
+
+            <div
+              className="
+                text-white
+                font-semibold
+              "
+            >
+              Réactions & commentaires
+            </div>
+
+            <div
+              className="
+                text-xs
+                text-gray-400
+              "
+            >
+              {comments.length} commentaires • {totalLikes} réactions
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* RIGHT */}
+
+        <div className="flex items-center gap-2">
+
+          {isOffline && (
+            <div
+              className="
+                flex
+                items-center
+                gap-2
+                text-xs
+                text-red-400
+                bg-red-500/10
+                border
+                border-red-500/20
+                px-3
+                py-1.5
+                rounded-full
+              "
+            >
+              <WifiOff
+                size={13}
+              />
+              Hors ligne
+            </div>
+          )}
+
+          <button
+            onClick={() =>
+              loadComments()
+            }
+            disabled={
+              refreshing
+            }
             className="
-              text-gray-200
+              flex
+              items-center
+              gap-2
+              text-sm
+              px-3
+              py-2
+              rounded-full
+              bg-white/5
+              hover:bg-white/10
+              text-gray-300
+              transition
+            "
+          >
+            <RefreshCw
+              size={15}
+              className={
+                refreshing
+                  ? "animate-spin"
+                  : ""
+              }
+            />
+
+            Actualiser
+          </button>
+
+          <button
+            onClick={() =>
+              setShowComments(
+                !showComments
+              )
+            }
+            className="
+              flex
+              items-center
+              gap-2
+              text-gray-300
+              hover:text-white
+              transition
               text-sm
               font-medium
             "
           >
-            {totalLikes} réactions
-          </span>
+
+            <MessageCircle
+              size={16}
+            />
+
+            {showComments ? (
+              <ChevronUp
+                size={16}
+              />
+            ) : (
+              <ChevronDown
+                size={16}
+              />
+            )}
+
+          </button>
+
         </div>
 
-        {/* RIGHT */}
-        <button
-          onClick={() =>
-            setShowComments(
-              !showComments
-            )
-          }
-          className="
-            flex
-            items-center
-            gap-2
-            text-gray-300
-            hover:text-white
-            transition
-            text-sm
-            font-medium
-          "
-        >
-          <MessageCircle
-            size={16}
-          />
-
-          {comments.length} commentaires
-          disponibles
-
-          {showComments ? (
-            <ChevronUp
-              size={16}
-            />
-          ) : (
-            <ChevronDown
-              size={16}
-            />
-          )}
-        </button>
       </div>
 
-      {/* COMMENTS SECTION */}
+      {/* COMMENTS */}
+
       {showComments && (
         <div
           className="
@@ -931,7 +1478,9 @@ export default function AdComments({
             overflow-y-auto
           "
         >
+
           {loading ? (
+
             <div
               className="
                 flex
@@ -945,14 +1494,17 @@ export default function AdComments({
               <Loader2 className="animate-spin" />
               Chargement...
             </div>
+
           ) : comments.length ===
             0 ? (
+
             <div
               className="
                 text-center
                 py-12
               "
             >
+
               <MessageCircle
                 size={40}
                 className="
@@ -965,8 +1517,11 @@ export default function AdComments({
               <p className="text-gray-400">
                 Aucun commentaire
               </p>
+
             </div>
+
           ) : (
+
             comments.map(
               (
                 comment,
@@ -993,6 +1548,9 @@ export default function AdComments({
                       c.id
                     )
                   }
+                  onDelete={
+                    deleteComment
+                  }
                   replyingTo={
                     replyingTo
                   }
@@ -1011,11 +1569,14 @@ export default function AdComments({
                 />
               )
             )
+
           )}
+
         </div>
       )}
 
-      {/* COMMENT INPUT */}
+      {/* INPUT */}
+
       <div
         className="
           border-t
@@ -1024,6 +1585,7 @@ export default function AdComments({
           bg-[#0F172A]
         "
       >
+
         {error && (
           <div
             className="
@@ -1043,7 +1605,9 @@ export default function AdComments({
         )}
 
         <div className="flex gap-3 items-end">
+
           {/* AVATAR */}
+
           <div
             className="
               w-11
@@ -1067,7 +1631,9 @@ export default function AdComments({
           </div>
 
           {/* INPUT */}
+
           <div className="flex-1">
+
             <div
               className="
                 bg-[#111827]
@@ -1080,7 +1646,9 @@ export default function AdComments({
                 transition-all
               "
             >
+
               <textarea
+                ref={textareaRef}
                 rows={1}
                 placeholder="Écrire un commentaire..."
                 value={text}
@@ -1097,6 +1665,7 @@ export default function AdComments({
                   text-white
                   placeholder:text-gray-500
                   text-sm
+                  max-h-[180px]
                 "
               />
 
@@ -1108,6 +1677,7 @@ export default function AdComments({
                   justify-between
                 "
               >
+
                 <button
                   className="
                     text-gray-500
@@ -1146,6 +1716,7 @@ export default function AdComments({
                     shadow-lg
                   "
                 >
+
                   {sending ? (
                     <>
                       <Loader2
@@ -1162,12 +1733,19 @@ export default function AdComments({
                       Publier
                     </>
                   )}
+
                 </button>
+
               </div>
+
             </div>
+
           </div>
+
         </div>
+
       </div>
+
     </div>
   );
 }

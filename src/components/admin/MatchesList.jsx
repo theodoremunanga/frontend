@@ -1,32 +1,11 @@
 import { useState } from "react";
-import axios from "axios";
+
 
 // ======================================================
 // API CONFIG
 // ======================================================
 
-const API_URL =
-  import.meta.env.VITE_API_URL;
-
-if (!API_URL) {
-  throw new Error(
-    "❌ VITE_API_URL is missing"
-  );
-}
-
-const api = axios.create({
-  baseURL: `${API_URL}/api`,
-
-  timeout: 15000,
-
-  withCredentials: true,
-
-  headers: {
-    "Content-Type":
-      "application/json",
-  },
-});
-
+import api from "../services/api";
 // ======================================================
 // TOKEN INTERCEPTOR
 // ======================================================
