@@ -6,7 +6,7 @@ import {
   useMemo,
 } from "react";
 
-import axios from "axios";
+import api from "../services/api";
 import { io } from "socket.io-client";
 
 import DashboardStats from "./admin/DashboardStats";
@@ -36,7 +36,8 @@ if (!API_URL) {
   );
 }
 
-const SOCKET_URL = API_URL;
+const SOCKET_URL =
+  API_URL.replace("/api", "");
 
 const NAVBAR_HEIGHT = 70;
 
@@ -50,72 +51,19 @@ const MAX_RECONNECT_ATTEMPTS = 10;
 // AXIOS
 // ======================================================
 
-const api = axios.create({
-  baseURL: `${API_URL}/api`,
-
-  timeout: 15000,
-
-  withCredentials: true,
-
-  headers: {
-    "Content-Type":
-      "application/json",
-  },
-});
+// supprimé
 
 // ======================================================
 // REQUEST INTERCEPTOR
 // ======================================================
 
-api.interceptors.request.use(
-  (config) => {
-    const token =
-      localStorage.getItem(
-        "token"
-      );
-
-    if (token) {
-      config.headers.Authorization =
-        `Bearer ${token}`;
-    }
-
-    return config;
-  },
-
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+   // supprimé
 
 // ======================================================
 // RESPONSE INTERCEPTOR
 // ======================================================
 
-api.interceptors.response.use(
-  (response) => response,
-
-  (error) => {
-    console.error(
-      "❌ API ERROR:",
-      error
-    );
-
-    // TOKEN EXPIRED
-    if (
-      error.response?.status ===
-      401
-    ) {
-      localStorage.removeItem(
-        "token"
-      );
-
-      window.location.href =
-        "/login";
-    }
-
-    return Promise.reject(error);
-  }
-);
+   // supprimé
 
 // ======================================================
 // HELPERS
@@ -576,35 +524,82 @@ export default function AdminDashboard() {
   // ======================================================
 
   const filterData =
-    useCallback(
-      (data) => {
-        if (!search.trim()) {
-          return data;
-        }
+  useCallback(
+    (data) => {
+      if (!search.trim()) {
+        return data;
+      }
 
-        const q =
-          search.toLowerCase();
+      const q =
+        search.toLowerCase();
 
-        return data.filter((item) =>
-          Object.values(item)
-            .join(" ")
-            .toLowerCase()
-            .includes(q)
-         );
-      },
-      [search]
-    );
+      return data.filter((item) =>
+        Object.values(item)
+          .join(" ")
+          .toLowerCase()
+          .includes(q)
+      );
+    },
+    [search]
+  );
 
-    const isOffline =
-      !connected;
-        {isOffline && (
-          <div style={{
-            color: "#ef4444",
-            fontWeight: 700
-         }}>
-            ⚠️ Mode hors ligne
-         </div>
-    )}
+// ======================================================
+// OFFLINE STATE
+// ======================================================
+
+const isOffline = !connected;
+  {/* HEADER */}
+
+     <div style={header}>
+       <div>
+         <div style={pageTitle}>
+           {tabTitles[tab] || "Admin"}
+     </div>
+
+     <div style={pageSub}>
+         Dernière mise à jour :{" "}
+       {formatDate(lastRefresh)}
+    </div>
+  </div>
+
+  <div style={headerActions}>
+    <input
+      placeholder="Recherche globale..."
+      value={search}
+      onChange={(e) =>
+        setSearch(e.target.value)
+      }
+      style={searchBox}
+    />
+
+    <button
+      onClick={fetchData}
+      style={refreshBtn}
+    >
+      🔄 Actualiser
+    </button>
+  </div>
+</div>
+
+{/* OFFLINE WARNING */}
+
+{isOffline && (
+  <div
+    style={{
+      background:
+        "rgba(239,68,68,0.15)",
+      border:
+        "1px solid rgba(239,68,68,0.4)",
+      color: "#ef4444",
+      padding: 14,
+      borderRadius: 14,
+      marginBottom: 20,
+      fontWeight: 700,
+    }}
+  >
+    ⚠️ Mode hors ligne
+  </div>
+)}
 
   // ======================================================
   // PAGINATION

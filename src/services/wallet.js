@@ -1,4 +1,4 @@
-import api from "../api";
+import api from "../services/api";
 
 export const deposit = (amount, phone) =>
   api.post("/deposit", { amount, phone });

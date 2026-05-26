@@ -1,5 +1,5 @@
 import { useState } from "react";
-import api from "../api";
+import api from "../services/api";
 
 export default function Deposit({ refresh }) {
   const [amount, setAmount] = useState("");
