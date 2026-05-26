@@ -30,14 +30,28 @@ import {
 } from "lucide-react";
 
 // ======================================================
-// CONFIG
+// CONFIGURATION PROPRE
 // ======================================================
 
-const BASE_URL =
-  "http://192.168.42.106:3000";
+// ❌ FINI LES IP LOCALES EN DUR
+// ❌ FINI LES localhost PARTOUT
+// ❌ FINI LES 192.168.x.x CASSÉS EN PRODUCTION
+//
+// Ce composant utilise maintenant
+// l'URL centrale définie dans VITE_API_URL.
+//
+// Exemple .env :
+// VITE_API_URL=https://api.6betball.com/api
+//
+// Le socket récupère automatiquement
+// la base du backend proprement.
 
-const API =
-  `${BASE_URL}/api/competitions`;
+const API_URL =
+  import.meta.env.VITE_API_URL ||
+  "https://backend-ad3t.onrender.com/api";
+
+const SOCKET_URL =
+  API_URL.replace("/api", "");
 
 // ======================================================
 // TOKEN
@@ -56,13 +70,12 @@ function getToken() {
 // ======================================================
 
 const api = axios.create({
-  baseURL: API,
+  baseURL: `${API_URL}/competitions`,
   timeout: 15000,
 });
 
 api.interceptors.request.use(
   (config) => {
-
     const token = getToken();
 
     if (token) {
@@ -81,12 +94,11 @@ api.interceptors.response.use(
   (response) => response,
 
   (error) => {
-
     if (
       error?.response?.status === 401
     ) {
       console.warn(
-        "🔒 Unauthorized request"
+        "🔒 Session expirée"
       );
     }
 
@@ -98,13 +110,17 @@ api.interceptors.response.use(
 // SOCKET
 // ======================================================
 
-const socket = io(BASE_URL, {
+const socket = io(SOCKET_URL, {
   transports: [
     "websocket",
     "polling",
   ],
 
   autoConnect: false,
+
+  reconnection: true,
+  reconnectionAttempts: 10,
+  reconnectionDelay: 2000,
 
   auth: {
     token: getToken(),
@@ -118,7 +134,6 @@ const socket = io(BASE_URL, {
 function formatCountdown(
   seconds
 ) {
-
   const mins = Math.floor(
     seconds / 60
   );
@@ -140,13 +155,12 @@ function formatMoney(value) {
 }
 
 // ======================================================
-// NORMALIZE
+// NORMALIZER
 // ======================================================
 
 function normalizeCompetition(
   competition
 ) {
-
   const currentPlayers =
     Number(
       competition.players_count ||
@@ -160,10 +174,6 @@ function normalizeCompetition(
       competition.max_players || 2
     );
 
-  // ======================================================
-  // MATCH DATA
-  // ======================================================
-
   const matchId =
     competition.match_id ||
     competition.firstMatchId ||
@@ -174,16 +184,8 @@ function normalizeCompetition(
   const matches =
     competition.matches || [];
 
-  // ======================================================
-  // READY = MATCH EXISTS
-  // ======================================================
-
   const ready =
     !!matchId;
-
-  // ======================================================
-  // COUNTDOWN
-  // ======================================================
 
   const countdown =
     Number(
@@ -267,7 +269,6 @@ export default function Competitions() {
   async function fetchCompetitions(
     silent = false
   ) {
-
     try {
 
       if (!silent) {
@@ -279,7 +280,7 @@ export default function Competitions() {
       setError("");
 
       console.log(
-        "📡 Loading competitions..."
+        "📡 Chargement compétitions..."
       );
 
       const [
@@ -290,11 +291,6 @@ export default function Competitions() {
         api.get("/stats"),
       ]);
 
-      console.log(
-        "✅ competitions:",
-        competitionsRes.data
-      );
-
       let competitionsData = [];
 
       if (
@@ -302,7 +298,6 @@ export default function Competitions() {
           competitionsRes.data
         )
       ) {
-
         competitionsData =
           competitionsRes.data;
 
@@ -312,7 +307,6 @@ export default function Competitions() {
             ?.competitions
         )
       ) {
-
         competitionsData =
           competitionsRes.data
             .competitions;
@@ -323,7 +317,6 @@ export default function Competitions() {
             ?.data
         )
       ) {
-
         competitionsData =
           competitionsRes.data
             .data;
@@ -371,21 +364,29 @@ export default function Competitions() {
     } catch (err) {
 
       console.error(
-        "❌ competitions error:",
+        "❌ ERREUR COMPÉTITIONS:",
         err
       );
 
       console.error(
-        "❌ response:",
+        "❌ RESPONSE:",
         err?.response?.data
       );
 
       if (
+        err?.code ===
+        "ERR_NETWORK"
+      ) {
+        setError(
+          "Backend inaccessible. Vérifiez VITE_API_URL et le serveur."
+        );
+
+      } else if (
         err?.response?.status === 401
       ) {
 
         setError(
-          "Accès non autorisé."
+          "Session expirée."
         );
 
       } else {
@@ -393,7 +394,7 @@ export default function Competitions() {
         setError(
           err?.response?.data
             ?.message ||
-            "Impossible de charger les compétitions."
+          "Impossible de charger les tournois."
         );
       }
 
@@ -422,9 +423,8 @@ export default function Competitions() {
     socket.on(
       "connect",
       () => {
-
         console.log(
-          "✅ Socket connected"
+          "✅ Socket connecté"
         );
 
         setSocketConnected(true);
@@ -434,67 +434,57 @@ export default function Competitions() {
     socket.on(
       "disconnect",
       () => {
-
         console.log(
-          "❌ Socket disconnected"
+          "❌ Socket déconnecté"
         );
 
         setSocketConnected(false);
       }
     );
 
-    socket.on(
+    // ======================================================
+    // LIVE EVENTS
+    // ======================================================
+
+    const realtimeEvents = [
       "competition_created",
-      () =>
-        fetchCompetitions(true)
-    );
-
-    socket.on(
       "competition_updated",
-      () =>
-        fetchCompetitions(true)
-    );
-
-    socket.on(
       "competition_deleted",
-      () =>
-        fetchCompetitions(true)
-    );
-
-    socket.on(
       "competition_ready",
-      () =>
-        fetchCompetitions(true)
-    );
-
-    socket.on(
       "player_joined",
-      () =>
-        fetchCompetitions(true)
-    );
-
-    socket.on(
       "match_created",
-      () =>
-        fetchCompetitions(true)
+      "competition_started",
+      "competition_finished",
+    ];
+
+    realtimeEvents.forEach(
+      (eventName) => {
+        socket.on(
+          eventName,
+          () =>
+            fetchCompetitions(true)
+        );
+      }
     );
 
-    socket.on(
-      "competition_started",
-      () =>
-        fetchCompetitions(true)
-    );
+    // ======================================================
+    // AUTO REFRESH
+    // ======================================================
 
     const interval =
       setInterval(() => {
         fetchCompetitions(true);
-      }, 10000);
+      }, 15000);
 
     return () => {
 
       clearInterval(interval);
 
-      socket.removeAllListeners();
+      realtimeEvents.forEach(
+        (eventName) => {
+          socket.off(eventName);
+        }
+      );
 
       socket.disconnect();
     };
@@ -568,15 +558,10 @@ export default function Competitions() {
           `/${competitionId}/join`
         );
 
-      console.log(
-        "✅ joined:",
-        response.data
-      );
-
       alert(
         response?.data
           ?.message ||
-          "Participation réussie."
+        "Participation réussie."
       );
 
       fetchCompetitions(true);
@@ -584,21 +569,16 @@ export default function Competitions() {
     } catch (err) {
 
       console.error(
-        "❌ join error:",
+        "❌ JOIN ERROR:",
         err
-      );
-
-      console.error(
-        "❌ join response:",
-        err?.response?.data
       );
 
       alert(
         err?.response?.data
           ?.message ||
-          err?.response?.data
-            ?.error ||
-          "Erreur participation."
+        err?.response?.data
+          ?.error ||
+        "Erreur participation."
       );
 
     } finally {
@@ -618,7 +598,7 @@ export default function Competitions() {
     if (!competition.match_id) {
 
       alert(
-        "Match non encore généré."
+        "Match non généré."
       );
 
       return;
@@ -630,12 +610,10 @@ export default function Competitions() {
     );
 
     alert(
-      `🎮 Match prêt : #${competition.match_id}`
+      `🎮 Match #${competition.match_id}`
     );
 
-    // navigate(
-    //   `/match/${competition.match_id}`
-    // );
+    // navigate(`/match/${competition.match_id}`);
   }
 
   // ======================================================
@@ -693,12 +671,13 @@ export default function Competitions() {
           </MainTitle>
 
           <Subtitle>
-            Plateforme de compétitions
-            eSport temps réel avec
-            matchmaking intelligent,
-            rounds automatiques,
-            countdown live et forfait
-            automatique.
+            Tournois eSport en
+            temps réel avec
+            matchmaking,
+            countdown live,
+            matchs automatiques
+            et synchronisation
+            socket.
           </Subtitle>
 
           <TopBar>

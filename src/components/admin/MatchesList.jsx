@@ -1,30 +1,25 @@
 import { useState } from "react";
-
-
-// ======================================================
-// API CONFIG
-// ======================================================
-
 import api from "../services/api";
+
 // ======================================================
 // TOKEN INTERCEPTOR
 // ======================================================
 
-api.interceptors.request.use(
-  (config) => {
-    const token =
-      localStorage.getItem(
-        "token"
-      );
+// évite de créer plusieurs interceptors
+if (!window.__MATCHES_INTERCEPTOR__) {
+  api.interceptors.request.use((config) => {
+    const token = localStorage.getItem("token");
 
     if (token) {
-      config.headers.Authorization =
-        `Bearer ${token}`;
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
     }
 
     return config;
-  }
-);
+  });
+
+  window.__MATCHES_INTERCEPTOR__ = true;
+}
 
 // ======================================================
 // COMPONENT
@@ -70,107 +65,110 @@ export default function MatchesList({
   // SAFE REFRESH
   // ====================================================
 
-  const refresh =
-    async () => {
-      try {
-        await onRefresh?.();
-      } catch (err) {
-        console.error(
-          "❌ Refresh error:",
-          err
-        );
-      }
-    };
+  const refresh = async () => {
+    try {
+      await onRefresh?.();
+    } catch (err) {
+      console.error(
+        "❌ Refresh error:",
+        err
+      );
+    }
+  };
 
   // ====================================================
   // CANCEL MATCH
   // ====================================================
 
-  const cancelMatch =
-    async (id) => {
-      const confirmCancel =
-        confirm(
-          "Annuler ce match ?"
-        );
+  const cancelMatch = async (id) => {
+    const confirmCancel = confirm(
+      "Annuler ce match ?"
+    );
 
-      if (!confirmCancel) {
-        return;
-      }
+    if (!confirmCancel) {
+      return;
+    }
 
-      try {
-        setLoadingId(id);
+    try {
+      setLoadingId(id);
 
-        await api.post(
-          `/admin/match/${id}/cancel`
-        );
+      // IMPORTANT :
+      // PAS DE /api ici
+      await api.post(
+        `/admin/match/${id}/cancel`
+      );
 
-        alert(
-          "✅ Match annulé"
-        );
+      alert("✅ Match annulé");
 
-        await refresh();
-      } catch (err) {
-        console.error(err);
+      await refresh();
+    } catch (err) {
+      console.error(
+        "❌ Cancel error:",
+        err
+      );
 
-        alert(
-          err?.response?.data
-            ?.error ||
-            "❌ Erreur annulation"
-        );
-      } finally {
-        setLoadingId(null);
-      }
-    };
+      alert(
+        err?.response?.data
+          ?.error ||
+          "❌ Erreur annulation"
+      );
+    } finally {
+      setLoadingId(null);
+    }
+  };
 
   // ====================================================
   // FORCE FINISH
   // ====================================================
 
-  const finishMatch =
-    async (id) => {
-      const confirmFinish =
-        confirm(
-          "Terminer ce match ?"
-        );
+  const finishMatch = async (id) => {
+    const confirmFinish = confirm(
+      "Terminer ce match ?"
+    );
 
-      if (!confirmFinish) {
-        return;
-      }
+    if (!confirmFinish) {
+      return;
+    }
 
-      try {
-        setLoadingId(id);
+    try {
+      setLoadingId(id);
 
-        await api.post(
-          `/admin/match/${id}/force-finish`
-        );
+      // IMPORTANT :
+      // PAS DE /api ici
+      await api.post(
+        `/admin/match/${id}/force-finish`
+      );
 
-        alert(
-          "✅ Match terminé"
-        );
+      alert(
+        "✅ Vous avez terminé ce match"
+      );
 
-        await refresh();
-      } catch (err) {
-        console.error(err);
+      await refresh();
+    } catch (err) {
+      console.error(
+        "❌ Finish error:",
+        err
+      );
 
-        alert(
-          err?.response?.data
-            ?.error ||
-            "❌ Erreur fin match"
-        );
-      } finally {
-        setLoadingId(null);
-      }
-    };
+      alert(
+        err?.response?.data
+          ?.error ||
+          "❌ Erreur fin match"
+      );
+    } finally {
+      setLoadingId(null);
+    }
+  };
 
   // ====================================================
   // VIEW PLAYERS
   // ====================================================
 
-  const viewPlayers = (
-    m
-  ) => {
+  const viewPlayers = (m) => {
     alert(
-      `👥 Joueurs\n\n${m.user1_name || "?"} VS ${m.user2_name || "?"}`
+      `👥 Joueurs\n\n${m.user1_name || "?"} VS ${
+        m.user2_name || "?"
+      }`
     );
   };
 
@@ -181,22 +179,23 @@ export default function MatchesList({
   const viewMatchState =
     async (match) => {
       try {
-        setSelectedMatch(
-          match
-        );
+        setSelectedMatch(match);
 
         setLoadingState(true);
 
+        // IMPORTANT :
+        // PAS DE /api ici
         const res =
           await api.get(
             `/admin/match/${match.id}/state`
           );
 
-        setMatchState(
-          res.data
-        );
+        setMatchState(res.data);
       } catch (err) {
-        console.error(err);
+        console.error(
+          "❌ State error:",
+          err
+        );
 
         alert(
           err?.response?.data
@@ -256,7 +255,6 @@ export default function MatchesList({
                 <div
                   style={{
                     ...subText,
-
                     color:
                       getStatusColor(
                         m.status

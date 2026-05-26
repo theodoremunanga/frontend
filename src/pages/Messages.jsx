@@ -25,7 +25,7 @@ import {
 const API =
   (
     import.meta.env.VITE_API_URL ||
-    "https://api.6betball.com/api"
+    "https://backend-ad3t.onrender.com/api" 
   ).replace(/\/+$/, "");
 
 const api = axios.create({
