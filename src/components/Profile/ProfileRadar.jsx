@@ -40,7 +40,7 @@ if (!API_URL) {
 }
 
 const PROFILE_ENDPOINT =
-  `${API_URL}/api/user/profile`;
+  `${API_URL}/user/profile`;
 
 // ======================================================
 // COMPONENT
