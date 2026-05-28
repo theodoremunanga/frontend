@@ -6,6 +6,8 @@ import axios from "axios";
  * =====================================================
  */
 
+const isDev = import.meta.env.DEV;
+
 export const API_URL =
   import.meta.env.VITE_API_URL ||
   "https://backend-ad3t.onrender.com/api";
@@ -26,9 +28,17 @@ if (!API_URL?.startsWith("http")) {
   );
 }
 
-// ======================================================
-// AXIOS INSTANCE
-// ======================================================
+if (!SOCKET_URL?.startsWith("http")) {
+  throw new Error(
+    `❌ Invalid VITE_SOCKET_URL: ${SOCKET_URL}`
+  );
+}
+
+/**
+ * =====================================================
+ * AXIOS INSTANCE
+ * =====================================================
+ */
 
 const api = axios.create({
   baseURL: API_URL,
@@ -44,9 +54,11 @@ const api = axios.create({
   },
 });
 
-// ======================================================
-// REQUEST INTERCEPTOR
-// ======================================================
+/**
+ * =====================================================
+ * REQUEST INTERCEPTOR
+ * =====================================================
+ */
 
 api.interceptors.request.use(
   (config) => {
@@ -54,17 +66,25 @@ api.interceptors.request.use(
       const token =
         localStorage.getItem("token");
 
-      // attach token safely
+      /**
+       * Attach JWT token
+       */
       if (token) {
-        config.headers = {
-          ...config.headers,
-          Authorization: `Bearer ${token}`,
-        };
+        config.headers.Authorization =
+          `Bearer ${token}`;
       }
 
+      /**
+       * Debug logs
+       */
       if (isDev) {
         console.log(
           `📡 ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`
+        );
+
+        console.log(
+          "🪪 TOKEN:",
+          token ? "FOUND" : "MISSING"
         );
       }
 
@@ -89,9 +109,11 @@ api.interceptors.request.use(
   }
 );
 
-// ======================================================
-// RESPONSE INTERCEPTOR
-// ======================================================
+/**
+ * =====================================================
+ * RESPONSE INTERCEPTOR
+ * =====================================================
+ */
 
 api.interceptors.response.use(
   (response) => {
@@ -105,9 +127,36 @@ api.interceptors.response.use(
   },
 
   async (error) => {
-    // ==================================================
-    // NETWORK ERROR
-    // ==================================================
+    /**
+     * =================================================
+     * TIMEOUT
+     * =================================================
+     */
+
+    if (
+      error.code === "ECONNABORTED"
+    ) {
+      console.error(
+        "⏳ REQUEST TIMEOUT"
+      );
+
+      return Promise.reject({
+        success: false,
+
+        timeout: true,
+
+        message:
+          "Le serveur met trop de temps à répondre",
+
+        originalError: error,
+      });
+    }
+
+    /**
+     * =================================================
+     * NETWORK ERROR
+     * =================================================
+     */
 
     if (!error.response) {
       console.error(
@@ -138,7 +187,6 @@ api.interceptors.response.use(
         "- Internet connection"
       );
 
-      // keep original axios error
       return Promise.reject({
         success: false,
 
@@ -151,28 +199,44 @@ api.interceptors.response.use(
       });
     }
 
-    // ==================================================
-    // STATUS
-    // ==================================================
+    /**
+     * =================================================
+     * RESPONSE DATA
+     * =================================================
+     */
 
     const status =
       error.response.status;
 
     const data =
-      error.response.data;
+      error.response.data || {};
 
     console.error(
       `❌ API ERROR ${status}`,
       data
     );
 
-    // ==================================================
-    // 401 UNAUTHORIZED
-    // ==================================================
+    /**
+     * =================================================
+     * 400 BAD REQUEST
+     * =================================================
+     */
+
+    if (status === 400) {
+      console.error(
+        "⚠️ BAD REQUEST"
+      );
+    }
+
+    /**
+     * =================================================
+     * 401 UNAUTHORIZED
+     * =================================================
+     */
 
     if (status === 401) {
       console.warn(
-        "🔒 Session expirée"
+        "🔒 SESSION EXPIRED"
       );
 
       localStorage.removeItem(
@@ -183,7 +247,9 @@ api.interceptors.response.use(
         "user"
       );
 
-      // avoid infinite redirect loop
+      /**
+       * Avoid redirect loop
+       */
       const currentPath =
         window.location.pathname;
 
@@ -204,75 +270,114 @@ api.interceptors.response.use(
       }
     }
 
-    // ==================================================
-    // 403
-    // ==================================================
+    /**
+     * =================================================
+     * 403 FORBIDDEN
+     * =================================================
+     */
 
     if (status === 403) {
       console.error(
-        "⛔ Access denied"
+        "⛔ ACCESS DENIED"
       );
     }
 
-    // ==================================================
-    // 404
-    // ==================================================
+    /**
+     * =================================================
+     * 404 NOT FOUND
+     * =================================================
+     */
 
     if (status === 404) {
       console.error(
-        "📭 Route not found"
+        "📭 ROUTE NOT FOUND"
       );
     }
 
-    // ==================================================
-    // 429
-    // ==================================================
+    /**
+     * =================================================
+     * 429 TOO MANY REQUESTS
+     * =================================================
+     */
 
     if (status === 429) {
       console.error(
-        "🚫 Too many requests"
+        "🚫 TOO MANY REQUESTS"
       );
     }
 
-    // ==================================================
-    // SERVER ERROR
-    // ==================================================
+    /**
+     * =================================================
+     * 500+ SERVER ERROR
+     * =================================================
+     */
 
     if (status >= 500) {
       console.error(
-        "🔥 Internal server error"
+        "🔥 INTERNAL SERVER ERROR"
       );
     }
 
-    // ==================================================
-    // TIMEOUT
-    // ==================================================
-
-    if (
-      error.code ===
-      "ECONNABORTED"
-    ) {
-      console.error(
-        "⏳ Request timeout"
-      );
-    }
+    /**
+     * =================================================
+     * FINAL ERROR OBJECT
+     * =================================================
+     */
 
     return Promise.reject({
       success: false,
 
       status,
 
-      ...(typeof data === "object"
-        ? data
-        : { message: data }),
+      message:
+        data.message ||
+        data.error ||
+        "Une erreur est survenue",
+
+      ...(
+        typeof data === "object"
+          ? data
+          : {}
+      ),
 
       originalError: error,
     });
   }
 );
 
-// ======================================================
-// EXPORT
-// ======================================================
+/**
+ * =====================================================
+ * OPTIONAL HELPERS
+ * =====================================================
+ */
+
+export const setAuthToken = (
+  token
+) => {
+  if (!token) return;
+
+  localStorage.setItem(
+    "token",
+    token
+  );
+
+  api.defaults.headers.common.Authorization =
+    `Bearer ${token}`;
+};
+
+export const clearAuth = () => {
+  localStorage.removeItem("token");
+
+  localStorage.removeItem("user");
+
+  delete api.defaults.headers.common
+    .Authorization;
+};
+
+/**
+ * =====================================================
+ * EXPORT
+ * =====================================================
+ */
 
 export default api;
