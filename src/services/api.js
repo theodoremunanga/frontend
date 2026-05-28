@@ -1,6 +1,13 @@
 import axios from "axios";
 
 // ======================================================
+// ENV
+// ======================================================
+
+const isDev =
+  import.meta.env.DEV;
+
+// ======================================================
 // API URL
 // ======================================================
 
@@ -9,13 +16,24 @@ const API_URL =
   "https://backend-ad3t.onrender.com/api";
 
 // ======================================================
+// VALIDATION
+// ======================================================
+
+if (!API_URL.startsWith("http")) {
+  throw new Error(
+    `❌ Invalid VITE_API_URL: ${API_URL}`
+  );
+}
+
+// ======================================================
 // AXIOS INSTANCE
 // ======================================================
 
 const api = axios.create({
   baseURL: API_URL,
 
-  timeout: 20000,
+  // Render free tier can sleep
+  timeout: 60000,
 
   withCredentials: true,
 
@@ -27,25 +45,37 @@ const api = axios.create({
 
 // ======================================================
 // REQUEST INTERCEPTOR
-// → ajoute automatiquement le token
 // ======================================================
 
 api.interceptors.request.use(
   (config) => {
-    const token =
-      localStorage.getItem("token");
+    try {
+      const token =
+        localStorage.getItem("token");
 
-    // attach JWT
-    if (token) {
-      config.headers.Authorization =
-        `Bearer ${token}`;
+      // attach token safely
+      if (token) {
+        config.headers = {
+          ...config.headers,
+          Authorization: `Bearer ${token}`,
+        };
+      }
+
+      if (isDev) {
+        console.log(
+          `📡 ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`
+        );
+      }
+
+      return config;
+    } catch (err) {
+      console.error(
+        "❌ REQUEST INTERCEPTOR ERROR",
+        err
+      );
+
+      return Promise.reject(err);
     }
-
-    console.log(
-      `📡 ${config.method?.toUpperCase()} ${config.url}`
-    );
-
-    return config;
   },
 
   (error) => {
@@ -60,21 +90,22 @@ api.interceptors.request.use(
 
 // ======================================================
 // RESPONSE INTERCEPTOR
-// → gestion globale des erreurs
 // ======================================================
 
 api.interceptors.response.use(
   (response) => {
-    console.log(
-      `✅ ${response.status} ${response.config.url}`
-    );
+    if (isDev) {
+      console.log(
+        `✅ ${response.status} ${response.config.url}`
+      );
+    }
 
     return response;
   },
 
-  (error) => {
+  async (error) => {
     // ==================================================
-    // BACKEND OFFLINE / CORS / NETWORK
+    // NETWORK ERROR
     // ==================================================
 
     if (!error.response) {
@@ -87,11 +118,11 @@ api.interceptors.response.use(
       );
 
       console.error(
-        "- Backend Render sleeping"
+        "- Render backend sleeping"
       );
 
       console.error(
-        "- CORS blocked"
+        "- Backend offline"
       );
 
       console.error(
@@ -99,31 +130,43 @@ api.interceptors.response.use(
       );
 
       console.error(
-        "- Internet issue"
+        "- CORS blocked"
       );
 
+      console.error(
+        "- Internet connection"
+      );
+
+      // keep original axios error
       return Promise.reject({
         success: false,
 
+        network: true,
+
         message:
           "Impossible de joindre le serveur",
+
+        originalError: error,
       });
     }
 
     // ==================================================
-    // ERROR STATUS
+    // STATUS
     // ==================================================
 
     const status =
       error.response.status;
 
+    const data =
+      error.response.data;
+
     console.error(
-      `❌ API ERROR ${status}:`,
-      error.response.data
+      `❌ API ERROR ${status}`,
+      data
     );
 
     // ==================================================
-    // SESSION EXPIRÉE / TOKEN INVALID
+    // 401 UNAUTHORIZED
     // ==================================================
 
     if (status === 401) {
@@ -139,32 +182,54 @@ api.interceptors.response.use(
         "user"
       );
 
-      // prevent redirect loop
+      // avoid infinite redirect loop
+      const currentPath =
+        window.location.pathname;
+
+      const publicRoutes = [
+        "/",
+        "/login",
+        "/register",
+      ];
+
       if (
-        window.location.pathname !==
-        "/"
+        !publicRoutes.includes(
+          currentPath
+        )
       ) {
-        window.location.href = "/";
+        setTimeout(() => {
+          window.location.replace("/");
+        }, 100);
       }
     }
 
     // ==================================================
-    // FORBIDDEN
+    // 403
     // ==================================================
 
     if (status === 403) {
       console.error(
-        "⛔ Accès refusé"
+        "⛔ Access denied"
       );
     }
 
     // ==================================================
-    // NOT FOUND
+    // 404
     // ==================================================
 
     if (status === 404) {
       console.error(
-        "📭 Route introuvable"
+        "📭 Route not found"
+      );
+    }
+
+    // ==================================================
+    // 429
+    // ==================================================
+
+    if (status === 429) {
+      console.error(
+        "🚫 Too many requests"
       );
     }
 
@@ -174,7 +239,7 @@ api.interceptors.response.use(
 
     if (status >= 500) {
       console.error(
-        "🔥 Erreur serveur"
+        "🔥 Internal server error"
       );
     }
 
@@ -187,15 +252,26 @@ api.interceptors.response.use(
       "ECONNABORTED"
     ) {
       console.error(
-        "⏳ Temps de réponse dépassé"
+        "⏳ Request timeout"
       );
     }
 
-    return Promise.reject(
-      error.response.data ||
-        error
-    );
+    return Promise.reject({
+      success: false,
+
+      status,
+
+      ...(typeof data === "object"
+        ? data
+        : { message: data }),
+
+      originalError: error,
+    });
   }
 );
+
+// ======================================================
+// EXPORT
+// ======================================================
 
 export default api;
