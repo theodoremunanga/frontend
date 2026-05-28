@@ -8,10 +8,15 @@ import {
 
 import socket from "../socket";
 
+const fetchData = useCallback(
+  async (silent = false) => {
+},
+[API, token, isOffline]
+);
+
 import SponsoredBanner from "../components/ads/SponsoredBanner";
 import AdCarousel from "../components/ads/AdCarousel";
 import AdComments from "../components/ads/AdComments";
-import styles from "./accueilStyles";
 
 import {
   getHomeFeedAds,
@@ -80,11 +85,8 @@ export default function Accueil({
   const [feedAds, setFeedAds] =
     useState([]);
 
-  const [isOffline, setIsOffline] = useState(
-    typeof navigator !== "undefined"
-      ? !navigator.onLine
-      : false
-    );
+  const [loadingAds, setLoadingAds] =
+    useState(true);
 
   const viewedAds = useRef(new Set());
 
@@ -123,38 +125,6 @@ export default function Accueil({
 
   const isFetching = useRef(false);
 
-  useEffect(() => {
-  const goOnline = () => {
-    setIsOffline(false);
-  };
-
-  const goOffline = () => {
-    setIsOffline(true);
-  };
-
-  window.addEventListener(
-    "online",
-    goOnline
-  );
-
-  window.addEventListener(
-    "offline",
-    goOffline
-  );
-
-  return () => {
-    window.removeEventListener(
-      "online",
-      goOnline
-    );
-
-    window.removeEventListener(
-      "offline",
-      goOffline
-    );
-  };
-}, []);
-
   // ================= LOAD ADS =================
   useEffect(() => {
     const loadAds = async () => {
@@ -171,7 +141,7 @@ export default function Accueil({
           err
         );
       } finally {
-        
+        setLoadingAds(false);
       }
     };
 
@@ -196,116 +166,133 @@ export default function Accueil({
    }
   };
 
- // ================= LOAD DATA =================
-const fetchData = useCallback(
-  async (silent = false) => {
-    if (!token) return;
+  // ================= LOAD DATA =================
+  const fetchData = async (
+    silent = false
+  ) => {
+   if (!token) return;
 
-    if (isFetching.current) return;
+   if (isFetching.current) return;
 
-    if (isOffline) {
-      setError("📡 Vous êtes hors ligne");
-      return;
-    }
+   if (isOffline) {
+    setError(
+      "📡 Vous êtes hors ligne"
+    );
+    return;
+   }
 
-    isFetching.current = true;
+   isFetching.current = true;
 
-    if (!silent) {
-      setLoading(true);
-    }
+   if (!silent) {
+    setLoading(true);
+   }
 
-    try {
-      const headers = {
-        Authorization: "Bearer " + token,
-      };
+   try {
+    const headers = {
+      Authorization:
+        "Bearer " + token,
+    };
 
-      const [openRes, myRes] = await Promise.all([
-        fetch(`${API}/match/open`, {
+    const [
+      openRes,
+      myRes,
+    ] = await Promise.all([
+      fetch(`${API}/match/open`, {
+        headers,
+      }),
+
+      fetch(
+        `${API}/match/my-active`,
+        {
           headers,
-        }),
+        }
+      ),
+    ]);
 
-        fetch(`${API}/match/my-active`, {
-          headers,
-        }),
-      ]);
+    if (
+      openRes.status === 401 ||
+      myRes.status === 401
+    ) {
+      localStorage.removeItem(
+        "token"
+      );
 
-      if (
-        openRes.status === 401 ||
-        myRes.status === 401
-      ) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-
-        setError("🔒 Session expirée");
-        return;
-      }
-
-      const [openData, myData] =
-        await Promise.all([
-          openRes
-            .json()
-            .catch(() => ({})),
-
-          myRes
-            .json()
-            .catch(() => ({})),
-        ]);
-
-      if (openRes.ok) {
-        setOpenChallenges(
-          openData.matches || []
-        );
-      }
-
-      if (myRes.ok) {
-        setMyGames(
-          myData.matches || []
-        );
-      }
-
-      setError("");
-    } catch (err) {
-      console.error(
-        "HOME FETCH ERROR:",
-        err
+      localStorage.removeItem(
+        "user"
       );
 
       setError(
-        "❌ Connexion serveur impossible"
+        "🔒 Session expirée"
       );
-    } finally {
-      isFetching.current = false;
-      setLoading(false);
-    }
-  },
-  [API, token, isOffline]
-);
 
-// ================= INITIAL LOAD =================
-useEffect(() => {
+      return;
+    }
+
+    const [
+      openData,
+      myData,
+    ] = await Promise.all([
+      openRes
+        .json()
+        .catch(() => ({})),
+
+      myRes
+        .json()
+        .catch(() => ({})),
+    ]);
+
+    if (openRes.ok) {
+      setOpenChallenges(
+        openData.matches || []
+      );
+    }
+
+    if (myRes.ok) {
+      setMyGames(
+        myData.matches || []
+      );
+    }
+
+    setError("");
+   } catch (err) {
+    console.error(
+      "HOME FETCH ERROR:",
+      err
+    );
+
+    setError(
+      "❌ Connexion serveur impossible"
+    );
+   } finally {
+    isFetching.current = false;
+    setLoading(false);
+   }
+};
+
+ useEffect(() => {
   fetchData();
-}, [fetchData]);
 
-// ================= AUTO REFRESH =================
-useEffect(() => {
-  const interval = setInterval(() => {
-    if (
-      document.visibilityState ===
-      "visible"
-    ) {
-      fetchData(true);
-    }
-  }, 15000);
+  const interval = setInterval(
+    () => {
+      if (
+        document.visibilityState ===
+        "visible"
+      ) {
+        fetchData(true);
+      }
+    },
+    15000
+  );
 
-  return () => clearInterval(interval);
-}, [fetchData]);
-
-// ================= RECONNECT =================
-useEffect(() => {
+  useEffect(() => {
   if (!isOffline) {
     fetchData(true);
   }
-}, [isOffline, fetchData]);
+  }, [isOffline, fetchData]);
+
+  return () =>
+    clearInterval(interval);
+}, [fetchData]);
 
 // ================= SOCKET REALTIME =================
   useEffect(() => {
@@ -673,7 +660,7 @@ useEffect(() => {
 
   // ================= UI =================
   return (
-    <div style={styles.container}>
+    <div style={container}>
       {/* ================= ADS TOP ================= */}
       <SponsoredBanner />
 
@@ -928,8 +915,7 @@ useEffect(() => {
                             <h3>
                               💰{" "}
                               {
-                                m.bet_amount,
-                                u.username
+                                m.bet
                               }{" "}
                               CDF
                             </h3>
@@ -941,8 +927,7 @@ useEffect(() => {
                             >
                               👤{" "}
                               {
-                                m.username 
-                                  || "Joueur"
+                                m.creator_name
                               }
                             </div>
 
@@ -1064,8 +1049,7 @@ useEffect(() => {
                             <h3>
                               💰{" "}
                               {
-                                m.bet_amount,
-                                  u.username
+                                m.bet
                               }{" "}
                               CDF
                             </h3>
@@ -1076,7 +1060,7 @@ useEffect(() => {
                               }
                             >
                               👤{" "}
-                              {m.username ||
+                              {m.creator_name ||
                                 "Joueur"}
                             </div>
 
@@ -1397,3 +1381,385 @@ function SectionTitle({
   );
 }
 
+// ================= STYLES =================
+const container = {
+  minHeight: "100vh",
+  background:
+    "linear-gradient(to bottom, #020617, #0f172a)",
+  color: "white",
+};
+
+const adsWrapper = {
+  maxWidth: 1300,
+  margin: "20px auto",
+  padding: "0 20px",
+};
+
+const feedAdCard = {
+  background:
+    "linear-gradient(to bottom, rgba(30,41,59,0.96), rgba(15,23,42,0.96))",
+  borderRadius: 28,
+  padding: 24,
+  marginBottom: 40,
+  border:
+    "1px solid rgba(255,255,255,0.08)",
+};
+
+const adTop = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 18,
+};
+
+const sponsoredBadge = {
+  background:
+    "linear-gradient(to right,#eab308,#f59e0b)",
+  color: "#111827",
+  padding: "6px 12px",
+  borderRadius: 999,
+  fontSize: 12,
+  fontWeight: "bold",
+};
+
+const advertiserName = {
+  opacity: 0.7,
+  fontSize: 14,
+};
+
+const adTitle = {
+  fontSize: 28,
+  fontWeight: 900,
+  marginBottom: 20,
+};
+
+const adImage = {
+  width: "100%",
+  borderRadius: 20,
+  marginBottom: 20,
+  maxHeight: 450,
+  objectFit: "cover",
+};
+
+const adDescription = {
+  opacity: 0.85,
+  lineHeight: 1.7,
+  marginBottom: 20,
+};
+
+const adButton = {
+  padding: "14px 22px",
+  border: "none",
+  borderRadius: 16,
+  background:
+    "linear-gradient(to right,#2563eb,#4f46e5)",
+  color: "white",
+  fontWeight: "bold",
+  cursor: "pointer",
+};
+
+const hero = {
+  position: "relative",
+  paddingBottom: 40,
+  overflow: "hidden",
+};
+
+const heroOverlay = {
+  position: "absolute",
+  inset: 0,
+  background:
+    "radial-gradient(circle at top, rgba(59,130,246,0.35), transparent 60%)",
+};
+
+const heroContent = {
+  position: "relative",
+  zIndex: 2,
+  maxWidth: 1300,
+  margin: "0 auto",
+  padding: "40px 20px",
+};
+
+const topBar = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 20,
+  flexWrap: "wrap",
+};
+
+const title = {
+  fontSize: 52,
+  fontWeight: 900,
+  marginBottom: 10,
+};
+
+const subtitle = {
+  opacity: 0.8,
+  fontSize: 18,
+};
+
+const profileCard = {
+  display: "flex",
+  alignItems: "center",
+  gap: 15,
+  background: "rgba(255,255,255,0.08)",
+  padding: "12px 18px",
+  borderRadius: 20,
+  backdropFilter: "blur(12px)",
+};
+
+const avatar = {
+  width: 50,
+  height: 50,
+  borderRadius: "50%",
+  background:
+    "linear-gradient(to bottom right, #2563eb, #7c3aed)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: 22,
+};
+
+const statsGrid = {
+  marginTop: 30,
+  display: "grid",
+  gridTemplateColumns:
+    "repeat(auto-fit,minmax(180px,1fr))",
+  gap: 20,
+};
+
+const statCard = {
+  background: "rgba(255,255,255,0.06)",
+  border: "1px solid rgba(255,255,255,0.08)",
+  borderRadius: 24,
+  padding: 24,
+  backdropFilter: "blur(10px)",
+};
+
+const statIcon = {
+  fontSize: 26,
+};
+
+const statValue = {
+  fontSize: 36,
+  fontWeight: 900,
+  marginTop: 12,
+};
+
+const statLabel = {
+  opacity: 0.7,
+};
+
+const content = {
+  maxWidth: 1300,
+  margin: "0 auto",
+  padding: "0 20px 60px",
+};
+
+const sectionTitle = {
+  fontSize: 28,
+  fontWeight: 900,
+  marginBottom: 18,
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+};
+
+const horizontalScroll = {
+  display: "flex",
+  gap: 20,
+  overflowX: "auto",
+  paddingBottom: 10,
+  marginBottom: 40,
+};
+
+const challengeCard = {
+  minWidth: 250,
+  background:
+    "linear-gradient(to bottom, rgba(30,41,59,0.95), rgba(15,23,42,0.95))",
+  borderRadius: 26,
+  padding: 24,
+  border: "1px solid rgba(255,255,255,0.06)",
+  display: "flex",
+  flexDirection: "column",
+  gap: 14,
+};
+
+const gameBadge = {
+  background: "#2563eb",
+  width: "fit-content",
+  padding: "6px 12px",
+  borderRadius: 999,
+  fontSize: 12,
+  fontWeight: "bold",
+};
+
+const smallText = {
+  fontSize: 13,
+  opacity: 0.8,
+};
+
+const statusBadge = {
+  padding: "6px 10px",
+  borderRadius: 999,
+  width: "fit-content",
+  fontSize: 12,
+  fontWeight: "bold",
+};
+
+const primaryButton = {
+  marginTop: 10,
+  padding: 14,
+  borderRadius: 14,
+  border: "none",
+  background:
+    "linear-gradient(to right, #22c55e, #16a34a)",
+  color: "white",
+  fontWeight: "bold",
+  cursor: "pointer",
+};
+
+const joinButton = {
+  ...primaryButton,
+  background:
+    "linear-gradient(to right, #2563eb, #1d4ed8)",
+};
+
+const disabledButton = {
+  ...primaryButton,
+  background: "#475569",
+  cursor: "not-allowed",
+};
+
+const grid = {
+  display: "grid",
+  gridTemplateColumns:
+    "repeat(auto-fit,minmax(340px,1fr))",
+  gap: 25,
+};
+
+const emptyBox = {
+  background: "rgba(255,255,255,0.05)",
+  padding: 25,
+  borderRadius: 24,
+  textAlign: "center",
+  opacity: 0.7,
+  marginBottom: 40,
+};
+
+const footer = {
+  marginTop: 70,
+  paddingTop: 30,
+  borderTop:
+    "1px solid rgba(255,255,255,0.08)",
+  textAlign: "center",
+};
+
+const errorStyle = {
+  background:
+    "linear-gradient(to right, #7f1d1d, #991b1b)",
+  padding: 16,
+  borderRadius: 18,
+  marginBottom: 25,
+  textAlign: "center",
+  fontWeight: "bold",
+};
+
+const loadingContainer = {
+  minHeight: "100vh",
+  background: "#020617",
+  color: "white",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  alignItems: "center",
+  gap: 20,
+};
+
+const spinner = {
+  width: 70,
+  height: 70,
+  border: "6px solid rgba(255,255,255,0.1)",
+  borderTop: "6px solid #2563eb",
+  borderRadius: "50%",
+  animation: "spin 1s linear infinite",
+};
+
+const gameCard = {
+  background:
+    "linear-gradient(to bottom, rgba(30,41,59,0.95), rgba(15,23,42,0.95))",
+  borderRadius: 30,
+  padding: 28,
+  boxShadow:
+    "0 15px 40px rgba(0,0,0,0.25)",
+};
+
+const gameTop = {
+  display: "flex",
+  gap: 18,
+  marginBottom: 20,
+};
+
+const gameIcon = {
+  fontSize: 50,
+};
+
+const gameDescription = {
+  opacity: 0.75,
+  marginTop: 6,
+  lineHeight: 1.5,
+};
+
+const availabilityBadge = {
+  width: "fit-content",
+  padding: "8px 14px",
+  borderRadius: 999,
+  fontSize: 12,
+  fontWeight: "bold",
+  marginBottom: 20,
+};
+
+const input = {
+  width: "100%",
+  padding: 15,
+  marginBottom: 15,
+  borderRadius: 16,
+  border: "1px solid rgba(255,255,255,0.08)",
+  background: "#1e293b",
+  color: "white",
+  fontSize: 15,
+};
+
+const launchButton = {
+  width: "100%",
+  padding: 16,
+  borderRadius: 18,
+  border: "none",
+  background:
+    "linear-gradient(to right, #2563eb, #4f46e5)",
+  color: "white",
+  fontWeight: "bold",
+  fontSize: 16,
+  cursor: "pointer",
+};
+
+const disabledContainer = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 18,
+};
+
+const disabledText = {
+  opacity: 0.7,
+  lineHeight: 1.6,
+};
+
+const disabledButtonLarge = {
+  width: "100%",
+  padding: 16,
+  borderRadius: 18,
+  border: "none",
+  background: "#334155",
+  color: "#94a3b8",
+  fontWeight: "bold",
+};
