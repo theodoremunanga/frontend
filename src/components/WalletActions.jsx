@@ -13,10 +13,10 @@ export default function WalletActions({ refresh }) {
 
   // 📱 NUMÉROS DES MOYENS DE PAIEMENT
   const methods = {
-    airtel: "0975551224",
-    mpesa: "000000000",
-    orange: "000000000",
-    usdt: "TRC20-ADRESSE-ICI"
+    airtel: "0973596027",
+    mpesa: "pas encore disponible",
+    orange: "pas encore disponible",
+    usdt: "pas encore disponible"
   };
 
   const reset = () => {
@@ -183,7 +183,7 @@ export default function WalletActions({ refresh }) {
                   </div>
 
                   <p className="text-xs mt-2 text-gray-600">
-                    ⚠ Envoyez exactement {amount || 0} CDF puis entrez la référence
+                    ⚠ Retrait de {amount || 0} CDF au +243 973596027 auprès de TUADILA GERARD MICHEL et référence {reference || "N/A"}
                   </p>
                 </div>
               )}
