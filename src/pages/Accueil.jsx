@@ -8,12 +8,6 @@ import {
 
 import socket from "../socket";
 
-const fetchData = useCallback(
-  async (silent = false) => {
-  },
-  [token, isOffline]
-);
-
 import SponsoredBanner from "../components/ads/SponsoredBanner";
 import AdCarousel from "../components/ads/AdCarousel";
 import AdComments from "../components/ads/AdComments";
