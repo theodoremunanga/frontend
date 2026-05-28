@@ -79,12 +79,11 @@ export default function Accueil({
   const [feedAds, setFeedAds] =
     useState([]);
 
-  const [loadingAds, setLoadingAds] =
-    useState(true);
-
   const [isOffline, setIsOffline] = useState(
-    !navigator.onLine
-  );
+    typeof navigator !== "undefined"
+      ? !navigator.onLine
+      : false
+    );
 
   const viewedAds = useRef(new Set());
 
@@ -171,7 +170,7 @@ export default function Accueil({
           err
         );
       } finally {
-        setLoadingAds(false);
+        
       }
     };
 
@@ -196,133 +195,116 @@ export default function Accueil({
    }
   };
 
-  // ================= LOAD DATA =================
-  const fetchData = async (
-    silent = false
-  ) => {
-   if (!token) return;
+ // ================= LOAD DATA =================
+const fetchData = useCallback(
+  async (silent = false) => {
+    if (!token) return;
 
-   if (isFetching.current) return;
+    if (isFetching.current) return;
 
-   if (isOffline) {
-    setError(
-      "📡 Vous êtes hors ligne"
-    );
-    return;
-   }
-
-   isFetching.current = true;
-
-   if (!silent) {
-    setLoading(true);
-   }
-
-   try {
-    const headers = {
-      Authorization:
-        "Bearer " + token,
-    };
-
-    const [
-      openRes,
-      myRes,
-    ] = await Promise.all([
-      fetch(`${API}/match/open`, {
-        headers,
-      }),
-
-      fetch(
-        `${API}/match/my-active`,
-        {
-          headers,
-        }
-      ),
-    ]);
-
-    if (
-      openRes.status === 401 ||
-      myRes.status === 401
-    ) {
-      localStorage.removeItem(
-        "token"
-      );
-
-      localStorage.removeItem(
-        "user"
-      );
-
-      setError(
-        "🔒 Session expirée"
-      );
-
+    if (isOffline) {
+      setError("📡 Vous êtes hors ligne");
       return;
     }
 
-    const [
-      openData,
-      myData,
-    ] = await Promise.all([
-      openRes
-        .json()
-        .catch(() => ({})),
+    isFetching.current = true;
 
-      myRes
-        .json()
-        .catch(() => ({})),
-    ]);
-
-    if (openRes.ok) {
-      setOpenChallenges(
-        openData.matches || []
-      );
+    if (!silent) {
+      setLoading(true);
     }
 
-    if (myRes.ok) {
-      setMyGames(
-        myData.matches || []
-      );
-    }
+    try {
+      const headers = {
+        Authorization: "Bearer " + token,
+      };
 
-    setError("");
-   } catch (err) {
-    console.error(
-      "HOME FETCH ERROR:",
-      err
-    );
+      const [openRes, myRes] = await Promise.all([
+        fetch(`${API}/match/open`, {
+          headers,
+        }),
 
-    setError(
-      "❌ Connexion serveur impossible"
-    );
-   } finally {
-    isFetching.current = false;
-    setLoading(false);
-   }
-};
+        fetch(`${API}/match/my-active`, {
+          headers,
+        }),
+      ]);
 
- useEffect(() => {
-  fetchData();
-
-  const interval = setInterval(
-    () => {
       if (
-        document.visibilityState ===
-        "visible"
+        openRes.status === 401 ||
+        myRes.status === 401
       ) {
-        fetchData(true);
-      }
-    },
-    15000
-  );
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
 
-  useEffect(() => {
+        setError("🔒 Session expirée");
+        return;
+      }
+
+      const [openData, myData] =
+        await Promise.all([
+          openRes
+            .json()
+            .catch(() => ({})),
+
+          myRes
+            .json()
+            .catch(() => ({})),
+        ]);
+
+      if (openRes.ok) {
+        setOpenChallenges(
+          openData.matches || []
+        );
+      }
+
+      if (myRes.ok) {
+        setMyGames(
+          myData.matches || []
+        );
+      }
+
+      setError("");
+    } catch (err) {
+      console.error(
+        "HOME FETCH ERROR:",
+        err
+      );
+
+      setError(
+        "❌ Connexion serveur impossible"
+      );
+    } finally {
+      isFetching.current = false;
+      setLoading(false);
+    }
+  },
+  [API, token, isOffline]
+);
+
+// ================= INITIAL LOAD =================
+useEffect(() => {
+  fetchData();
+}, [fetchData]);
+
+// ================= AUTO REFRESH =================
+useEffect(() => {
+  const interval = setInterval(() => {
+    if (
+      document.visibilityState ===
+      "visible"
+    ) {
+      fetchData(true);
+    }
+  }, 15000);
+
+  return () => clearInterval(interval);
+}, [fetchData]);
+
+// ================= RECONNECT =================
+useEffect(() => {
   if (!isOffline) {
     fetchData(true);
   }
-  }, [isOffline, fetchData]);
-
-  return () =>
-    clearInterval(interval);
-}, [fetchData]);
+}, [isOffline, fetchData]);
 
 // ================= SOCKET REALTIME =================
   useEffect(() => {
