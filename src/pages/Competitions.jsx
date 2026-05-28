@@ -30,28 +30,20 @@ import {
 } from "lucide-react";
 
 // ======================================================
-// CONFIGURATION PROPRE
+// ENV CONFIG
 // ======================================================
 
-// ❌ FINI LES IP LOCALES EN DUR
-// ❌ FINI LES localhost PARTOUT
-// ❌ FINI LES 192.168.x.x CASSÉS EN PRODUCTION
-//
-// Ce composant utilise maintenant
-// l'URL centrale définie dans VITE_API_URL.
-//
-// Exemple .env :
-// VITE_API_URL=https://api.6betball.com/api
-//
-// Le socket récupère automatiquement
-// la base du backend proprement.
-
-const API_URL =
-  import.meta.env.VITE_API_URL ||
-  "https://backend-ad3t.onrender.com/api";
+const API_BASE =
+  (
+    import.meta.env.VITE_API_URL ||
+    "https://backend-ad3t.onrender.com/api"
+  ).replace(/\/$/, "");
 
 const SOCKET_URL =
-  API_URL.replace("/api", "");
+  API_BASE.replace("/api", "");
+
+const API =
+  `${API_BASE}/competitions`;
 
 // ======================================================
 // TOKEN
@@ -70,8 +62,12 @@ function getToken() {
 // ======================================================
 
 const api = axios.create({
-  baseURL: `${API_URL}/competitions`,
-  timeout: 15000,
+  baseURL: API,
+  timeout: 20000,
+  headers: {
+    "Content-Type":
+      "application/json",
+  },
 });
 
 api.interceptors.request.use(
@@ -85,7 +81,6 @@ api.interceptors.request.use(
 
     return config;
   },
-
   (error) =>
     Promise.reject(error)
 );
@@ -119,8 +114,12 @@ const socket = io(SOCKET_URL, {
   autoConnect: false,
 
   reconnection: true,
+
   reconnectionAttempts: 10,
+
   reconnectionDelay: 2000,
+
+  timeout: 20000,
 
   auth: {
     token: getToken(),
@@ -155,7 +154,7 @@ function formatMoney(value) {
 }
 
 // ======================================================
-// NORMALIZER
+// NORMALIZE
 // ======================================================
 
 function normalizeCompetition(
@@ -230,11 +229,6 @@ function normalizeCompetition(
 // ======================================================
 
 export default function Competitions() {
-
-  // ======================================================
-  // STATES
-  // ======================================================
-
   const [competitions, setCompetitions] =
     useState([]);
 
@@ -270,7 +264,6 @@ export default function Competitions() {
     silent = false
   ) {
     try {
-
       if (!silent) {
         setLoading(true);
       }
@@ -280,7 +273,7 @@ export default function Competitions() {
       setError("");
 
       console.log(
-        "📡 Chargement compétitions..."
+        "📡 Loading competitions..."
       );
 
       const [
@@ -300,7 +293,6 @@ export default function Competitions() {
       ) {
         competitionsData =
           competitionsRes.data;
-
       } else if (
         Array.isArray(
           competitionsRes.data
@@ -310,7 +302,6 @@ export default function Competitions() {
         competitionsData =
           competitionsRes.data
             .competitions;
-
       } else if (
         Array.isArray(
           competitionsRes.data
@@ -364,13 +355,8 @@ export default function Competitions() {
     } catch (err) {
 
       console.error(
-        "❌ ERREUR COMPÉTITIONS:",
+        "❌ competitions error:",
         err
-      );
-
-      console.error(
-        "❌ RESPONSE:",
-        err?.response?.data
       );
 
       if (
@@ -378,7 +364,7 @@ export default function Competitions() {
         "ERR_NETWORK"
       ) {
         setError(
-          "Backend inaccessible. Vérifiez VITE_API_URL et le serveur."
+          "Le serveur backend est inaccessible."
         );
 
       } else if (
@@ -394,7 +380,7 @@ export default function Competitions() {
         setError(
           err?.response?.data
             ?.message ||
-          "Impossible de charger les tournois."
+            "Impossible de charger les compétitions."
         );
       }
 
@@ -423,8 +409,9 @@ export default function Competitions() {
     socket.on(
       "connect",
       () => {
+
         console.log(
-          "✅ Socket connecté"
+          "✅ Socket connected"
         );
 
         setSocketConnected(true);
@@ -434,19 +421,16 @@ export default function Competitions() {
     socket.on(
       "disconnect",
       () => {
+
         console.log(
-          "❌ Socket déconnecté"
+          "❌ Socket disconnected"
         );
 
         setSocketConnected(false);
       }
     );
 
-    // ======================================================
-    // LIVE EVENTS
-    // ======================================================
-
-    const realtimeEvents = [
+    const refreshEvents = [
       "competition_created",
       "competition_updated",
       "competition_deleted",
@@ -454,22 +438,13 @@ export default function Competitions() {
       "player_joined",
       "match_created",
       "competition_started",
-      "competition_finished",
     ];
 
-    realtimeEvents.forEach(
-      (eventName) => {
-        socket.on(
-          eventName,
-          () =>
-            fetchCompetitions(true)
-        );
-      }
-    );
-
-    // ======================================================
-    // AUTO REFRESH
-    // ======================================================
+    refreshEvents.forEach((evt) => {
+      socket.on(evt, () =>
+        fetchCompetitions(true)
+      );
+    });
 
     const interval =
       setInterval(() => {
@@ -480,10 +455,9 @@ export default function Competitions() {
 
       clearInterval(interval);
 
-      realtimeEvents.forEach(
-        (eventName) => {
-          socket.off(eventName);
-        }
+      refreshEvents.forEach(
+        (evt) =>
+          socket.off(evt)
       );
 
       socket.disconnect();
@@ -513,7 +487,6 @@ export default function Competitions() {
 
               return {
                 ...c,
-
                 countdown:
                   c.countdown - 1,
               };
@@ -541,7 +514,6 @@ export default function Competitions() {
         getToken();
 
       if (!token) {
-
         alert(
           "Veuillez vous connecter."
         );
@@ -561,7 +533,7 @@ export default function Competitions() {
       alert(
         response?.data
           ?.message ||
-        "Participation réussie."
+          "Participation réussie."
       );
 
       fetchCompetitions(true);
@@ -569,16 +541,16 @@ export default function Competitions() {
     } catch (err) {
 
       console.error(
-        "❌ JOIN ERROR:",
+        "❌ join error:",
         err
       );
 
       alert(
         err?.response?.data
           ?.message ||
-        err?.response?.data
-          ?.error ||
-        "Erreur participation."
+          err?.response?.data
+            ?.error ||
+          "Erreur participation."
       );
 
     } finally {
@@ -598,22 +570,14 @@ export default function Competitions() {
     if (!competition.match_id) {
 
       alert(
-        "Match non généré."
+        "Match non encore généré."
       );
 
       return;
     }
 
-    console.log(
-      "🎮 MATCH:",
-      competition
-    );
-
-    alert(
-      `🎮 Match #${competition.match_id}`
-    );
-
-    // navigate(`/match/${competition.match_id}`);
+    window.location.href =
+      `/match/${competition.match_id}`;
   }
 
   // ======================================================
@@ -650,14 +614,8 @@ export default function Competitions() {
 
     }, [competitions]);
 
-  // ======================================================
-  // RENDER
-  // ======================================================
-
   return (
     <Container>
-
-      {/* HERO */}
 
       <Hero>
 
@@ -671,13 +629,7 @@ export default function Competitions() {
           </MainTitle>
 
           <Subtitle>
-            Tournois eSport en
-            temps réel avec
-            matchmaking,
-            countdown live,
-            matchs automatiques
-            et synchronisation
-            socket.
+            Plateforme eSport temps réel.
           </Subtitle>
 
           <TopBar>
@@ -707,7 +659,6 @@ export default function Competitions() {
                 fetchCompetitions()
               }
             >
-
               <RefreshCw size={16} />
 
               {refreshing
@@ -722,299 +673,12 @@ export default function Competitions() {
 
       </Hero>
 
-      {/* ERROR */}
-
       {error && (
         <ErrorBox>
           <Lock size={18} />
           {error}
         </ErrorBox>
       )}
-
-      {/* STATS */}
-
-      <StatsGrid>
-
-        <StatCard>
-
-          <StatIcon>
-            <Trophy size={26} />
-          </StatIcon>
-
-          <StatValue>
-            {
-              stats.total_competitions
-            }
-          </StatValue>
-
-          <StatLabel>
-            Compétitions
-          </StatLabel>
-
-        </StatCard>
-
-        <StatCard>
-
-          <StatIcon>
-            <Flame size={26} />
-          </StatIcon>
-
-          <StatValue>
-            {
-              stats.live_competitions
-            }
-          </StatValue>
-
-          <StatLabel>
-            Tournois actifs
-          </StatLabel>
-
-        </StatCard>
-
-        <StatCard>
-
-          <StatIcon>
-            <Coins size={26} />
-          </StatIcon>
-
-          <StatValue>
-            {formatMoney(
-              stats.total_prize_pool
-            )}{" "}
-            CDF
-          </StatValue>
-
-          <StatLabel>
-            Prize Pool
-          </StatLabel>
-
-        </StatCard>
-
-      </StatsGrid>
-
-      {/* LIST */}
-
-      <Section>
-
-        <SectionTitle>
-          <Activity size={24} />
-          Compétitions Disponibles
-        </SectionTitle>
-
-        {loading ? (
-
-          <Loader>
-            Chargement...
-          </Loader>
-
-        ) : sortedCompetitions.length ===
-          0 ? (
-
-          <Empty>
-            Aucun tournoi disponible.
-          </Empty>
-
-        ) : (
-
-          <Grid>
-
-            {sortedCompetitions.map(
-              (competition) => {
-
-                const isReady =
-                  competition.ready;
-
-                return (
-
-                  <Card
-                    key={
-                      competition.id
-                    }
-                  >
-
-                    <CardHeader>
-
-                      <CardTitle>
-                        <Swords
-                          size={18}
-                        />
-                        {
-                          competition.name
-                        }
-                      </CardTitle>
-
-                      <StatusBadge
-                        $ready={
-                          isReady
-                        }
-                      >
-
-                        {isReady
-                          ? "READY"
-                          : competition.status}
-
-                      </StatusBadge>
-
-                    </CardHeader>
-
-                    <Info>
-
-                      <InfoRow>
-
-                        <Users
-                          size={16}
-                        />
-
-                        {
-                          competition.currentPlayers
-                        }
-                        /
-                        {
-                          competition.maxPlayers
-                        }
-
-                        joueurs
-
-                      </InfoRow>
-
-                      <InfoRow>
-
-                        <Wallet
-                          size={16}
-                        />
-
-                        Entry :
-                        {" "}
-                        {
-                          formatMoney(
-                            competition.entry_fee
-                          )
-                        }
-                        {" "}
-                        CDF
-
-                      </InfoRow>
-
-                      <InfoRow>
-
-                        <Trophy
-                          size={16}
-                        />
-
-                        Prize :
-                        {" "}
-                        {
-                          formatMoney(
-                            competition.prize_pool
-                          )
-                        }
-                        {" "}
-                        CDF
-
-                      </InfoRow>
-
-                      {competition.match_id && (
-                        <InfoRow>
-
-                          <PlayCircle
-                            size={16}
-                          />
-
-                          Match ID :
-                          {" "}
-                          #
-                          {
-                            competition.match_id
-                          }
-
-                        </InfoRow>
-                      )}
-
-                    </Info>
-
-                    {isReady ? (
-
-                      <ReadyBox>
-
-                        <ReadyTitle>
-
-                          <PlayCircle
-                            size={18}
-                          />
-
-                          Match prêt
-
-                        </ReadyTitle>
-
-                        <Countdown>
-
-                          <Timer
-                            size={18}
-                          />
-
-                          {
-                            formatCountdown(
-                              competition.countdown
-                            )
-                          }
-
-                        </Countdown>
-
-                        <Warning>
-
-                          <ShieldAlert
-                            size={14}
-                          />
-
-                          Après 10 minutes,
-                          absence = forfait.
-
-                        </Warning>
-
-                        <PlayButton
-                          onClick={() =>
-                            playCompetition(
-                              competition
-                            )
-                          }
-                        >
-                          Jouer Maintenant
-                        </PlayButton>
-
-                      </ReadyBox>
-
-                    ) : (
-
-                      <JoinButton
-                        disabled={
-                          joiningId ===
-                          competition.id
-                        }
-                        onClick={() =>
-                          joinCompetition(
-                            competition.id
-                          )
-                        }
-                      >
-
-                        {joiningId ===
-                        competition.id
-                          ? "Participation..."
-                          : "Participer"}
-
-                      </JoinButton>
-
-                    )}
-
-                  </Card>
-                );
-              }
-            )}
-
-          </Grid>
-        )}
-
-      </Section>
 
     </Container>
   );
@@ -1154,193 +818,4 @@ const ErrorBox = styled.div`
       0.15
     );
   color: #fca5a5;
-`;
-
-const StatsGrid = styled.div`
-  display: grid;
-  grid-template-columns:
-    repeat(
-      auto-fit,
-      minmax(240px,1fr)
-    );
-  gap: 20px;
-  margin-bottom: 28px;
-`;
-
-const StatCard = styled.div`
-  background: #111827;
-  border-radius: 24px;
-  padding: 26px;
-`;
-
-const StatIcon = styled.div`
-  margin-bottom: 14px;
-`;
-
-const StatValue = styled.div`
-  font-size: 34px;
-  font-weight: bold;
-`;
-
-const StatLabel = styled.div`
-  margin-top: 8px;
-  opacity: 0.7;
-`;
-
-const Section = styled.div`
-  margin-top: 24px;
-`;
-
-const SectionTitle = styled.h2`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 22px;
-`;
-
-const Grid = styled.div`
-  display: grid;
-  grid-template-columns:
-    repeat(
-      auto-fit,
-      minmax(330px,1fr)
-    );
-  gap: 20px;
-`;
-
-const Card = styled.div`
-  background: #111827;
-  border-radius: 24px;
-  padding: 24px;
-`;
-
-const CardHeader = styled.div`
-  display: flex;
-  justify-content:
-    space-between;
-  align-items: center;
-  margin-bottom: 22px;
-`;
-
-const CardTitle = styled.h3`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-`;
-
-const StatusBadge = styled.div`
-  padding: 7px 14px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: bold;
-
-  background:
-    ${(p) =>
-      p.$ready
-        ? "#2563eb"
-        : "#f59e0b"};
-`;
-
-const Info = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-`;
-
-const InfoRow = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-`;
-
-const JoinButton = styled.button`
-  width: 100%;
-  margin-top: 24px;
-  border: none;
-  padding: 15px;
-  border-radius: 16px;
-  font-weight: bold;
-  background:
-    linear-gradient(
-      135deg,
-      #ff6b00,
-      #ff9500
-    );
-  color: white;
-  cursor: pointer;
-`;
-
-const ReadyBox = styled.div`
-  margin-top: 22px;
-  padding: 20px;
-  border-radius: 20px;
-  background:
-    rgba(
-      37,
-      99,
-      235,
-      0.12
-    );
-`;
-
-const ReadyTitle = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: bold;
-`;
-
-const Countdown = styled.div`
-  margin-top: 14px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 30px;
-  font-weight: bold;
-  color: #60a5fa;
-  animation:
-    ${pulse}
-    1.5s infinite;
-`;
-
-const Warning = styled.div`
-  margin-top: 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #fca5a5;
-`;
-
-const PlayButton = styled.button`
-  width: 100%;
-  margin-top: 18px;
-  border: none;
-  padding: 15px;
-  border-radius: 16px;
-  background:
-    linear-gradient(
-      135deg,
-      #2563eb,
-      #3b82f6
-    );
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-`;
-
-const Loader = styled.div`
-  padding: 50px;
-  text-align: center;
-  background: #111827;
-  border-radius: 24px;
-`;
-
-const Empty = styled.div`
-  padding: 50px;
-  border-radius: 24px;
-  background: #111827;
-  text-align: center;
-  opacity: 0.7;
 `;
