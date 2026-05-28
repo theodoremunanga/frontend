@@ -5,8 +5,10 @@ import api from "../../services/api";
 // TOKEN INTERCEPTOR
 // ======================================================
 
-// évite de créer plusieurs interceptors
-if (!window.__MATCHES_INTERCEPTOR__) {
+if (
+  typeof window !== "undefined" &&
+  !window.__MATCHES_INTERCEPTOR__
+) {
   api.interceptors.request.use((config) => {
     const token = localStorage.getItem("token");
 
@@ -22,6 +24,121 @@ if (!window.__MATCHES_INTERCEPTOR__) {
 }
 
 // ======================================================
+// STYLES
+// ======================================================
+
+const btnBase = {
+  border: "none",
+  padding: "10px 14px",
+  borderRadius: 10,
+  color: "#fff",
+  cursor: "pointer",
+  fontWeight: 700,
+  transition: "0.2s ease",
+  fontSize: 13,
+};
+
+const btnPrimary = {
+  ...btnBase,
+  background: "#0ea5e9",
+};
+
+const btnInfo = {
+  ...btnBase,
+  background: "#6366f1",
+};
+
+const btnWarning = {
+  ...btnBase,
+  background: "#f59e0b",
+};
+
+const btnSuccess = {
+  ...btnBase,
+  background: "#22c55e",
+};
+
+const btnDanger = {
+  ...btnBase,
+  background: "#ef4444",
+};
+
+const container = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 14,
+};
+
+const card = {
+  background: "#1e293b",
+  padding: 16,
+  borderRadius: 14,
+  color: "#e2e8f0",
+  boxShadow: "0 4px 15px rgba(0,0,0,0.25)",
+  border: "1px solid rgba(255,255,255,0.05)",
+};
+
+const header = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 12,
+  flexWrap: "wrap",
+  marginBottom: 12,
+};
+
+const subText = {
+  fontSize: 12,
+  marginTop: 4,
+};
+
+const players = {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  fontWeight: "bold",
+  flexWrap: "wrap",
+};
+
+const actions = {
+  display: "flex",
+  gap: 10,
+  marginTop: 10,
+  flexWrap: "wrap",
+};
+
+const modalOverlay = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.7)",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  zIndex: 9999,
+  padding: 20,
+};
+
+const modal = {
+  width: "100%",
+  maxWidth: 700,
+  background: "#0f172a",
+  padding: 20,
+  borderRadius: 14,
+  color: "white",
+  border: "1px solid rgba(255,255,255,0.08)",
+};
+
+const stateBox = {
+  background: "#020617",
+  padding: 15,
+  borderRadius: 10,
+  overflow: "auto",
+  maxHeight: 400,
+  fontSize: 13,
+  marginTop: 15,
+};
+
+// ======================================================
 // COMPONENT
 // ======================================================
 
@@ -29,10 +146,6 @@ export default function MatchesList({
   matches = [],
   onRefresh,
 }) {
-  // ====================================================
-  // STATES
-  // ====================================================
-
   const [loadingId, setLoadingId] =
     useState(null);
 
@@ -49,25 +162,29 @@ export default function MatchesList({
   // EMPTY
   // ====================================================
 
-  if (!matches.length) {
+  if (!matches?.length) {
     return (
       <p
         style={{
           color: "#94a3b8",
+          textAlign: "center",
+          padding: 20,
         }}
       >
-        Aucun match
+        Aucun match disponible
       </p>
     );
   }
 
   // ====================================================
-  // SAFE REFRESH
+  // REFRESH
   // ====================================================
 
   const refresh = async () => {
     try {
-      await onRefresh?.();
+      if (onRefresh) {
+        await onRefresh();
+      }
     } catch (err) {
       console.error(
         "❌ Refresh error:",
@@ -81,9 +198,10 @@ export default function MatchesList({
   // ====================================================
 
   const cancelMatch = async (id) => {
-    const confirmCancel = confirm(
-      "Annuler ce match ?"
-    );
+    const confirmCancel =
+      window.confirm?.(
+        "Annuler ce match ?"
+      );
 
     if (!confirmCancel) {
       return;
@@ -92,13 +210,13 @@ export default function MatchesList({
     try {
       setLoadingId(id);
 
-      // IMPORTANT :
-      // PAS DE /api ici
       await api.post(
         `/admin/match/${id}/cancel`
       );
 
-      alert("✅ Match annulé");
+      window.alert?.(
+        "✅ Match annulé"
+      );
 
       await refresh();
     } catch (err) {
@@ -107,9 +225,8 @@ export default function MatchesList({
         err
       );
 
-      alert(
-        err?.response?.data
-          ?.error ||
+      window.alert?.(
+        err?.response?.data?.error ||
           "❌ Erreur annulation"
       );
     } finally {
@@ -122,9 +239,10 @@ export default function MatchesList({
   // ====================================================
 
   const finishMatch = async (id) => {
-    const confirmFinish = confirm(
-      "Terminer ce match ?"
-    );
+    const confirmFinish =
+      window.confirm?.(
+        "Terminer ce match ?"
+      );
 
     if (!confirmFinish) {
       return;
@@ -133,14 +251,12 @@ export default function MatchesList({
     try {
       setLoadingId(id);
 
-      // IMPORTANT :
-      // PAS DE /api ici
       await api.post(
         `/admin/match/${id}/force-finish`
       );
 
-      alert(
-        "✅ Vous avez terminé ce match"
+      window.alert?.(
+        "✅ Match terminé"
       );
 
       await refresh();
@@ -150,9 +266,8 @@ export default function MatchesList({
         err
       );
 
-      alert(
-        err?.response?.data
-          ?.error ||
+      window.alert?.(
+        err?.response?.data?.error ||
           "❌ Erreur fin match"
       );
     } finally {
@@ -165,7 +280,7 @@ export default function MatchesList({
   // ====================================================
 
   const viewPlayers = (m) => {
-    alert(
+    window.alert?.(
       `👥 Joueurs\n\n${m.user1_name || "?"} VS ${
         m.user2_name || "?"
       }`
@@ -183,12 +298,9 @@ export default function MatchesList({
 
         setLoadingState(true);
 
-        // IMPORTANT :
-        // PAS DE /api ici
-        const res =
-          await api.get(
-            `/admin/match/${match.id}/state`
-          );
+        const res = await api.get(
+          `/admin/match/${match.id}/state`
+        );
 
         setMatchState(res.data);
       } catch (err) {
@@ -197,9 +309,8 @@ export default function MatchesList({
           err
         );
 
-        alert(
-          err?.response?.data
-            ?.error ||
+        window.alert?.(
+          err?.response?.data?.error ||
             "❌ Impossible de récupérer l'état du match"
         );
       } finally {
@@ -244,8 +355,6 @@ export default function MatchesList({
             key={m.id}
             style={card}
           >
-            {/* HEADER */}
-
             <div style={header}>
               <div>
                 <strong>
@@ -263,14 +372,11 @@ export default function MatchesList({
                 >
                   ● {m.status} •{" "}
                   {m.game} • 💰{" "}
-                  {m.bet_amount ||
-                    0}
+                  {m.bet_amount || 0}
                 </div>
               </div>
 
-              <div
-                style={players}
-              >
+              <div style={players}>
                 <span>
                   {m.user1_name ||
                     "?"}
@@ -282,7 +388,7 @@ export default function MatchesList({
                       "#38bdf8",
                   }}
                 >
-                  vs
+                  VS
                 </span>
 
                 <span>
@@ -292,17 +398,11 @@ export default function MatchesList({
               </div>
             </div>
 
-            {/* ACTIONS */}
-
             <div style={actions}>
               <button
-                style={
-                  btnPrimary
-                }
+                style={btnPrimary}
                 onClick={() =>
-                  viewPlayers(
-                    m
-                  )
+                  viewPlayers(m)
                 }
               >
                 👥 Joueurs
@@ -311,9 +411,7 @@ export default function MatchesList({
               <button
                 style={btnInfo}
                 onClick={() =>
-                  viewMatchState(
-                    m
-                  )
+                  viewMatchState(m)
                 }
               >
                 📡 Voir état
@@ -331,9 +429,14 @@ export default function MatchesList({
                       loadingId ===
                       m.id
                     }
-                    style={
-                      btnWarning
-                    }
+                    style={{
+                      ...btnWarning,
+                      opacity:
+                        loadingId ===
+                        m.id
+                          ? 0.6
+                          : 1,
+                    }}
                     onClick={() =>
                       cancelMatch(
                         m.id
@@ -348,9 +451,14 @@ export default function MatchesList({
                       loadingId ===
                       m.id
                     }
-                    style={
-                      btnSuccess
-                    }
+                    style={{
+                      ...btnSuccess,
+                      opacity:
+                        loadingId ===
+                        m.id
+                          ? 0.6
+                          : 1,
+                    }}
                     onClick={() =>
                       finishMatch(
                         m.id
@@ -365,8 +473,6 @@ export default function MatchesList({
           </div>
         ))}
       </div>
-
-      {/* MATCH STATE MODAL */}
 
       {selectedMatch && (
         <div style={modalOverlay}>
@@ -397,9 +503,10 @@ export default function MatchesList({
             )}
 
             <button
-              style={
-                btnDanger
-              }
+              style={{
+                ...btnDanger,
+                marginTop: 15,
+              }}
               onClick={() => {
                 setSelectedMatch(
                   null
@@ -418,111 +525,3 @@ export default function MatchesList({
     </>
   );
 }
-
-// ======================================================
-// STYLES
-// ======================================================
-
-const container = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 12,
-};
-
-const card = {
-  background: "#1e293b",
-  padding: 15,
-  borderRadius: 12,
-  color: "#e2e8f0",
-  boxShadow:
-    "0 4px 10px rgba(0,0,0,0.25)",
-};
-
-const header = {
-  display: "flex",
-  justifyContent:
-    "space-between",
-  alignItems: "center",
-  marginBottom: 10,
-};
-
-const subText = {
-  fontSize: 12,
-};
-
-const players = {
-  display: "flex",
-  gap: 8,
-  fontWeight: "bold",
-};
-
-const actions = {
-  display: "flex",
-  gap: 10,
-  marginTop: 10,
-  flexWrap: "wrap",
-};
-
-const btnBase = {
-  border: "none",
-  padding: "8px 12px",
-  borderRadius: 8,
-  color: "white",
-  cursor: "pointer",
-  fontWeight: "bold",
-};
-
-const btnPrimary = {
-  ...btnBase,
-  background: "#0ea5e9",
-};
-
-const btnInfo = {
-  ...btnBase,
-  background: "#6366f1",
-};
-
-const btnWarning = {
-  ...btnBase,
-  background: "#f59e0b",
-};
-
-const btnSuccess = {
-  ...btnBase,
-  background: "#22c55e",
-};
-
-const btnDanger = {
-  ...btnBase,
-  background: "#ef4444",
-};
-
-const modalOverlay = {
-  position: "fixed",
-  inset: 0,
-  background:
-    "rgba(0,0,0,0.7)",
-  display: "flex",
-  justifyContent:
-    "center",
-  alignItems: "center",
-  zIndex: 9999,
-};
-
-const modal = {
-  width: "90%",
-  maxWidth: 700,
-  background: "#0f172a",
-  padding: 20,
-  borderRadius: 12,
-  color: "white",
-};
-
-const stateBox = {
-  background: "#020617",
-  padding: 15,
-  borderRadius: 10,
-  overflow: "auto",
-  maxHeight: 400,
-  fontSize: 13,
-};
