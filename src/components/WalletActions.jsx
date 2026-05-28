@@ -183,7 +183,7 @@ export default function WalletActions({ refresh }) {
                   </div>
 
                   <p className="text-xs mt-2 text-gray-600">
-                    ⚠ Envoyez par Retrait de {amount || 0} CDF au +243 973596027 auprès de Agent TUADILA GERARD MICHEL 
+                    ⚠ Envoyez par Retrait exactement le montant de {amount || 0} auprès de l'Agent TUADILA GERARD MICHEL ; 
                   </p>
                 </div>
               )}
@@ -191,7 +191,7 @@ export default function WalletActions({ refresh }) {
               {/* REFERENCE */}
               <input
                 type="text"
-                placeholder="Référence transaction (obligatoire)"
+                placeholder="Référence de la transaction (obligatoire)"
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
                 className="w-full p-2 border rounded"

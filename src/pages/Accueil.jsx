@@ -64,29 +64,16 @@ export default function Accueil({
   setGameConfig,
 }) {
   // ================= STATES =================
-  const [inputs, setInputs] =
-    useState({});
+  const [inputs, setInputs] = useState({});
+  const [error, setError] = useState("");
 
-  const [error, setError] =
-    useState("");
-
-  const [
-    openChallenges,
-    setOpenChallenges,
-  ] = useState([]);
-
-  const [myGames, setMyGames] =
+  const [openChallenges, setOpenChallenges] =
     useState([]);
+
+  const [myGames, setMyGames] = useState([]);
 
   const [loading, setLoading] =
     useState(true);
-
-  const [
-    isOffline,
-    setIsOffline,
-  ] = useState(
-    !navigator.onLine
-  );
 
   // ================= ADS =================
   const [feedAds, setFeedAds] =
@@ -95,11 +82,11 @@ export default function Accueil({
   const [loadingAds, setLoadingAds] =
     useState(true);
 
-  const viewedAds = useRef(
-    new Set()
+  const [isOffline, setIsOffline] = useState(
+    !navigator.onLine
   );
 
-  const isFetching = useRef(false);
+  const viewedAds = useRef(new Set());
 
   const MIN_BET = 500;
 
@@ -107,69 +94,66 @@ export default function Accueil({
     localStorage.getItem("token");
 
   const username =
-    localStorage.getItem(
-      "username"
-    ) || "Joueur";
+    localStorage.getItem("username") ||
+    "Joueur";
 
   const role =
     localStorage.getItem("role") ||
     "PLAYER";
 
-  // ================= API =================
-  const API = (
-    import.meta.env
-      .VITE_API_URL ||
-    "https://backend-ad3t.onrender.com/api"
-  ).replace(/\/+$/, "");
+  const offlineBanner = {
+   background:
+     "linear-gradient(to right,#b45309,#d97706)",
+   padding: 14,
+   borderRadius: 14,
+   marginBottom: 20,
+   textAlign: "center",
+   fontWeight: "bold",
+ };
+
+ const API = (
+  import.meta.env.VITE_API_URL ||
+  "https://backend-ad3t.onrender.com/api"
+).replace(/\/+$/, "");
 
   const BASE_URL = API.replace(
     /\/api$/,
     ""
   );
 
-  // ================= OFFLINE BANNER =================
-  const offlineBanner = {
-    background:
-      "linear-gradient(to right,#b45309,#d97706)",
-    padding: 14,
-    borderRadius: 14,
-    marginBottom: 20,
-    textAlign: "center",
-    fontWeight: "bold",
+  const isFetching = useRef(false);
+
+  useEffect(() => {
+  const goOnline = () => {
+    setIsOffline(false);
   };
 
-  // ================= NETWORK LISTENER =================
-  useEffect(() => {
-    const goOnline = () => {
-      setIsOffline(false);
-    };
+  const goOffline = () => {
+    setIsOffline(true);
+  };
 
-    const goOffline = () => {
-      setIsOffline(true);
-    };
+  window.addEventListener(
+    "online",
+    goOnline
+  );
 
-    window.addEventListener(
+  window.addEventListener(
+    "offline",
+    goOffline
+  );
+
+  return () => {
+    window.removeEventListener(
       "online",
       goOnline
     );
 
-    window.addEventListener(
+    window.removeEventListener(
       "offline",
       goOffline
     );
-
-    return () => {
-      window.removeEventListener(
-        "online",
-        goOnline
-      );
-
-      window.removeEventListener(
-        "offline",
-        goOffline
-      );
-    };
-  }, []);
+  };
+}, []);
 
   // ================= LOAD ADS =================
   useEffect(() => {
@@ -177,6 +161,8 @@ export default function Accueil({
       try {
         const ads =
           await getHomeFeedAds();
+
+          console.log("HOME ADS:", ads);
 
         setFeedAds(ads || []);
       } catch (err) {
@@ -193,15 +179,10 @@ export default function Accueil({
   }, []);
 
   // ================= TRACK VIEW =================
-  const handleAdView = async (
-    id
-  ) => {
+  const handleAdView = async (id) => {
     if (!id) return;
 
-    if (
-      viewedAds.current.has(id)
-    )
-      return;
+    if (viewedAds.current.has(id)) return;
 
     viewedAds.current.add(id);
 
@@ -211,162 +192,144 @@ export default function Accueil({
       console.error(
         "Track ad failed:",
         err
-      );
-    }
+     );
+   }
   };
 
   // ================= LOAD DATA =================
-  const fetchData = useCallback(
-    async (
-      silent = false
-    ) => {
-      if (!token) {
-        setLoading(false);
-        return;
-      }
+  const fetchData = async (
+    silent = false
+  ) => {
+   if (!token) return;
 
+   if (isFetching.current) return;
+
+   if (isOffline) {
+    setError(
+      "📡 Vous êtes hors ligne"
+    );
+    return;
+   }
+
+   isFetching.current = true;
+
+   if (!silent) {
+    setLoading(true);
+   }
+
+   try {
+    const headers = {
+      Authorization:
+        "Bearer " + token,
+    };
+
+    const [
+      openRes,
+      myRes,
+    ] = await Promise.all([
+      fetch(`${API}/match/open`, {
+        headers,
+      }),
+
+      fetch(
+        `${API}/match/my-active`,
+        {
+          headers,
+        }
+      ),
+    ]);
+
+    if (
+      openRes.status === 401 ||
+      myRes.status === 401
+    ) {
+      localStorage.removeItem(
+        "token"
+      );
+
+      localStorage.removeItem(
+        "user"
+      );
+
+      setError(
+        "🔒 Session expirée"
+      );
+
+      return;
+    }
+
+    const [
+      openData,
+      myData,
+    ] = await Promise.all([
+      openRes
+        .json()
+        .catch(() => ({})),
+
+      myRes
+        .json()
+        .catch(() => ({})),
+    ]);
+
+    if (openRes.ok) {
+      setOpenChallenges(
+        openData.matches || []
+      );
+    }
+
+    if (myRes.ok) {
+      setMyGames(
+        myData.matches || []
+      );
+    }
+
+    setError("");
+   } catch (err) {
+    console.error(
+      "HOME FETCH ERROR:",
+      err
+    );
+
+    setError(
+      "❌ Connexion serveur impossible"
+    );
+   } finally {
+    isFetching.current = false;
+    setLoading(false);
+   }
+};
+
+ useEffect(() => {
+  fetchData();
+
+  const interval = setInterval(
+    () => {
       if (
-        isFetching.current
-      )
-        return;
-
-      if (isOffline) {
-        setError(
-          "📡 Vous êtes hors ligne"
-        );
-        return;
-      }
-
-      isFetching.current = true;
-
-      if (!silent) {
-        setLoading(true);
-      }
-
-      try {
-        const headers = {
-          Authorization:
-            "Bearer " + token,
-        };
-
-        const [
-          openRes,
-          myRes,
-        ] =
-          await Promise.all([
-            fetch(
-              `${API}/match/open`,
-              {
-                headers,
-              }
-            ),
-
-            fetch(
-              `${API}/match/my-active`,
-              {
-                headers,
-              }
-            ),
-          ]);
-
-        if (
-          openRes.status ===
-            401 ||
-          myRes.status === 401
-        ) {
-          localStorage.removeItem(
-            "token"
-          );
-
-          localStorage.removeItem(
-            "user"
-          );
-
-          setError(
-            "🔒 Session expirée"
-          );
-
-          setLoading(false);
-
-          return;
-        }
-
-        const [
-          openData,
-          myData,
-        ] =
-          await Promise.all([
-            openRes
-              .json()
-              .catch(() => ({})),
-
-            myRes
-              .json()
-              .catch(() => ({})),
-          ]);
-
-        if (openRes.ok) {
-          setOpenChallenges(
-            openData.matches ||
-              []
-          );
-        }
-
-        if (myRes.ok) {
-          setMyGames(
-            myData.matches || []
-          );
-        }
-
-        setError("");
-      } catch (err) {
-        console.error(
-          "HOME FETCH ERROR:",
-          err
-        );
-
-        setError(
-          "❌ Connexion serveur impossible"
-        );
-      } finally {
-        isFetching.current = false;
-        setLoading(false);
+        document.visibilityState ===
+        "visible"
+      ) {
+        fetchData(true);
       }
     },
-    [token, isOffline, API]
+    15000
   );
 
-  // ================= INIT =================
   useEffect(() => {
-    fetchData();
-
-    const interval =
-      setInterval(() => {
-        if (
-          document.visibilityState ===
-          "visible"
-        ) {
-          fetchData(true);
-        }
-      }, 15000);
-
-    return () =>
-      clearInterval(interval);
-  }, [fetchData]);
-
-  // ================= REFRESH WHEN BACK ONLINE =================
-  useEffect(() => {
-    if (!isOffline) {
-      fetchData(true);
-    }
+  if (!isOffline) {
+    fetchData(true);
+  }
   }, [isOffline, fetchData]);
 
-  // ================= SOCKET REALTIME =================
+  return () =>
+    clearInterval(interval);
+}, [fetchData]);
+
+// ================= SOCKET REALTIME =================
   useEffect(() => {
     if (!token) return;
 
-    const refreshFeed = () => {
-      fetchData(true);
+     const refreshFeed = () => {
+        fetchData(true);
     };
 
     socket.on(
@@ -375,32 +338,33 @@ export default function Accueil({
     );
 
     socket.on(
-      "match_joined",
-      refreshFeed
-    );
+     "match_joined",
+     refreshFeed
+   );
 
-    socket.on(
-      "match_finished",
-      refreshFeed
-    );
+   socket.on(
+     "match_finished",
+     refreshFeed
+   );
 
-    return () => {
-      socket.off(
-        "match_created",
-        refreshFeed
-      );
+   return () => {
+     socket.off(
+       "match_created",
+       refreshFeed
+     );
 
-      socket.off(
-        "match_joined",
-        refreshFeed
-      );
+     socket.off(
+       "match_joined",
+       refreshFeed
+     );
 
-      socket.off(
-        "match_finished",
-        refreshFeed
-      );
-    };
+     socket.off(
+       "match_finished",
+       refreshFeed
+     );
+   };
   }, [fetchData, token]);
+
 
   // ================= INPUTS =================
   const updateInput = (
@@ -418,22 +382,17 @@ export default function Accueil({
     }));
   };
 
-  const getAmount = (
-    gameId
-  ) =>
+  const getAmount = (gameId) =>
     inputs[gameId]?.amount || "";
 
   const getMode = (gameId) =>
-    inputs[gameId]?.mode ||
-    "user";
+    inputs[gameId]?.mode || "user";
 
   const getJoId = (gameId) =>
     inputs[gameId]?.joId || "";
 
   // ================= GAME NAVIGATION =================
-  const goToGame = (
-    match
-  ) => {
+  const goToGame = (match) => {
     if (!match?.id) {
       return setError(
         "❌ matchId invalide"
@@ -444,9 +403,7 @@ export default function Accueil({
       matchId: match.id,
       game: match.game,
       mode: "playing",
-      bet:
-        match.bet ||
-        match.bet_amount,
+      bet: match.bet,
     });
 
     setTimeout(
@@ -456,76 +413,72 @@ export default function Accueil({
   };
 
   // ================= JOIN =================
-  const joinMatchById =
-    async (match) => {
-      if (!match?.id) return;
+  const joinMatchById = async (
+    match
+  ) => {
+    if (!match?.id) return;
 
-      if (isOffline) {
-        return setError(
-          "📡 Hors ligne"
-        );
-      }
+    if (isOffline) {
+      return setError(
+        "📡 Hors ligne"
+     );
+    }
 
-      try {
-        const res = await fetch(
-          `${API}/match/join`,
-          {
-            method: "POST",
+    try {
+      const res = await fetch(
+        `${API}/match/join`,
+        {
+          method: "POST",
 
-            headers: {
-              "Content-Type":
-                "application/json",
+          headers: {
+            "Content-Type":
+              "application/json",
 
-              Authorization:
-                "Bearer " +
-                token,
-            },
+            Authorization:
+              "Bearer " + token,
+          },
 
-            body: JSON.stringify({
-              matchId:
-                match.id,
-            }),
-          }
-        );
-
-        const data =
-          await res
-            .json()
-            .catch(() => ({}));
-
-        if (
-          !res.ok ||
-          data.error
-        ) {
-          return setError(
-            data?.error ||
-              "❌ Impossible de rejoindre"
-          );
+          body: JSON.stringify({
+            matchId: match.id,
+          }),
         }
+      );
 
-        await fetchData(true);
+      const data = await res
+        .json()
+        .catch(() => ({}));
 
-        goToGame({
-          ...match,
-          id:
-            data.matchId ||
-            match.id,
-        });
-      } catch (err) {
-        console.error(err);
-
-        setError(
-          "❌ Connexion serveur"
+      if (!res.ok || data.error) {
+        return setError(
+          data?.error ||
+            "❌ Impossible de rejoindre"
         );
       }
-    };
+
+      const joinedMatch = {
+        id:
+          data.matchId || match.id,
+
+        game: match.game,
+        bet: match.bet,
+      };
+
+      await fetchData();
+
+      goToGame(joinedMatch);
+    } catch (err) {
+      console.error(err);
+
+      setError(
+        "❌ Connexion serveur"
+      );
+    }
+  };
 
   // ================= CREATE =================
   const handleCreateChallenge =
     async (gameId) => {
-      if (
-        gameId !== "dames"
-      ) {
+      if (gameId !== "dames") {
         return setError(
           "🚧 Seul le jeu Dames est disponible actuellement."
         );
@@ -535,7 +488,7 @@ export default function Accueil({
         return setError(
           "📡 Hors ligne"
         );
-      }
+     }
 
       const raw =
         getAmount(gameId);
@@ -544,11 +497,9 @@ export default function Accueil({
         ? Number(raw)
         : null;
 
-      const mode =
-        getMode(gameId);
+      const mode = getMode(gameId);
 
-      const joId =
-        getJoId(gameId);
+      const joId = getJoId(gameId);
 
       if (
         !amount ||
@@ -579,8 +530,7 @@ export default function Accueil({
                 "application/json",
 
               Authorization:
-                "Bearer " +
-                token,
+                "Bearer " + token,
             },
 
             body: JSON.stringify({
@@ -592,10 +542,9 @@ export default function Accueil({
           }
         );
 
-        const data =
-          await res
-            .json()
-            .catch(() => ({}));
+        const data = await res
+          .json()
+          .catch(() => ({}));
 
         if (
           !res.ok ||
@@ -607,32 +556,58 @@ export default function Accueil({
           );
         }
 
-        await fetchData(true);
+        if (!data?.matchId) {
+          return setError(
+            "❌ matchId manquant"
+          );
+        }
 
-        if (
-          mode === "user"
-        ) {
+        const match = {
+          id: data.matchId,
+          game: gameId,
+          bet: amount,
+        };
+
+        await fetchData();
+
+        if (mode === "user") {
           setGameConfig({
-            matchId:
-              data.matchId,
+            matchId: match.id,
             game: gameId,
             mode: "waiting",
             bet: amount,
           });
 
           setTimeout(
-            () =>
-              setPage(
-                "waiting"
-              ),
+            () => setPage("waiting"),
             0
           );
-        } else {
-          goToGame({
-            id: data.matchId,
-            game: gameId,
-            bet: amount,
-          });
+        } else if (
+          mode === "ai"
+        ) {
+          await fetch(
+            `${API}/bot/create`,
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+
+                Authorization:
+                  "Bearer " +
+                  token,
+              },
+
+              body: JSON.stringify({
+                matchId: match.id,
+                level: "hard",
+                user_id: 999,
+              }),
+            }
+          );
+
+          goToGame(match);
         }
       } catch (err) {
         console.error(err);
@@ -652,8 +627,7 @@ export default function Accueil({
         },
 
         {
-          type:
-            "openChallenges",
+          type: "openChallenges",
         },
 
         {
@@ -671,6 +645,7 @@ export default function Accueil({
           merged.push(section);
 
           if (
+            (index + 1) % 1 === 0 &&
             feedAds[index]
           ) {
             merged.push({
@@ -690,8 +665,7 @@ export default function Accueil({
       open:
         openChallenges.length,
 
-      active:
-        myGames.length,
+      active: myGames.length,
 
       games: 1,
     };
@@ -700,35 +674,11 @@ export default function Accueil({
     myGames,
   ]);
 
-  // ================= HELPERS =================
-  const getGameLabel = (
-    game
-  ) => {
-    switch (game) {
-      case "dames":
-        return "♟️ Dames";
-
-      case "football":
-        return "⚽ Football";
-
-      case "cartes":
-        return "🃏 Cartes";
-
-      default:
-        return `🎮 ${game}`;
-    }
-  };
-
   // ================= LOADING =================
   if (loading) {
     return (
-      <div
-        style={
-          loadingContainer
-        }
-      >
-        <div style={spinner}>
-        </div>
+      <div style={loadingContainer}>
+        <div style={spinner}></div>
 
         <h2>
           Chargement de
@@ -741,50 +691,31 @@ export default function Accueil({
   // ================= UI =================
   return (
     <div style={container}>
+      {/* ================= ADS TOP ================= */}
       <SponsoredBanner />
 
+      {/* ================= HERO ================= */}
       <div style={hero}>
-        <div
-          style={
-            heroOverlay
-          }
-        ></div>
+        <div style={heroOverlay}></div>
 
-        <div
-          style={
-            heroContent
-          }
-        >
+        <div style={heroContent}>
           <div style={topBar}>
             <div>
-              <h1
-                style={title}
-              >
+              <h1 style={title}>
                 🎮 6BetBall
               </h1>
 
-              <p
-                style={
-                  subtitle
-                }
-              >
+              <p style={subtitle}>
                 Plateforme
-                compétitive
-                nouvelle
+                compétitive nouvelle
                 génération.
+                Authentique,
+                Honnête et Sûre !
               </p>
             </div>
 
-            <div
-              style={
-                profileCard
-              }
-            >
-              <div
-                style={
-                  avatar
-                }
-              >
+            <div style={profileCard}>
+              <div style={avatar}>
                 👤
               </div>
 
@@ -795,9 +726,7 @@ export default function Accueil({
                       "bold",
                   }}
                 >
-                  {
-                    username
-                  }
+                  {username}
                 </div>
 
                 <div
@@ -812,11 +741,8 @@ export default function Accueil({
             </div>
           </div>
 
-          <div
-            style={
-              statsGrid
-            }
-          >
+          {/* STATS */}
+          <div style={statsGrid}>
             <StatCard
               value={
                 stats.active
@@ -844,207 +770,606 @@ export default function Accueil({
         </div>
       </div>
 
-      <div
-        style={
-          adsWrapper
-        }
-      >
+      {/* ================= ADS CAROUSEL ================= */}
+      <div style={adsWrapper}>
         <AdCarousel />
       </div>
 
+      {/* ================= CONTENT ================= */}
       <div style={content}>
         {error && (
-          <div
-            style={
-              errorStyle
-            }
-          >
+          <div style={errorStyle}>
             {error}
           </div>
         )}
 
         {isOffline && (
-          <div
-            style={
-              offlineBanner
-            }
-          >
+          <div style={offlineBanner}>
             📡 Mode hors ligne
           </div>
         )}
 
-        {/* ================= MES PARTIES ================= */}
+        {/* ================= DYNAMIC FEED ================= */}
+        {feedSections.map(
+          (section, index) => {
+            // ================= AD =================
+            if (
+              section.type === "ad"
+            ) {
+              const ad =
+                section.ad;
 
-        <SectionTitle
-          icon="🎮"
-          title="Mes parties actives"
-        />
-
-        {myGames.length ===
-        0 ? (
-          <div
-            style={
-              emptyBox
-            }
-          >
-            Aucune partie
-            active
-          </div>
-        ) : (
-          <div
-            style={
-              horizontalScroll
-            }
-          >
-            {myGames.map(
-              (m) => (
+              return (
                 <div
-                  key={m.id}
-                  style={
-                    challengeCard
+                  key={`ad-${ad.id}`}
+                  onMouseEnter={() =>
+                    handleAdView(
+                      ad.id
+                    )
                   }
+                  style={feedAdCard}
                 >
                   <div
                     style={
-                      gameBadge
+                      adTop
                     }
                   >
-                    {getGameLabel(
-                      m.game
-                    )}
-                  </div>
-
-                  <h3>
-                    💰{" "}
-                    {m.bet ||
-                      m.bet_amount ||
-                      0}{" "}
-                    CDF
-                  </h3>
-
-                  <div
-                    style={
-                      smallText
-                    }
-                  >
-                    👤{" "}
-                    {m.creator_name ||
-                      m.username ||
-                      m.user_name ||
-                      "Joueur"}
-                  </div>
-
-                  {m.opponent_name && (
                     <div
                       style={
-                        smallText
+                        sponsoredBadge
                       }
                     >
-                      ⚔️ vs{" "}
-                      {
-                        m.opponent_name
-                      }
+                      Sponsored
                     </div>
-                  )}
 
-                  <button
-                    style={
-                      primaryButton
-                    }
-                    onClick={() =>
-                      goToGame(
-                        m
-                      )
-                    }
-                  >
-                    ▶️
-                    Reprendre
-                  </button>
-                </div>
-              )
-            )}
-          </div>
-        )}
-
-        {/* ================= OPEN CHALLENGES ================= */}
-
-        <SectionTitle
-          icon="🔥"
-          title="Défis disponibles"
-        />
-
-        {openChallenges.length ===
-        0 ? (
-          <div
-            style={
-              emptyBox
-            }
-          >
-            Aucun défi
-            disponible
-          </div>
-        ) : (
-          <div
-            style={
-              horizontalScroll
-            }
-          >
-            {openChallenges.map(
-              (m) => (
-                <div
-                  key={m.id}
-                  style={
-                    challengeCard
-                  }
-                >
-                  <div
-                    style={
-                      gameBadge
-                    }
-                  >
-                    {getGameLabel(
-                      m.game
+                    {ad.advertiser && (
+                      <div
+                        style={
+                          advertiserName
+                        }
+                      >
+                        {
+                          ad.advertiser
+                        }
+                      </div>
                     )}
                   </div>
 
-                  <h3>
-                    💰{" "}
-                    {m.bet ||
-                      m.bet_amount ||
-                      0}{" "}
-                    CDF
-                  </h3>
+                  <h2
+                    style={
+                      adTitle
+                    }
+                  >
+                    {ad.title}
+                  </h2>
+
+                  {ad.image && (
+                    <img
+                      src={
+                        ad.image.startsWith("http")
+                          ? ad.image
+                          : `${BASE_URL}${ad.image}`
+                  }
+                  alt={ad.title}
+                  style={adImage}
+                  onError={(e) =>
+                    console.log(
+                      "❌ IMAGE ERROR:",
+                     e.target.src
+                    )
+                  }
+               />
+             )}
+
+                  <p
+                    style={
+                      adDescription
+                    }
+                  >
+                    {
+                      ad.description
+                    }
+                  </p>
+
+                  {ad.link && (
+                    <button
+                      style={adButton}
+                      onClick={() =>
+                        openAdLink(ad)
+                      }
+                    >
+                     🔗 Voir plus
+                    </button>
+                 )}
+
+                <AdComments
+                  ad={ad}
+                  currentUser={{
+                    username,
+                  }}
+               />
+                </div>
+              );
+            }
+
+            // ================= MY GAMES =================
+            if (
+              section.type ===
+              "myGames"
+            ) {
+              return (
+                <div
+                  key={`section-${index}`}
+                >
+                  <SectionTitle
+                    icon="🎮"
+                    title="Mes parties actives"
+                  />
+
+                  {myGames.length ===
+                  0 ? (
+                    <div
+                      style={
+                        emptyBox
+                      }
+                    >
+                      Aucune partie
+                      active
+                      actuellement
+                    </div>
+                  ) : (
+                    <div
+                      style={
+                        horizontalScroll
+                      }
+                    >
+                      {myGames.map(
+                        (m) => (
+                          <div
+                            key={
+                              m.id
+                            }
+                            style={
+                              challengeCard
+                            }
+                          >
+                            <div
+                              style={
+                                gameBadge
+                              }
+                            >
+                              ♟️
+                              Dames
+                            </div>
+
+                            <h3>
+                              💰{" "}
+                              {
+                                m.bet
+                              }{" "}
+                              CDF
+                            </h3>
+
+                            <div
+                              style={
+                                smallText
+                              }
+                            >
+                              👤{" "}
+                              {
+                                m.creator_name
+                              }
+                            </div>
+
+                            {m.opponent_name && (
+                              <div
+                                style={
+                                  smallText
+                                }
+                              >
+                                ⚔️
+                                vs{" "}
+                                {
+                                  m.opponent_name
+                                }
+                              </div>
+                            )}
+
+                            <div
+                              style={{
+                                ...statusBadge,
+
+                                background:
+                                  m.status ===
+                                  "waiting"
+                                    ? "#f59e0b"
+                                    : "#22c55e",
+                              }}
+                            >
+                              {m.status ===
+                              "waiting"
+                                ? "EN ATTENTE"
+                                : "PRÊT"}
+                            </div>
+
+                            {m.status ===
+                            "waiting" ? (
+                              <button
+                                style={
+                                  disabledButton
+                                }
+                                disabled
+                              >
+                                ⏳ En
+                                attente
+                              </button>
+                            ) : (
+                              <button
+                                style={
+                                  primaryButton
+                                }
+                                onClick={() =>
+                                  goToGame(
+                                    m
+                                  )
+                                }
+                              >
+                                ▶️
+                                Reprendre
+                              </button>
+                            )}
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // ================= OPEN CHALLENGES =================
+            if (
+              section.type ===
+              "openChallenges"
+            ) {
+              return (
+                <div
+                  key={`section-${index}`}
+                >
+                  <SectionTitle
+                    icon="🔥"
+                    title="Défis disponibles"
+                  />
+
+                  {openChallenges.length ===
+                  0 ? (
+                    <div
+                      style={
+                        emptyBox
+                      }
+                    >
+                      Aucun défi
+                      disponible
+                    </div>
+                  ) : (
+                    <div
+                      style={
+                        horizontalScroll
+                      }
+                    >
+                      {openChallenges.map(
+                        (m) => (
+                          <div
+                            key={
+                              m.id
+                            }
+                            style={
+                              challengeCard
+                            }
+                          >
+                            <div
+                              style={
+                                gameBadge
+                              }
+                            >
+                              ♟️
+                              Dames
+                            </div>
+
+                            <h3>
+                              💰{" "}
+                              {
+                                m.bet
+                              }{" "}
+                              CDF
+                            </h3>
+
+                            <div
+                              style={
+                                smallText
+                              }
+                            >
+                              👤{" "}
+                              {m.creator_name ||
+                                "Joueur"}
+                            </div>
+
+                            <button
+                              style={
+                                joinButton
+                              }
+                              onClick={() =>
+                                joinMatchById(
+                                  m
+                                )
+                              }
+                            >
+                              🔗
+                              Rejoindre
+                            </button>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            }
+
+            // ================= GAMES =================
+            if (
+              section.type ===
+              "games"
+            ) {
+              return (
+                <div
+                  key={`section-${index}`}
+                >
+                  <SectionTitle
+                    icon="🎲"
+                    title="Jeux disponibles"
+                  />
 
                   <div
-                    style={
-                      smallText
-                    }
+                    style={grid}
                   >
-                    👤{" "}
-                    {m.creator_name ||
-                      m.username ||
-                      m.user_name ||
-                      "Joueur"}
-                  </div>
+                    {games.map(
+                      (game) => {
+                        const disabled =
+                          !game.available;
 
-                  <button
-                    style={
-                      joinButton
-                    }
-                    onClick={() =>
-                      joinMatchById(
-                        m
-                      )
-                    }
-                  >
-                    🔗
-                    Rejoindre
-                  </button>
+                        return (
+                          <div
+                            key={
+                              game.id
+                            }
+                            style={{
+                              ...gameCard,
+
+                              opacity:
+                                disabled
+                                  ? 0.55
+                                  : 1,
+
+                              border:
+                                disabled
+                                  ? "1px solid rgba(255,255,255,0.05)"
+                                  : "1px solid rgba(59,130,246,0.4)",
+                            }}
+                          >
+                            <div
+                              style={
+                                gameTop
+                              }
+                            >
+                              <div
+                                style={
+                                  gameIcon
+                                }
+                              >
+                                {
+                                  game.icon
+                                }
+                              </div>
+
+                              <div>
+                                <h2>
+                                  {
+                                    game.name
+                                  }
+                                </h2>
+
+                                <p
+                                  style={
+                                    gameDescription
+                                  }
+                                >
+                                  {
+                                    game.description
+                                  }
+                                </p>
+                              </div>
+                            </div>
+
+                            <div
+                              style={{
+                                ...availabilityBadge,
+
+                                background:
+                                  game.available
+                                    ? "#22c55e"
+                                    : "#ef4444",
+                              }}
+                            >
+                              {game.available
+                                ? "🟢 DISPONIBLE"
+                                : "🚧 BIENTÔT"}
+                            </div>
+
+                            {disabled ? (
+                              <div
+                                style={
+                                  disabledContainer
+                                }
+                              >
+                                <div
+                                  style={
+                                    disabledText
+                                  }
+                                >
+                                  Ce
+                                  jeu
+                                  sera
+                                  disponible
+                                  prochainement
+                                  sur
+                                  6BetBall.
+                                </div>
+
+                                <button
+                                  style={
+                                    disabledButtonLarge
+                                  }
+                                  disabled
+                                >
+                                  🔒
+                                  Indisponible
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                <input
+                                  type="number"
+                                  placeholder="💰 Mise"
+                                  value={getAmount(
+                                    game.id
+                                  )}
+                                  onChange={(
+                                    e
+                                  ) =>
+                                    updateInput(
+                                      game.id,
+                                      "amount",
+                                      e
+                                        .target
+                                        .value
+                                    )
+                                  }
+                                  style={
+                                    input
+                                  }
+                                />
+
+                                <select
+                                  value={getMode(
+                                    game.id
+                                  )}
+                                  onChange={(
+                                    e
+                                  ) =>
+                                    updateInput(
+                                      game.id,
+                                      "mode",
+                                      e
+                                        .target
+                                        .value
+                                    )
+                                  }
+                                  style={
+                                    input
+                                  }
+                                >
+                                  <option value="user">
+                                    👤
+                                    vs
+                                    Joueur
+                                  </option>
+
+                                  <option value="ai">
+                                    🤖
+                                    vs
+                                    IA
+                                  </option>
+
+                                  <option value="jo">
+                                    🧑‍💼
+                                    via
+                                    JO
+                                  </option>
+                                </select>
+
+                                {getMode(
+                                  game.id
+                                ) ===
+                                  "jo" && (
+                                  <input
+                                    type="text"
+                                    placeholder="ID du JO"
+                                    value={getJoId(
+                                      game.id
+                                    )}
+                                    onChange={(
+                                      e
+                                    ) =>
+                                      updateInput(
+                                        game.id,
+                                        "joId",
+                                        e
+                                          .target
+                                          .value
+                                      )
+                                    }
+                                    style={
+                                      input
+                                    }
+                                  />
+                                )}
+
+                                <button
+                                  onClick={() =>
+                                    handleCreateChallenge(
+                                      game.id
+                                    )
+                                  }
+                                  style={
+                                    launchButton
+                                  }
+                                >
+                                  🎯
+                                  Lancer
+                                  Partie
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        );
+                      }
+                    )}
+                  </div>
                 </div>
-              )
-            )}
-          </div>
+              );
+            }
+
+            return null;
+          }
         )}
+
+        {/* ================= FOOTER ================= */}
+        <div style={footer}>
+          <div>
+            🎮 6BetBall © 2026
+          </div>
+
+          <div
+            style={{
+              opacity: 0.7,
+              marginTop: 6,
+            }}
+          >
+            Plateforme
+            compétitive sécurisée
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1078,10 +1403,9 @@ function SectionTitle({
   title,
 }) {
   return (
-    <div
-      style={sectionTitle}
-    >
+    <div style={sectionTitle}>
       <span>{icon}</span>
+
       <span>{title}</span>
     </div>
   );
@@ -1099,6 +1423,69 @@ const adsWrapper = {
   maxWidth: 1300,
   margin: "20px auto",
   padding: "0 20px",
+};
+
+const feedAdCard = {
+  background:
+    "linear-gradient(to bottom, rgba(30,41,59,0.96), rgba(15,23,42,0.96))",
+  borderRadius: 28,
+  padding: 24,
+  marginBottom: 40,
+  border:
+    "1px solid rgba(255,255,255,0.08)",
+};
+
+const adTop = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  marginBottom: 18,
+};
+
+const sponsoredBadge = {
+  background:
+    "linear-gradient(to right,#eab308,#f59e0b)",
+  color: "#111827",
+  padding: "6px 12px",
+  borderRadius: 999,
+  fontSize: 12,
+  fontWeight: "bold",
+};
+
+const advertiserName = {
+  opacity: 0.7,
+  fontSize: 14,
+};
+
+const adTitle = {
+  fontSize: 28,
+  fontWeight: 900,
+  marginBottom: 20,
+};
+
+const adImage = {
+  width: "100%",
+  borderRadius: 20,
+  marginBottom: 20,
+  maxHeight: 450,
+  objectFit: "cover",
+};
+
+const adDescription = {
+  opacity: 0.85,
+  lineHeight: 1.7,
+  marginBottom: 20,
+};
+
+const adButton = {
+  padding: "14px 22px",
+  border: "none",
+  borderRadius: 16,
+  background:
+    "linear-gradient(to right,#2563eb,#4f46e5)",
+  color: "white",
+  fontWeight: "bold",
+  cursor: "pointer",
 };
 
 const hero = {
@@ -1124,8 +1511,7 @@ const heroContent = {
 
 const topBar = {
   display: "flex",
-  justifyContent:
-    "space-between",
+  justifyContent: "space-between",
   alignItems: "center",
   gap: 20,
   flexWrap: "wrap",
@@ -1146,10 +1532,10 @@ const profileCard = {
   display: "flex",
   alignItems: "center",
   gap: 15,
-  background:
-    "rgba(255,255,255,0.08)",
+  background: "rgba(255,255,255,0.08)",
   padding: "12px 18px",
   borderRadius: 20,
+  backdropFilter: "blur(12px)",
 };
 
 const avatar = {
@@ -1173,12 +1559,11 @@ const statsGrid = {
 };
 
 const statCard = {
-  background:
-    "rgba(255,255,255,0.06)",
-  border:
-    "1px solid rgba(255,255,255,0.08)",
+  background: "rgba(255,255,255,0.06)",
+  border: "1px solid rgba(255,255,255,0.08)",
   borderRadius: 24,
   padding: 24,
+  backdropFilter: "blur(10px)",
 };
 
 const statIcon = {
@@ -1224,8 +1609,7 @@ const challengeCard = {
     "linear-gradient(to bottom, rgba(30,41,59,0.95), rgba(15,23,42,0.95))",
   borderRadius: 26,
   padding: 24,
-  border:
-    "1px solid rgba(255,255,255,0.06)",
+  border: "1px solid rgba(255,255,255,0.06)",
   display: "flex",
   flexDirection: "column",
   gap: 14,
@@ -1243,6 +1627,14 @@ const gameBadge = {
 const smallText = {
   fontSize: 13,
   opacity: 0.8,
+};
+
+const statusBadge = {
+  padding: "6px 10px",
+  borderRadius: 999,
+  width: "fit-content",
+  fontSize: 12,
+  fontWeight: "bold",
 };
 
 const primaryButton = {
@@ -1263,14 +1655,34 @@ const joinButton = {
     "linear-gradient(to right, #2563eb, #1d4ed8)",
 };
 
+const disabledButton = {
+  ...primaryButton,
+  background: "#475569",
+  cursor: "not-allowed",
+};
+
+const grid = {
+  display: "grid",
+  gridTemplateColumns:
+    "repeat(auto-fit,minmax(340px,1fr))",
+  gap: 25,
+};
+
 const emptyBox = {
-  background:
-    "rgba(255,255,255,0.05)",
+  background: "rgba(255,255,255,0.05)",
   padding: 25,
   borderRadius: 24,
   textAlign: "center",
   opacity: 0.7,
   marginBottom: 40,
+};
+
+const footer = {
+  marginTop: 70,
+  paddingTop: 30,
+  borderTop:
+    "1px solid rgba(255,255,255,0.08)",
+  textAlign: "center",
 };
 
 const errorStyle = {
@@ -1297,9 +1709,87 @@ const loadingContainer = {
 const spinner = {
   width: 70,
   height: 70,
-  border:
-    "6px solid rgba(255,255,255,0.1)",
-  borderTop:
-    "6px solid #2563eb",
+  border: "6px solid rgba(255,255,255,0.1)",
+  borderTop: "6px solid #2563eb",
   borderRadius: "50%",
+  animation: "spin 1s linear infinite",
+};
+
+const gameCard = {
+  background:
+    "linear-gradient(to bottom, rgba(30,41,59,0.95), rgba(15,23,42,0.95))",
+  borderRadius: 30,
+  padding: 28,
+  boxShadow:
+    "0 15px 40px rgba(0,0,0,0.25)",
+};
+
+const gameTop = {
+  display: "flex",
+  gap: 18,
+  marginBottom: 20,
+};
+
+const gameIcon = {
+  fontSize: 50,
+};
+
+const gameDescription = {
+  opacity: 0.75,
+  marginTop: 6,
+  lineHeight: 1.5,
+};
+
+const availabilityBadge = {
+  width: "fit-content",
+  padding: "8px 14px",
+  borderRadius: 999,
+  fontSize: 12,
+  fontWeight: "bold",
+  marginBottom: 20,
+};
+
+const input = {
+  width: "100%",
+  padding: 15,
+  marginBottom: 15,
+  borderRadius: 16,
+  border: "1px solid rgba(255,255,255,0.08)",
+  background: "#1e293b",
+  color: "white",
+  fontSize: 15,
+};
+
+const launchButton = {
+  width: "100%",
+  padding: 16,
+  borderRadius: 18,
+  border: "none",
+  background:
+    "linear-gradient(to right, #2563eb, #4f46e5)",
+  color: "white",
+  fontWeight: "bold",
+  fontSize: 16,
+  cursor: "pointer",
+};
+
+const disabledContainer = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 18,
+};
+
+const disabledText = {
+  opacity: 0.7,
+  lineHeight: 1.6,
+};
+
+const disabledButtonLarge = {
+  width: "100%",
+  padding: 16,
+  borderRadius: 18,
+  border: "none",
+  background: "#334155",
+  color: "#94a3b8",
+  fontWeight: "bold",
 };
