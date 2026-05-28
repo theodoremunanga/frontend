@@ -11,7 +11,7 @@ import socket from "../socket";
 const fetchData = useCallback(
   async (silent = false) => {
 },
-[API, token, isOffline]
+[api, token, isOffline]
 );
 
 import SponsoredBanner from "../components/ads/SponsoredBanner";
