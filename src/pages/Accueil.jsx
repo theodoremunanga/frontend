@@ -10,8 +10,8 @@ import socket from "../socket";
 
 const fetchData = useCallback(
   async (silent = false) => {
-},
-[api, token, isOffline]
+  },
+  [token, isOffline]
 );
 
 import SponsoredBanner from "../components/ads/SponsoredBanner";
