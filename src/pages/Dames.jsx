@@ -1268,61 +1268,60 @@ const handleReport = async () => {
   // END GAME
   // ======================================================
 
+  console.log({
+    winner,
+    myPlayer,
+    winnerType: typeof winner,
+    myPlayerType: typeof myPlayer,
+  });
+
   if (gameOver) {
-    const text = draw
-      ? "🤝 Match nul"
-      : Number(winner) ===
-        Number(myPlayer)
-      ? "🎉 Victoire"
-      : "😢 Défaite";
+  const isWinner =
+    String(winner) === String(myPlayer);
 
-    return (
-      <div
+  const text = draw
+    ? "🤝 Match nul"
+    : isWinner
+    ? "🎉 Félicitations, vous avez remporté la victoire."
+    : "😢 Désolé, vous avez perdu ; tentez encore plus d'expérience";
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background:
+          "linear-gradient(135deg,#020617,#0f172a)",
+        padding: 40,
+        color: "white",
+      }}
+    >
+      <h1
         style={{
-          minHeight: "100vh",
-
-          background:
-            "linear-gradient(135deg,#020617,#0f172a)",
-
-          padding: 40,
-
-          color: "white",
+          fontSize: 52,
+          marginBottom: 30,
         }}
       >
-        <h1
-          style={{
-            fontSize: 52,
-            marginBottom: 30,
-          }}
-        >
-          {text}
-        </h1>
+        {text}
+      </h1>
 
-        <button
-          onClick={resetGame}
-          style={{
-            padding:
-              "14px 24px",
-
-            border: "none",
-
-            borderRadius: 14,
-
-            cursor: "pointer",
-
-            color: "white",
-
-            fontWeight: 700,
-
-            background:
-              "linear-gradient(135deg,#2563eb,#1d4ed8)",
-          }}
-        >
-          Retour
-        </button>
-      </div>
-    );
-  }
+      <button
+        onClick={resetGame}
+        style={{
+          padding: "14px 24px",
+          border: "none",
+          borderRadius: 14,
+          cursor: "pointer",
+          color: "white",
+          fontWeight: 700,
+          background:
+            "linear-gradient(135deg,#2563eb,#1d4ed8)",
+        }}
+      >
+        Retour
+      </button>
+    </div>
+  );
+}
 
   // ======================================================
   // MAIN
