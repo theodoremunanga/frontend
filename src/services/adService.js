@@ -2,28 +2,58 @@ import axios from "axios";
 
 /**
  * =====================================================
- * API BASE URL
+ * ENV
  * =====================================================
  */
 
-const API =
+// API
+export const API_URL =
   import.meta.env.VITE_API_URL ||
-  "http://localhost:5000/api";
+  "https://backend-ad3t.onrender.com/api";
+
+// SOCKET
+export const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL ||
+  "https://backend-ad3t.onrender.com";
 
 /**
  * =====================================================
- * AXIOS INSTANCES
+ * AXIOS MAIN INSTANCE
+ * =====================================================
+ */
+
+const api = axios.create({
+  baseURL: API_URL,
+
+  timeout: 20000,
+
+  withCredentials: true,
+});
+
+/**
+ * =====================================================
+ * SPECIALIZED INSTANCES
  * =====================================================
  */
 
 // ================= ADMIN =================
+
 const adminApi = axios.create({
-  baseURL: `${API}/admin`,
+  baseURL: `${API_URL}/admin`,
+
+  timeout: 20000,
+
+  withCredentials: true,
 });
 
 // ================= PUBLIC ADS =================
+
 const publicAdsApi = axios.create({
-  baseURL: `${API}/ads`,
+  baseURL: `${API_URL}/ads`,
+
+  timeout: 20000,
+
+  withCredentials: true,
 });
 
 /**
@@ -38,21 +68,28 @@ function getToken() {
 
 /**
  * =====================================================
- * ADMIN AUTH INTERCEPTOR
+ * AUTH INTERCEPTOR
  * =====================================================
  */
 
+const attachToken = (config) => {
+  const token = getToken();
+
+  if (token) {
+    config.headers.Authorization =
+      `Bearer ${token}`;
+  }
+
+  return config;
+};
+
+api.interceptors.request.use(
+  attachToken,
+  (error) => Promise.reject(error)
+);
+
 adminApi.interceptors.request.use(
-  (config) => {
-    const token = getToken();
-
-    if (token) {
-      config.headers.Authorization =
-        `Bearer ${token}`;
-    }
-
-    return config;
-  },
+  attachToken,
   (error) => Promise.reject(error)
 );
 
@@ -77,7 +114,7 @@ function handleError(
 
 /**
  * =====================================================
- * CREATE AD (ADMIN)
+ * CREATE AD
  * =====================================================
  */
 
@@ -96,7 +133,7 @@ export async function createAd(adData) {
 
 /**
  * =====================================================
- * GET ALL ADS (ADMIN)
+ * GET ALL ADS
  * =====================================================
  */
 
@@ -114,7 +151,7 @@ export async function getAllAds() {
 
 /**
  * =====================================================
- * GET SINGLE AD (ADMIN)
+ * GET SINGLE AD
  * =====================================================
  */
 
@@ -132,7 +169,7 @@ export async function getAdById(id) {
 
 /**
  * =====================================================
- * UPDATE AD (ADMIN)
+ * UPDATE AD
  * =====================================================
  */
 
@@ -154,15 +191,16 @@ export async function updateAd(
 
 /**
  * =====================================================
- * DELETE AD (ADMIN)
+ * DELETE AD
  * =====================================================
  */
 
 export async function deleteAd(id) {
   try {
-    const response = await adminApi.delete(
-      `/ads/${id}`
-    );
+    const response =
+      await adminApi.delete(
+        `/ads/${id}`
+      );
 
     return response.data;
   } catch (error) {
@@ -172,7 +210,7 @@ export async function deleteAd(id) {
 
 /**
  * =====================================================
- * TOGGLE AD STATUS (ADMIN)
+ * TOGGLE AD STATUS
  * =====================================================
  */
 
@@ -196,7 +234,7 @@ export async function toggleAdStatus(
 
 /**
  * =====================================================
- * PUBLIC ACTIVE ADS
+ * GET ACTIVE ADS
  * =====================================================
  */
 
@@ -214,7 +252,6 @@ export async function getActiveAds(
         }
       );
 
-    // Compatible avec plusieurs formats backend
     return (
       response.data.ads ||
       response.data ||
@@ -348,6 +385,12 @@ export async function getSponsoredPosts() {
   );
 }
 
+/**
+ * =====================================================
+ * COMMENTS
+ * =====================================================
+ */
+
 export async function getAdComments(
   adId
 ) {
@@ -362,6 +405,7 @@ export async function getAdComments(
     );
   } catch (error) {
     console.error(error);
+
     return [];
   }
 }
@@ -394,4 +438,4 @@ export {
   publicAdsApi,
 };
 
-export default adminApi;
+export default api;

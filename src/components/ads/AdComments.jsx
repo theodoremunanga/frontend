@@ -24,10 +24,7 @@ import {
 
 import { io } from "socket.io-client";
 
-import api, {
-  SOCKET_URL,
-} from "../services/api";
-
+import api, { SOCKET_URL } from "../../services/api";
 // ======================================================
 // SOCKET
 // ======================================================

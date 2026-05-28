@@ -1,25 +1,26 @@
 import axios from "axios";
 
-// ======================================================
-// ENV
-// ======================================================
+/**
+ * =====================================================
+ * ENV
+ * =====================================================
+ */
 
-const isDev =
-  import.meta.env.DEV;
-
-// ======================================================
-// API URL
-// ======================================================
-
-const API_URL =
+export const API_URL =
   import.meta.env.VITE_API_URL ||
   "https://backend-ad3t.onrender.com/api";
 
-// ======================================================
-// VALIDATION
-// ======================================================
+export const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL ||
+  "https://backend-ad3t.onrender.com";
 
-if (!API_URL.startsWith("http")) {
+/**
+ * =====================================================
+ * VALIDATION
+ * =====================================================
+ */
+
+if (!API_URL?.startsWith("http")) {
   throw new Error(
     `❌ Invalid VITE_API_URL: ${API_URL}`
   );

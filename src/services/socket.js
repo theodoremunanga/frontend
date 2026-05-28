@@ -4,7 +4,7 @@ import { io } from "socket.io-client";
 // ENV
 // ======================================================
 
-const SOCKET_URL =
+export const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL ||
   "https://backend-ad3t.onrender.com";
 
@@ -31,7 +31,10 @@ export const connectSocket = (token) => {
     // ==========================================
 
     if (!token) {
-      console.error("❌ Missing socket token");
+      console.error(
+        "❌ Missing socket token"
+      );
+
       return null;
     }
 
@@ -45,6 +48,7 @@ export const connectSocket = (token) => {
       }
 
       socket.disconnect();
+
       socket = null;
     }
 
@@ -88,25 +92,33 @@ export const connectSocket = (token) => {
       );
     });
 
-    socket.on("disconnect", (reason) => {
-      console.warn(
-        "❌ SOCKET DISCONNECTED:",
-        reason
-      );
-    });
+    socket.on(
+      "disconnect",
+      (reason) => {
+        console.warn(
+          "❌ SOCKET DISCONNECTED:",
+          reason
+        );
+      }
+    );
 
-    socket.on("connect_error", (err) => {
-      console.error(
-        "❌ SOCKET CONNECT ERROR:"
-      );
+    socket.on(
+      "connect_error",
+      (err) => {
+        console.error(
+          "❌ SOCKET CONNECT ERROR:"
+        );
 
-      console.error(
-        err?.message || err
-      );
-    });
+        console.error(
+          err?.message || err
+        );
+      }
+    );
 
     socket.on("error", (err) => {
-      console.error("❌ SOCKET ERROR:");
+      console.error(
+        "❌ SOCKET ERROR:"
+      );
 
       console.error(err);
     });
@@ -142,30 +154,38 @@ export const connectSocket = (token) => {
 // GET SOCKET
 // ======================================================
 
-export const getSocket = () => socket;
+export const getSocket = () =>
+  socket;
 
 // ======================================================
 // DISCONNECT SOCKET
 // ======================================================
 
-export const disconnectSocket = () => {
-  try {
-    if (socket) {
-      console.log(
-        "🔌 SOCKET DISCONNECTED"
+export const disconnectSocket =
+  () => {
+    try {
+      if (socket) {
+        console.log(
+          "🔌 SOCKET DISCONNECTED"
+        );
+
+        socket.removeAllListeners();
+
+        socket.disconnect();
+
+        socket = null;
+      }
+    } catch (err) {
+      console.error(
+        "❌ SOCKET DISCONNECT ERROR:"
       );
 
-      socket.removeAllListeners();
-
-      socket.disconnect();
-
-      socket = null;
+      console.error(err);
     }
-  } catch (err) {
-    console.error(
-      "❌ SOCKET DISCONNECT ERROR:"
-    );
+  };
 
-    console.error(err);
-  }
-};
+// ======================================================
+// DEFAULT EXPORT
+// ======================================================
+
+export default socket;
