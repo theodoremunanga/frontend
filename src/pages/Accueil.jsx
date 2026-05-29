@@ -1,3 +1,4 @@
+
 import {
   useState,
   useEffect,
@@ -8,11 +9,7 @@ import {
 
 import socket from "../socket";
 
-const fetchData = useCallback(
-  async (silent = false) => {
-},
-[API, token, isOffline]
-);
+import { API_URL } from "../services/api";
 
 import SponsoredBanner from "../components/ads/SponsoredBanner";
 import AdCarousel from "../components/ads/AdCarousel";
@@ -76,7 +73,8 @@ export default function Accueil({
   const [openChallenges, setOpenChallenges] =
     useState([]);
 
-  const [myGames, setMyGames] = useState([]);
+  const [myGames, setMyGames] =
+    useState([]);
 
   const [loading, setLoading] =
     useState(true);
@@ -88,7 +86,43 @@ export default function Accueil({
   const [loadingAds, setLoadingAds] =
     useState(true);
 
+  // ================= NETWORK =================
+  const [isOffline, setIsOffline] =
+    useState(!navigator.onLine);
+
+  useEffect(() => {
+    const online = () =>
+      setIsOffline(false);
+
+    const offline = () =>
+      setIsOffline(true);
+
+    window.addEventListener(
+      "online",
+      online
+    );
+
+    window.addEventListener(
+      "offline",
+      offline
+    );
+
+    return () => {
+      window.removeEventListener(
+        "online",
+        online
+      );
+
+      window.removeEventListener(
+        "offline",
+        offline
+      );
+    };
+  }, []);
+
   const viewedAds = useRef(new Set());
+
+  const isFetching = useRef(false);
 
   const MIN_BET = 500;
 
@@ -103,27 +137,26 @@ export default function Accueil({
     localStorage.getItem("role") ||
     "PLAYER";
 
-  const offlineBanner = {
-   background:
-     "linear-gradient(to right,#b45309,#d97706)",
-   padding: 14,
-   borderRadius: 14,
-   marginBottom: 20,
-   textAlign: "center",
-   fontWeight: "bold",
- };
-
- const API = (
-  import.meta.env.VITE_API_URL ||
-  "https://backend-ad3t.onrender.com/api"
-).replace(/\/+$/, "");
+  // ================= API =================
+  const API = (
+    API_URL ||
+    "https://backend-ad3t.onrender.com/api"
+  ).replace(/\/+$/, "");
 
   const BASE_URL = API.replace(
     /\/api$/,
     ""
   );
 
-  const isFetching = useRef(false);
+  const offlineBanner = {
+    background:
+      "linear-gradient(to right,#b45309,#d97706)",
+    padding: 14,
+    borderRadius: 14,
+    marginBottom: 20,
+    textAlign: "center",
+    fontWeight: "bold",
+  };
 
   // ================= LOAD ADS =================
   useEffect(() => {
@@ -132,7 +165,7 @@ export default function Accueil({
         const ads =
           await getHomeFeedAds();
 
-          console.log("HOME ADS:", ads);
+        console.log("HOME ADS:", ads);
 
         setFeedAds(ads || []);
       } catch (err) {
@@ -152,7 +185,8 @@ export default function Accueil({
   const handleAdView = async (id) => {
     if (!id) return;
 
-    if (viewedAds.current.has(id)) return;
+    if (viewedAds.current.has(id))
+      return;
 
     viewedAds.current.add(id);
 
@@ -162,144 +196,146 @@ export default function Accueil({
       console.error(
         "Track ad failed:",
         err
-     );
-   }
+      );
+    }
   };
 
   // ================= LOAD DATA =================
-  const fetchData = async (
-    silent = false
-  ) => {
-   if (!token) return;
+  const fetchData = useCallback(
+    async (silent = false) => {
+      if (!token) return;
 
-   if (isFetching.current) return;
+      if (isFetching.current) return;
 
-   if (isOffline) {
-    setError(
-      "📡 Vous êtes hors ligne"
-    );
-    return;
-   }
+      if (isOffline) {
+        setError(
+          "📡 Vous êtes hors ligne"
+        );
+        return;
+      }
 
-   isFetching.current = true;
+      isFetching.current = true;
 
-   if (!silent) {
-    setLoading(true);
-   }
+      if (!silent) {
+        setLoading(true);
+      }
 
-   try {
-    const headers = {
-      Authorization:
-        "Bearer " + token,
-    };
+      try {
+        const headers = {
+          Authorization:
+            "Bearer " + token,
+        };
 
-    const [
-      openRes,
-      myRes,
-    ] = await Promise.all([
-      fetch(`${API}/match/open`, {
-        headers,
-      }),
+        const [openRes, myRes] =
+          await Promise.all([
+            fetch(
+              `${API}/match/open`,
+              {
+                headers,
+              }
+            ),
 
-      fetch(
-        `${API}/match/my-active`,
-        {
-          headers,
+            fetch(
+              `${API}/match/my-active`,
+              {
+                headers,
+              }
+            ),
+          ]);
+
+        if (
+          openRes.status === 401 ||
+          myRes.status === 401
+        ) {
+          localStorage.removeItem(
+            "token"
+          );
+
+          localStorage.removeItem(
+            "user"
+          );
+
+          setError(
+            "🔒 Session expirée"
+          );
+
+          return;
         }
-      ),
-    ]);
 
-    if (
-      openRes.status === 401 ||
-      myRes.status === 401
-    ) {
-      localStorage.removeItem(
-        "token"
-      );
+        const [openData, myData] =
+          await Promise.all([
+            openRes
+              .json()
+              .catch(() => ({})),
 
-      localStorage.removeItem(
-        "user"
-      );
+            myRes
+              .json()
+              .catch(() => ({})),
+          ]);
 
-      setError(
-        "🔒 Session expirée"
-      );
+        if (openRes.ok) {
+          setOpenChallenges(
+            openData.matches || []
+          );
+        }
 
-      return;
-    }
+        if (myRes.ok) {
+          setMyGames(
+            myData.matches || []
+          );
+        }
 
-    const [
-      openData,
-      myData,
-    ] = await Promise.all([
-      openRes
-        .json()
-        .catch(() => ({})),
+        setError("");
+      } catch (err) {
+        console.error(
+          "HOME FETCH ERROR:",
+          err
+        );
 
-      myRes
-        .json()
-        .catch(() => ({})),
-    ]);
-
-    if (openRes.ok) {
-      setOpenChallenges(
-        openData.matches || []
-      );
-    }
-
-    if (myRes.ok) {
-      setMyGames(
-        myData.matches || []
-      );
-    }
-
-    setError("");
-   } catch (err) {
-    console.error(
-      "HOME FETCH ERROR:",
-      err
-    );
-
-    setError(
-      "❌ Connexion serveur impossible"
-    );
-   } finally {
-    isFetching.current = false;
-    setLoading(false);
-   }
-};
-
- useEffect(() => {
-  fetchData();
-
-  const interval = setInterval(
-    () => {
-      if (
-        document.visibilityState ===
-        "visible"
-      ) {
-        fetchData(true);
+        setError(
+          "❌ Connexion serveur impossible"
+        );
+      } finally {
+        isFetching.current = false;
+        setLoading(false);
       }
     },
-    15000
+    [token, isOffline, API]
   );
 
+  // ================= INITIAL LOAD =================
   useEffect(() => {
-  if (!isOffline) {
-    fetchData(true);
-  }
+    fetchData();
+
+    const interval = setInterval(
+      () => {
+        if (
+          document.visibilityState ===
+          "visible"
+        ) {
+          fetchData(true);
+        }
+      },
+      15000
+    );
+
+    return () =>
+      clearInterval(interval);
+  }, [fetchData]);
+
+  // ================= REFRESH ONLINE =================
+  useEffect(() => {
+    if (!isOffline) {
+      fetchData(true);
+    }
   }, [isOffline, fetchData]);
 
-  return () =>
-    clearInterval(interval);
-}, [fetchData]);
-
-// ================= SOCKET REALTIME =================
+  // ================= SOCKET REALTIME =================
   useEffect(() => {
     if (!token) return;
 
-     const refreshFeed = () => {
-        fetchData(true);
+    const refreshFeed = () => {
+      fetchData(true);
     };
 
     socket.on(
@@ -308,32 +344,33 @@ export default function Accueil({
     );
 
     socket.on(
-     "match_joined",
-     refreshFeed
-   );
+      "match_joined",
+      refreshFeed
+    );
 
-   socket.on(
-     "match_finished",
-     refreshFeed
-   );
+    socket.on(
+      "match_finished",
+      refreshFeed
+    );
 
-   return () => {
-     socket.off(
-       "match_created",
-       refreshFeed
-     );
+    return () => {
+      socket.off(
+        "match_created",
+        refreshFeed
+      );
 
-     socket.off(
-       "match_joined",
-       refreshFeed
-     );
+      socket.off(
+        "match_joined",
+        refreshFeed
+      );
 
-     socket.off(
+      socket.off(
        "match_finished",
        refreshFeed
      );
    };
   }, [fetchData, token]);
+
 
 
   // ================= INPUTS =================
