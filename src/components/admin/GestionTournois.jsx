@@ -25,7 +25,7 @@ if (!API_URL) {
 // ======================================================
 
 const api = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL: `${API_URL}`,
 
   timeout: 15000,
 
