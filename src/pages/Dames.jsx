@@ -1264,26 +1264,38 @@ const handleReport = async () => {
     );
   }
 
-  // ======================================================
-  // END GAME
-  // ======================================================
 
-  console.log({
-    winner,
-    myPlayer,
-    winnerType: typeof winner,
-    myPlayerType: typeof myPlayer,
+// ======================================================
+// END GAME
+// ======================================================
+
+if (gameOver) {
+  const safeWinner =
+    winner !== undefined &&
+    winner !== null
+      ? String(winner).trim()
+      : "";
+
+  const safePlayer =
+    myPlayer !== undefined &&
+    myPlayer !== null
+      ? String(myPlayer).trim()
+      : "";
+
+  console.log("GAME RESULT", {
+    winner: safeWinner,
+    myPlayer: safePlayer,
   });
 
-  if (gameOver) {
+
   const isWinner =
     String(winner) === String(myPlayer);
 
   const text = draw
-    ? "🤝 Match nul"
+    ? "🤝 Match nul, vos fonds seront remboursés à 97.5% "
     : isWinner
-    ? "🎉 Félicitations, vous avez remporté la victoire."
-    : "😢 Désolé, vous avez perdu ; tentez encore plus d'expérience";
+    ? "🎉 Félicitations, vous avez remporté la victoire ; créez plus des défis pour maintenir votre expérience."
+    : "😢 Désolé, vous avez perdu cette partie ; tentez encore plus d'expérience";
 
   return (
     <div
@@ -1322,6 +1334,7 @@ const handleReport = async () => {
     </div>
   );
 }
+
 
   // ======================================================
   // MAIN
