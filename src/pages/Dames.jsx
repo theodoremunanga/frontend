@@ -541,14 +541,16 @@ export default function Dames({
     // ======================================================
 
 
-    console.log(
-      "MATCH INIT:",
-      data
-    );
+    
 
     socket.on(
       "match:init",
       (data) => {
+         console.log(
+           "MATCH INIT:",
+           data
+         );
+         
         if (
           !data ||
           !isValidBoard(
@@ -615,14 +617,17 @@ export default function Dames({
     // ======================================================
     // UPDATE
     // ======================================================
-    console.log(
-      "MATCH UPDATE:",
-      data
-    );
-    
+   
+
     socket.on(
       "match:update",
       (data) => {
+
+         console.log(
+           "MATCH UPDATE:",
+           data
+         );
+
         if (
           !data ||
           !isValidBoard(
