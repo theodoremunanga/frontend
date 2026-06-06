@@ -502,6 +502,39 @@ export default function Dames({
 
     socketRef.current = socket;
 
+     // ======================================================
+     // DEBUG SOCKET
+     // ======================================================
+
+     socket.on("connect", () => {
+        console.log(
+        "✅ SOCKET CONNECTED:",
+        socket.id
+      );
+    });
+
+      socket.on("connect_error", (err) => {
+        console.error(
+        "❌ CONNECT ERROR:",
+        err
+      );
+    });
+
+    socket.on("error", (err) => {
+      console.error(
+      "❌ SOCKET ERROR:",
+     err
+    );
+  });
+
+    socket.onAny((event, ...args) => {
+      console.log(
+      "📩 SOCKET EVENT:",
+      event,
+      args
+    );
+  });
+
     // ======================================================
     // CONNECT
     // ======================================================
@@ -511,8 +544,13 @@ export default function Dames({
 
       setLoadingError(false);
 
+      console.log(
+        "➡️ JOIN MATCH:",
+        matchId
+      );
+
       socket.emit(
-        "joinMatch",
+       "joinMatch",
         { matchId }
       );
 
@@ -547,10 +585,10 @@ export default function Dames({
       "match:init",
       (data) => {
          console.log(
-           "MATCH INIT:",
+           "🔥 MATCH INIT RECEIVED:",
            data
          );
-         
+
         if (
           !data ||
           !isValidBoard(
@@ -624,7 +662,7 @@ export default function Dames({
       (data) => {
 
          console.log(
-           "MATCH UPDATE:",
+           "🔥 MATCH UPDATE RECEIVED:",
            data
          );
 
