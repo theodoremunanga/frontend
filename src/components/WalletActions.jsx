@@ -1,5 +1,5 @@
 import { useState } from "react";
-import api from "../api";
+import api from "../services/api";
 
 export default function WalletActions({ refresh }) {
   const [open, setOpen] = useState(null); // "deposit" | "withdraw"
@@ -13,10 +13,10 @@ export default function WalletActions({ refresh }) {
 
   // 📱 NUMÉROS DES MOYENS DE PAIEMENT
   const methods = {
-    airtel: "0975551224",
-    mpesa: "000000000",
-    orange: "000000000",
-    usdt: "TRC20-ADRESSE-ICI"
+    airtel: "0973596027",
+    mpesa: "pas encore disponible",
+    orange: "pas encore disponible",
+    usdt: "pas encore disponible"
   };
 
   const reset = () => {
@@ -183,7 +183,7 @@ export default function WalletActions({ refresh }) {
                   </div>
 
                   <p className="text-xs mt-2 text-gray-600">
-                    ⚠ Envoyez exactement {amount || 0} CDF puis entrez la référence
+                    ⚠ Envoyez par Retrait exactement le montant de {amount || 0} auprès de l'Agent TUADILA GERARD MICHEL ; 
                   </p>
                 </div>
               )}
@@ -191,7 +191,7 @@ export default function WalletActions({ refresh }) {
               {/* REFERENCE */}
               <input
                 type="text"
-                placeholder="Référence transaction (obligatoire)"
+                placeholder="Référence de la transaction (obligatoire)"
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
                 className="w-full p-2 border rounded"
@@ -203,7 +203,7 @@ export default function WalletActions({ refresh }) {
           {open === "withdraw" && (
             <input
               type="text"
-              placeholder="Téléphone"
+              placeholder="insérez votre numéro AirtelMoney"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               className="w-full p-2 border rounded"

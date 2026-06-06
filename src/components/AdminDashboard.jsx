@@ -6,7 +6,7 @@ import {
   useMemo,
 } from "react";
 
-import axios from "axios";
+import api from "../services/api";
 import { io } from "socket.io-client";
 
 import DashboardStats from "./admin/DashboardStats";
@@ -18,43 +18,52 @@ import AIControlPanel from "./admin/AIControlPanel";
 import ActionsAdmin from "../components/admin/ActionsAdmin";
 import PerceptorCM from "../components/admin/PerceptorCM";
 
+import AdsManager from "./admin/AdsManager";
+import AdsEditor from "./admin/AdsEditor";
+
+import GestionTournois from "./admin/GestionTournois";
+
 // ======================================================
 // CONFIG
 // ======================================================
 
-const API =
-  import.meta.env.VITE_API_URL ||
-  "http://localhost:3000/api";
+const API_URL =
+  import.meta.env.VITE_API_URL;
+
+if (!API_URL) {
+  throw new Error(
+    "❌ VITE_API_URL is missing"
+  );
+}
 
 const SOCKET_URL =
-  API.replace(/\/api$/, "");
+  API_URL.replace("/api", "");
 
 const NAVBAR_HEIGHT = 70;
 
 const PAGE_SIZE = 10;
 
+const SOCKET_TIMEOUT = 20000;
+
+const MAX_RECONNECT_ATTEMPTS = 10;
+
 // ======================================================
 // AXIOS
 // ======================================================
 
-const api = axios.create({
-  baseURL: API,
-  timeout: 15000,
-});
+// supprimé
 
-api.interceptors.request.use(
-  (config) => {
-    const token =
-      localStorage.getItem("token");
+// ======================================================
+// REQUEST INTERCEPTOR
+// ======================================================
 
-    if (token) {
-      config.headers.Authorization =
-        `Bearer ${token}`;
-    }
+   // supprimé
 
-    return config;
-  }
-);
+// ======================================================
+// RESPONSE INTERCEPTOR
+// ======================================================
+
+   // supprimé
 
 // ======================================================
 // HELPERS
@@ -87,6 +96,23 @@ function formatDate(date) {
     return "--";
   }
 }
+
+// ======================================================
+// TAB TITLES
+// ======================================================
+
+const tabTitles = {
+  dashboard: "Dashboard",
+  transactions: "Transactions",
+  matches: "Matches",
+  messages: "Messages",
+  ai: "Ai",
+  users: "Users",
+  ads: "Ads",
+  "ads-editor": "Ads Editor",
+  tournaments: "Gestion Tournois",
+  perceptor: "Perceptor",
+};
 
 // ======================================================
 // COMPONENT
@@ -285,167 +311,202 @@ export default function AdminDashboard() {
   // SOCKET
   // ======================================================
 
-  useEffect(() => {
-    fetchData();
+ useEffect(() => {
+  fetchData();
 
-    const socket = io(
-      SOCKET_URL,
-      {
-        auth: {
-          token:
-            localStorage.getItem(
-              "token"
-            ),
-        },
+  const token =
+    localStorage.getItem("token");
 
-        transports: [
-          "websocket",
-          "polling",
-        ],
+  const socket = io(
+    SOCKET_URL,
+    {
+      auth: {
+        token,
+      },
 
-        reconnection: true,
+      withCredentials: true,
 
-        reconnectionAttempts:
-          Infinity,
+      transports: [
+        "websocket",
+        "polling",
+      ],
 
-        reconnectionDelay: 1000,
+      reconnection: true,
 
-        timeout: 20000,
+      reconnectionAttempts:
+        MAX_RECONNECT_ATTEMPTS,
 
-        autoConnect: true,
-      }
+      reconnectionDelay: 2000,
+
+      reconnectionDelayMax: 10000,
+
+      timeout:
+        SOCKET_TIMEOUT,
+
+      autoConnect: true,
+    }
+  );
+
+  socketRef.current = socket;
+
+  // ====================================================
+  // CONNECT
+  // ====================================================
+
+  socket.on("connect", () => {
+    setConnected(true);
+
+    pushNotif(
+      "🟢 Temps réel connecté",
+      "success"
     );
 
-    socketRef.current = socket;
+    clearInterval(
+      pingInterval.current
+    );
 
-    // ======================================================
-    // CONNECT
-    // ======================================================
+    pingInterval.current =
+      setInterval(() => {
+        const start =
+          Date.now();
 
-    socket.on("connect", () => {
-      setConnected(true);
+        socket.emit(
+          "ping:test",
+          start
+        );
+      }, 5000);
+  });
+
+  // ====================================================
+  // PING
+  // ====================================================
+
+  socket.on(
+    "pong:test",
+    (start) => {
+      setPing(
+        Date.now() - start
+      );
+    }
+  );
+
+  // ====================================================
+  // DISCONNECT
+  // ====================================================
+
+  socket.on(
+    "disconnect",
+    (reason) => {
+      setConnected(false);
+
+      console.warn(
+        "⚠️ Socket disconnected:",
+        reason
+      );
 
       pushNotif(
-        "🟢 Socket connecté",
-        "success"
+        "🔴 Temps réel déconnecté",
+        "error"
+      );
+    }
+  );
+
+  // ====================================================
+  // CONNECT ERROR
+  // ====================================================
+
+  socket.on(
+    "connect_error",
+    (err) => {
+      console.error(
+        "❌ Socket error:",
+        err.message
       );
 
-      clearInterval(
-        pingInterval.current
+      pushNotif(
+        "❌ Connexion temps réel impossible",
+        "error"
       );
+    }
+  );
 
-      pingInterval.current =
-        setInterval(() => {
-          const start =
-            Date.now();
+  // ====================================================
+  // TRANSACTIONS
+  // ====================================================
 
-          socket.emit(
-            "ping:test",
-            start
-          );
-        }, 4000);
-    });
-
-    // ======================================================
-    // PING
-    // ======================================================
-
-    socket.on(
-      "pong:test",
-      (start) => {
-        setPing(
-          Date.now() - start
-        );
-      }
-    );
-
-    // ======================================================
-    // DISCONNECT
-    // ======================================================
-
-    socket.on(
-      "disconnect",
-      () => {
-        setConnected(false);
-
-        pushNotif(
-          "🔴 Socket déconnecté",
-          "error"
-        );
-      }
-    );
-
-    // ======================================================
-    // TRANSACTION
-    // ======================================================
-
-    socket.on(
-      "transaction:new",
-      (tx) => {
-        setTransactions((prev) => [
+  socket.on(
+    "transaction:new",
+    (tx) => {
+      setTransactions(
+        (prev) => [
           tx,
           ...prev,
-        ]);
-
-        pushNotif(
-          "💰 Nouvelle transaction",
-          "success"
-        );
-      }
-    );
-
-    // ======================================================
-    // MESSAGE
-    // ======================================================
-
-    socket.on(
-      "message:new",
-      (message) => {
-        setMessages((prev) => [
-          message,
-          ...prev,
-        ]);
-
-        pushNotif(
-          "💬 Nouveau message",
-          "info"
-        );
-      }
-    );
-
-    // ======================================================
-    // MATCH
-    // ======================================================
-
-    socket.on(
-      "match:new",
-      (match) => {
-        setMatches((prev) => [
-          match,
-          ...prev,
-        ]);
-
-        pushNotif(
-          "♟️ Nouveau match",
-          "info"
-        );
-      }
-    );
-
-    // ======================================================
-    // CLEANUP
-    // ======================================================
-
-    return () => {
-      clearInterval(
-        pingInterval.current
+        ]
       );
 
-      socket.removeAllListeners();
+      pushNotif(
+        "💰 Nouvelle transaction",
+        "success"
+      );
+    }
+  );
 
-      socket.disconnect();
-    };
-  }, [fetchData, pushNotif]);
+  // ====================================================
+  // MESSAGES
+  // ====================================================
+
+  socket.on(
+    "message:new",
+    (message) => {
+      setMessages(
+        (prev) => [
+          message,
+          ...prev,
+        ]
+      );
+
+      pushNotif(
+        "💬 Nouveau message",
+        "info"
+      );
+    }
+  );
+
+  // ====================================================
+  // MATCHES
+  // ====================================================
+
+  socket.on(
+    "match:new",
+    (match) => {
+      setMatches(
+        (prev) => [
+          match,
+          ...prev,
+        ]
+      );
+
+      pushNotif(
+        "♟️ Nouveau match",
+        "info"
+      );
+    }
+  );
+
+  // ====================================================
+  // CLEANUP
+  // ====================================================
+
+  return () => {
+    clearInterval(
+      pingInterval.current
+    );
+
+    socket.removeAllListeners();
+
+    socket.disconnect();
+  };
+}, [fetchData, pushNotif]);
 
   // ======================================================
   // RESET PAGE
@@ -463,23 +524,82 @@ export default function AdminDashboard() {
   // ======================================================
 
   const filterData =
-    useCallback(
-      (data) => {
-        if (!search.trim()) {
-          return data;
-        }
+  useCallback(
+    (data) => {
+      if (!search.trim()) {
+        return data;
+      }
 
-        const q =
-          search.toLowerCase();
+      const q =
+        search.toLowerCase();
 
-        return data.filter((item) =>
-          JSON.stringify(item)
-            .toLowerCase()
-            .includes(q)
-        );
-      },
-      [search]
-    );
+      return data.filter((item) =>
+        Object.values(item)
+          .join(" ")
+          .toLowerCase()
+          .includes(q)
+      );
+    },
+    [search]
+  );
+
+// ======================================================
+// OFFLINE STATE
+// ======================================================
+
+const isOffline = !connected;
+  {/* HEADER */}
+
+     <div style={header}>
+       <div>
+         <div style={pageTitle}>
+           {tabTitles[tab] || "Admin"}
+     </div>
+
+     <div style={pageSub}>
+         Dernière mise à jour :{" "}
+       {formatDate(lastRefresh)}
+    </div>
+  </div>
+
+  <div style={headerActions}>
+    <input
+      placeholder="Recherche globale..."
+      value={search}
+      onChange={(e) =>
+        setSearch(e.target.value)
+      }
+      style={searchBox}
+    />
+
+    <button
+      onClick={fetchData}
+      style={refreshBtn}
+    >
+      🔄 Actualiser
+    </button>
+  </div>
+</div>
+
+{/* OFFLINE WARNING */}
+
+{isOffline && (
+  <div
+    style={{
+      background:
+        "rgba(239,68,68,0.15)",
+      border:
+        "1px solid rgba(239,68,68,0.4)",
+      color: "#ef4444",
+      padding: 14,
+      borderRadius: 14,
+      marginBottom: 20,
+      fontWeight: 700,
+    }}
+  >
+    ⚠️ Mode hors ligne
+  </div>
+)}
 
   // ======================================================
   // PAGINATION
@@ -663,14 +783,78 @@ export default function AdminDashboard() {
     }, [fetchData]);
 
   // ======================================================
+  // MENU ITEMS
+  // ======================================================
+
+  const menuItems = [
+    {
+      key: "dashboard",
+      label: "Dashboard",
+      icon: "📊",
+    },
+
+    {
+      key: "transactions",
+      label: "Transactions",
+      icon: "💰",
+    },
+
+    {
+      key: "matches",
+      label: "Matches",
+      icon: "♟️",
+    },
+
+    {
+      key: "messages",
+      label: "Messages",
+      icon: "💬",
+    },
+
+    {
+      key: "ai",
+      label: "Ai",
+      icon: "🤖",
+    },
+
+    {
+      key: "users",
+      label: "Users",
+      icon: "👥",
+    },
+
+    {
+      key: "ads",
+      label: "Ads",
+      icon: "📢",
+    },
+
+    {
+      key: "ads-editor",
+      label: "Ads Editor",
+      icon: "✏️",
+    },
+
+    {
+      key: "tournaments",
+      label: "Tournois",
+      icon: "🏆",
+    },
+
+    {
+      key: "perceptor",
+      label: "Perceptor",
+      icon: "🧠",
+    },
+  ];
+
+  // ======================================================
   // RENDER
   // ======================================================
 
   return (
     <div style={layout}>
-      {/* ====================================================== */}
       {/* SIDEBAR */}
-      {/* ====================================================== */}
 
       <aside style={sidebar}>
         <div style={logoBox}>
@@ -713,55 +897,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {[
-          {
-            key:
-              "dashboard",
-            icon:
-              "📊",
-          },
-
-          {
-            key:
-              "transactions",
-            icon:
-              "💰",
-          },
-
-          {
-            key:
-              "matches",
-            icon:
-              "♟️",
-          },
-
-          {
-            key:
-              "messages",
-            icon:
-              "💬",
-          },
-
-          {
-            key: "ai",
-            icon:
-              "🤖",
-          },
-
-          {
-            key:
-              "users",
-            icon:
-              "👥",
-          },
-
-          {
-            key:
-              "perceptor",
-            icon:
-              "🧠",
-          },
-        ].map((item) => (
+        {menuItems.map((item) => (
           <button
             key={item.key}
             onClick={() =>
@@ -790,17 +926,13 @@ export default function AdminDashboard() {
             </span>
 
             <span>
-              {
-                item.key
-              }
+              {item.label}
             </span>
           </button>
         ))}
       </aside>
 
-      {/* ====================================================== */}
       {/* MAIN */}
-      {/* ====================================================== */}
 
       <main style={main}>
         {/* HEADER */}
@@ -812,14 +944,9 @@ export default function AdminDashboard() {
                 pageTitle
               }
             >
-              {tab
-                .charAt(
-                  0
-                )
-                .toUpperCase() +
-                tab.slice(
-                  1
-                )}
+              {tabTitles[
+                tab
+              ] || "Admin"}
             </div>
 
             <div
@@ -1060,6 +1187,26 @@ export default function AdminDashboard() {
               }
             />
           </>
+        )}
+
+        {/* ADS */}
+
+        {tab === "ads" && (
+          <AdsManager />
+        )}
+
+        {/* ADS EDITOR */}
+
+        {tab ===
+          "ads-editor" && (
+          <AdsEditor />
+        )}
+
+        {/* TOURNAMENTS */}
+
+        {tab ===
+          "tournaments" && (
+          <GestionTournois />
         )}
 
         {/* PERCEPTOR */}

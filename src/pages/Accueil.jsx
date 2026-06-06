@@ -67,10 +67,7 @@ export default function Accueil({
 
   const role = localStorage.getItem("role") || "PLAYER";
 
-  const API = (
-    import.meta.env.VITE_API_URL ||
-    "http://localhost:3000"
-  ).replace(/\/+$/, "");
+  const API = import.meta.env.VITE_API_URL.replace(/\/+$/, "");
 
   const isFetching = useRef(false);
 
@@ -323,7 +320,7 @@ export default function Accueil({
 
       // 🤖 VS IA
       else if (mode === "ai") {
-        await fetch(`${API}/bot/create`, {
+        await fetch(`${API}/match/create/bot`, {
           method: "POST",
 
           headers: {

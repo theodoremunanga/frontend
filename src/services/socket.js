@@ -7,7 +7,7 @@ export const connectSocket = (token) => {
 
   if (socket) return socket; // évite double connexion
 
-  socket = io("http://localhost:3000", {
+  socket = io("https://backend-ad3t.onrender.com/api", {
     auth: { token },
     transports: ["websocket"],
   });

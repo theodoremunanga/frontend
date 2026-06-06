@@ -2,6 +2,8 @@ import {
   useState,
   useEffect,
   useMemo,
+  useCallback,
+  useRef,
 } from "react";
 
 import {
@@ -19,18 +21,35 @@ import {
   Swords,
   Coins,
   BadgeCheck,
+  WifiOff,
 } from "lucide-react";
 
 import WalletActions from "../WalletActions";
 
+// ======================================================
+// API CONFIG
+// ======================================================
+
 const API_URL =
-  import.meta.env.VITE_API_URL ||
-  "http://192.168.42.106:3000/api";
+  import.meta.env.VITE_API_URL;
+
+if (!API_URL) {
+  throw new Error(
+    "❌ VITE_API_URL is missing"
+  );
+}
+
+const PROFILE_ENDPOINT =
+  `${API_URL}/user/profile`;
+
+// ======================================================
+// COMPONENT
+// ======================================================
 
 export default function ProfileRadar() {
-  // ======================================================
+  // ====================================================
   // STATES
-  // ======================================================
+  // ====================================================
 
   const [user, setUser] =
     useState(null);
@@ -44,111 +63,245 @@ export default function ProfileRadar() {
   const [refreshing, setRefreshing] =
     useState(false);
 
-  const token =
-    localStorage.getItem("token");
+  const [offline, setOffline] =
+    useState(!navigator.onLine);
 
-  // ======================================================
+  // ====================================================
+  // REFS
+  // ====================================================
+
+  const mountedRef =
+    useRef(true);
+
+  // ====================================================
   // LOAD PROFILE
-  // ======================================================
+  // ====================================================
 
-  const load = async (
-    silent = false
-  ) => {
-    try {
-      if (!silent) {
-        setLoading(true);
-      }
-
-      setRefreshing(true);
-
-      setError("");
-
-      if (!token) {
-        setError(
-          "Utilisateur non authentifié"
-        );
-
-        return;
-      }
-
-      const res = await fetch(
-        `${API_URL}/user/profile`,
-        {
-          method: "GET",
-
-          headers: {
-            Authorization:
-              "Bearer " + token,
-
-            "Content-Type":
-              "application/json",
-          },
-        }
-      );
-
-      let data = null;
-
+  const load = useCallback(
+    async (
+      silent = false
+    ) => {
       try {
-        data = await res.json();
-      } catch {
-        throw new Error(
-          "Réponse serveur invalide"
-        );
-      }
-
-      if (!res.ok) {
+        // offline
         if (
-          data?.error ===
-            "Token invalide" ||
-          data?.error ===
-            "Token expiré"
+          !navigator.onLine
         ) {
-          localStorage.clear();
+          setOffline(true);
 
-          window.location.reload();
+          setError(
+            "Connexion internet indisponible"
+          );
 
           return;
         }
 
-        throw new Error(
-          data?.error ||
-            "Erreur serveur"
+        setOffline(false);
+
+        const token =
+          localStorage.getItem(
+            "token"
+          );
+
+        // no token
+        if (!token) {
+          setError(
+            "Utilisateur non authentifié"
+          );
+
+          setUser(null);
+
+          return;
+        }
+
+        if (!silent) {
+          setLoading(true);
+        }
+
+        setRefreshing(true);
+
+        setError("");
+
+        const res =
+          await fetch(
+            PROFILE_ENDPOINT,
+            {
+              method:
+                "GET",
+
+              headers: {
+                Authorization:
+                  `Bearer ${token}`,
+
+                "Content-Type":
+                  "application/json",
+              },
+            }
+          );
+
+        // session expired
+        if (
+          res.status === 401
+        ) {
+          localStorage.clear();
+
+          setUser(null);
+
+          setError(
+            "Session expirée"
+          );
+
+          setTimeout(() => {
+            window.location.reload();
+          }, 1200);
+
+          return;
+        }
+
+        // invalid server response
+        const contentType =
+          res.headers.get(
+            "content-type"
+          );
+
+        if (
+          !contentType?.includes(
+            "application/json"
+          )
+        ) {
+          throw new Error(
+            "Réponse serveur invalide"
+          );
+        }
+
+        const data =
+          await res.json();
+
+        if (!res.ok) {
+          throw new Error(
+            data?.error ||
+              data?.message ||
+              "Erreur serveur"
+          );
+        }
+
+        // safe mounted check
+        if (
+          mountedRef.current
+        ) {
+          setUser(data);
+        }
+      } catch (err) {
+        console.error(
+          "❌ PROFILE ERROR:",
+          err
         );
+
+        if (
+          mountedRef.current
+        ) {
+          setError(
+            err.message ||
+              "Erreur chargement profil"
+          );
+        }
+      } finally {
+        if (
+          mountedRef.current
+        ) {
+          setLoading(false);
+
+          setRefreshing(false);
+        }
       }
+    },
+    []
+  );
 
-      setUser(data);
-
-    } catch (err) {
-
-      console.error(
-        "PROFILE ERROR:",
-        err
-      );
-
-      setError(
-        err.message ||
-          "Erreur chargement profil"
-      );
-
-    } finally {
-
-      setLoading(false);
-
-      setRefreshing(false);
-    }
-  };
-
-  // ======================================================
+  // ====================================================
   // INIT
-  // ======================================================
+  // ====================================================
 
   useEffect(() => {
-    load();
-  }, []);
+    mountedRef.current = true;
 
-  // ======================================================
-  // DERIVED
-  // ======================================================
+    load();
+
+    return () => {
+      mountedRef.current =
+        false;
+    };
+  }, [load]);
+
+  // ====================================================
+  // ONLINE / OFFLINE
+  // ====================================================
+
+  useEffect(() => {
+    const handleOnline =
+      () => {
+        setOffline(false);
+
+        load(true);
+      };
+
+    const handleOffline =
+      () => {
+        setOffline(true);
+      };
+
+    window.addEventListener(
+      "online",
+      handleOnline
+    );
+
+    window.addEventListener(
+      "offline",
+      handleOffline
+    );
+
+    return () => {
+      window.removeEventListener(
+        "online",
+        handleOnline
+      );
+
+      window.removeEventListener(
+        "offline",
+        handleOffline
+      );
+    };
+  }, [load]);
+
+  // ====================================================
+  // WINDOW FOCUS REFRESH
+  // ====================================================
+
+  useEffect(() => {
+    const handleFocus =
+      () => {
+        if (
+          navigator.onLine
+        ) {
+          load(true);
+        }
+      };
+
+    window.addEventListener(
+      "focus",
+      handleFocus
+    );
+
+    return () => {
+      window.removeEventListener(
+        "focus",
+        handleFocus
+      );
+    };
+  }, [load]);
+
+  // ====================================================
+  // DERIVED DATA
+  // ====================================================
 
   const balance = Number(
     user?.wallet?.balance ??
@@ -185,75 +338,92 @@ export default function ProfileRadar() {
         ).padStart(6, "0")}`
       : "UNKNOWN");
 
-  const winRate = useMemo(() => {
+  // ====================================================
+  // WIN RATE
+  // ====================================================
 
-    const total =
-      wins + losses;
+  const winRate = useMemo(
+    () => {
+      const total =
+        wins + losses;
 
-    if (total <= 0) {
-      return 0;
-    }
+      if (total <= 0) {
+        return 0;
+      }
 
-    return Number(
-      (
-        (wins / total) *
-        100
-      ).toFixed(1)
-    );
+      return Number(
+        (
+          (wins / total) *
+          100
+        ).toFixed(1)
+      );
+    },
+    [wins, losses]
+  );
 
-  }, [wins, losses]);
+  // ====================================================
+  // RANK
+  // ====================================================
 
-  const rank = useMemo(() => {
+  const rank = useMemo(
+    () => {
+      if (wins >= 200)
+        return "🔥 Grand Maître";
 
-    if (wins >= 200)
-      return "🔥 Grand Maître";
+      if (wins >= 100)
+        return "👑 Maître";
 
-    if (wins >= 100)
-      return "👑 Maître";
+      if (wins >= 50)
+        return "⚔️ Expert";
 
-    if (wins >= 50)
-      return "⚔️ Expert";
+      if (wins >= 20)
+        return "🥈 Confirmé";
 
-    if (wins >= 20)
-      return "🥈 Confirmé";
+      return "🥉 Débutant";
+    },
+    [wins]
+  );
 
-    return "🥉 Débutant";
-
-  }, [wins]);
-
-  // ======================================================
+  // ====================================================
   // LOADING
-  // ======================================================
+  // ====================================================
 
   if (loading) {
     return (
-      <div style={loadingContainer}>
+      <div
+        style={
+          loadingContainer
+        }
+      >
         <div style={loader} />
 
         <h2>
-          Chargement du profil...
+          Chargement du
+          profil...
         </h2>
       </div>
     );
   }
 
-  // ======================================================
+  // ====================================================
   // ERROR
-  // ======================================================
+  // ====================================================
 
   if (error) {
     return (
       <div style={container}>
         <div style={errorCard}>
           <h2>
-            ❌ Une erreur est
-            survenue
+            ❌ Une erreur
+            est survenue
           </h2>
 
           <p>{error}</p>
 
           <button
-            onClick={() => load()}
+            onClick={() =>
+              load()
+            }
             style={retryBtn}
           >
             Réessayer
@@ -263,23 +433,24 @@ export default function ProfileRadar() {
     );
   }
 
-  // ======================================================
+  // ====================================================
   // EMPTY
-  // ======================================================
+  // ====================================================
 
   if (!user) {
     return (
       <div style={container}>
         <div style={emptyCard}>
-          Aucun utilisateur trouvé
+          Aucun utilisateur
+          trouvé
         </div>
       </div>
     );
   }
 
-  // ======================================================
+  // ====================================================
   // UI
-  // ======================================================
+  // ====================================================
 
   return (
     <div style={container}>
@@ -290,12 +461,16 @@ export default function ProfileRadar() {
           <div style={avatar}>
             {user?.username
               ?.charAt(0)
-              ?.toUpperCase() || "U"}
+              ?.toUpperCase() ||
+              "U"}
           </div>
 
           <div>
             <div style={verified}>
-              <BadgeCheck size={14} />
+              <BadgeCheck
+                size={14}
+              />
+
               Joueur vérifié
             </div>
 
@@ -304,22 +479,45 @@ export default function ProfileRadar() {
                 "Utilisateur"}
             </h1>
 
-            <div style={heroMeta}>
+            <div
+              style={heroMeta}
+            >
               <span>
                 {customId}
               </span>
 
               <span>
-                Niveau {level}
+                Niveau{" "}
+                {level}
               </span>
 
-              <span>{rank}</span>
+              <span>
+                {rank}
+              </span>
             </div>
+
+            {offline && (
+              <div
+                style={
+                  offlineBadge
+                }
+              >
+                <WifiOff
+                  size={14}
+                />
+                Hors ligne
+              </div>
+            )}
           </div>
         </div>
 
         <button
-          onClick={() => load(true)}
+          onClick={() =>
+            load(true)
+          }
+          disabled={
+            refreshing
+          }
           style={refreshBtn}
         >
           <RefreshCw
@@ -332,7 +530,9 @@ export default function ProfileRadar() {
             }}
           />
 
-          Actualiser
+          {refreshing
+            ? "Actualisation..."
+            : "Actualiser"}
         </button>
       </div>
 
@@ -351,18 +551,32 @@ export default function ProfileRadar() {
             title="Portefeuille"
           />
 
-          <div style={walletBox}>
-            <div style={walletLabel}>
+          <div
+            style={walletBox}
+          >
+            <div
+              style={
+                walletLabel
+              }
+            >
               Solde disponible
             </div>
 
-            <div style={walletAmount}>
+            <div
+              style={
+                walletAmount
+              }
+            >
               {balance.toLocaleString()}{" "}
               CDF
             </div>
           </div>
 
-          <div style={miniContainer}>
+          <div
+            style={
+              miniContainer
+            }
+          >
             <MiniStat
               icon={
                 <ShieldCheck
@@ -375,7 +589,9 @@ export default function ProfileRadar() {
 
             <MiniStat
               icon={
-                <Coins size={15} />
+                <Coins
+                  size={15}
+                />
               }
               label="Winrate"
               value={`${winRate}%`}
@@ -399,12 +615,20 @@ export default function ProfileRadar() {
 
         <div style={card}>
           <SectionTitle
-            icon={<User size={18} />}
+            icon={
+              <User
+                size={18}
+              />
+            }
             title="Informations"
           />
 
           <InfoRow
-            icon={<User size={15} />}
+            icon={
+              <User
+                size={15}
+              />
+            }
             label="Nom"
             value={
               user?.username ||
@@ -413,23 +637,37 @@ export default function ProfileRadar() {
           />
 
           <InfoRow
-            icon={<Mail size={15} />}
+            icon={
+              <Mail
+                size={15}
+              />
+            }
             label="Email"
             value={
-              user?.email || "N/A"
+              user?.email ||
+              "N/A"
             }
           />
 
           <InfoRow
-            icon={<Phone size={15} />}
+            icon={
+              <Phone
+                size={15}
+              />
+            }
             label="Téléphone"
             value={
-              user?.phone || "N/A"
+              user?.phone ||
+              "N/A"
             }
           />
 
           <InfoRow
-            icon={<Globe size={15} />}
+            icon={
+              <Globe
+                size={15}
+              />
+            }
             label="Pays"
             value={
               user?.country ||
@@ -443,12 +681,18 @@ export default function ProfileRadar() {
         <div style={card}>
           <SectionTitle
             icon={
-              <Trophy size={18} />
+              <Trophy
+                size={18}
+              />
             }
             title="Statistiques"
           />
 
-          <div style={statsGrid}>
+          <div
+            style={
+              statsGrid
+            }
+          >
             <StatCard
               icon={
                 <TrendingUp
@@ -480,14 +724,26 @@ export default function ProfileRadar() {
             />
 
             <StatCard
-              icon={<Star size={18} />}
+              icon={
+                <Star
+                  size={18}
+                />
+              }
               value={`${winRate}%`}
               label="Winrate"
             />
           </div>
 
-          <div style={progressWrap}>
-            <div style={progressTop}>
+          <div
+            style={
+              progressWrap
+            }
+          >
+            <div
+              style={
+                progressTop
+              }
+            >
               <span>
                 Progression
               </span>
@@ -497,10 +753,15 @@ export default function ProfileRadar() {
               </strong>
             </div>
 
-            <div style={progressBar}>
+            <div
+              style={
+                progressBar
+              }
+            >
               <div
                 style={{
                   ...progressFill,
+
                   width: `${winRate}%`,
                 }}
               />
@@ -513,7 +774,9 @@ export default function ProfileRadar() {
         <div style={card}>
           <SectionTitle
             icon={
-              <Clock3 size={18} />
+              <Clock3
+                size={18}
+              />
             }
             title="Transactions"
           />
@@ -521,70 +784,80 @@ export default function ProfileRadar() {
           {!user
             ?.transactions_list
             ?.length && (
-            <div style={emptyTransactions}>
-              Aucune transaction
+            <div
+              style={
+                emptyTransactions
+              }
+            >
+              Aucune
+              transaction
             </div>
           )}
 
           {user?.transactions_list
             ?.slice(0, 8)
-            .map((t, i) => {
+            .map(
+              (t, i) => {
+                const positive =
+                  Number(
+                    t?.amount ||
+                      0
+                  ) > 0;
 
-              const positive =
-                Number(
-                  t?.amount || 0
-                ) > 0;
-
-              return (
-                <div
-                  key={i}
-                  style={
-                    transactionRow
-                  }
-                >
-                  <div>
-                    <div
-                      style={
-                        transactionType
-                      }
-                    >
-                      {t?.type ||
-                        "Transaction"}
-                    </div>
-
-                    <div
-                      style={
-                        transactionDate
-                      }
-                    >
-                      {t?.created_at
-                        ? new Date(
-                            t.created_at
-                          ).toLocaleString()
-                        : "—"}
-                    </div>
-                  </div>
-
+                return (
                   <div
-                    style={{
-                      fontWeight: 800,
-                      color:
-                        positive
-                          ? "#22c55e"
-                          : "#ef4444",
-                    }}
+                    key={i}
+                    style={
+                      transactionRow
+                    }
                   >
-                    {positive
-                      ? "+"
-                      : ""}
-                    {Number(
-                      t?.amount || 0
-                    ).toLocaleString()}{" "}
-                    CDF
+                    <div>
+                      <div
+                        style={
+                          transactionType
+                        }
+                      >
+                        {t?.type ||
+                          "Transaction"}
+                      </div>
+
+                      <div
+                        style={
+                          transactionDate
+                        }
+                      >
+                        {t?.created_at
+                          ? new Date(
+                              t.created_at
+                            ).toLocaleString()
+                          : "—"}
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        fontWeight: 800,
+
+                        color:
+                          positive
+                            ? "#22c55e"
+                            : "#ef4444",
+                      }}
+                    >
+                      {positive
+                        ? "+"
+                        : ""}
+
+                      {Number(
+                        t?.amount ||
+                          0
+                      ).toLocaleString()}{" "}
+                      CDF
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              }
+            )}
         </div>
       </div>
     </div>
@@ -681,7 +954,8 @@ const hero = {
   padding: 30,
   marginBottom: 24,
   display: "flex",
-  justifyContent: "space-between",
+  justifyContent:
+    "space-between",
   alignItems: "center",
   gap: 20,
   flexWrap: "wrap",
@@ -716,6 +990,20 @@ const verified = {
     "rgba(255,255,255,0.15)",
   marginBottom: 10,
   fontSize: 12,
+};
+
+const offlineBadge = {
+  marginTop: 12,
+  display: "inline-flex",
+  alignItems: "center",
+  gap: 8,
+  padding: "8px 12px",
+  borderRadius: 999,
+  background:
+    "rgba(239,68,68,0.2)",
+  color: "#fecaca",
+  fontSize: 12,
+  fontWeight: 700,
 };
 
 const username = {
@@ -795,7 +1083,8 @@ const miniContainer = {
 
 const miniStat = {
   display: "flex",
-  justifyContent: "space-between",
+  justifyContent:
+    "space-between",
   alignItems: "center",
   padding: "12px 14px",
   borderRadius: 14,
@@ -811,7 +1100,8 @@ const miniLeft = {
 
 const infoRow = {
   display: "flex",
-  justifyContent: "space-between",
+  justifyContent:
+    "space-between",
   alignItems: "center",
   padding: "14px 0",
   borderBottom:
@@ -856,7 +1146,8 @@ const progressWrap = {
 
 const progressTop = {
   display: "flex",
-  justifyContent: "space-between",
+  justifyContent:
+    "space-between",
   marginBottom: 10,
 };
 
@@ -877,7 +1168,8 @@ const progressFill = {
 
 const transactionRow = {
   display: "flex",
-  justifyContent: "space-between",
+  justifyContent:
+    "space-between",
   alignItems: "center",
   padding: "14px 0",
   borderBottom:

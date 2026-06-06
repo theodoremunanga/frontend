@@ -1,307 +1,840 @@
-import { useEffect, useMemo, useState } from "react";
+// ======================================================
+// IMPORTS
+// ======================================================
+
 import axios from "axios";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
-// ================= API =================
-const API = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+import { io } from "socket.io-client";
 
-const api = axios.create({ baseURL: API });
+import api, { SOCKET_URL } from "../../services/api";
+// ======================================================
+// SOCKET
+// ======================================================
 
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+const socket = io(
+  SOCKET_URL,
+  {
+    transports: [
+      "websocket",
+    ],
+    reconnection: true,
+  }
+);
 
-// ================= COMPONENT =================
-export default function MessagesList({ type = "all" }) {
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(false);
+// ======================================================
+// HELPERS
+// ======================================================
 
-  // ================= FETCH =================
-  const fetchMessages = async () => {
-    try {
-      setLoading(true);
-      const { data } = await api.get("/admin/messages");
-      setMessages(data || []);
-    } catch (err) {
-      console.error("❌ FETCH MESSAGES:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchMessages();
-  }, []);
-
-  // ================= FILTER =================
-  const filtered = useMemo(() => {
-    let list = [...messages];
-
-    if (type !== "all") {
-      list = list.filter((m) => m.type === type);
-    }
-
-    return list.sort((a, b) => {
-      if (a.read === b.read) {
-        return new Date(b.created_at) - new Date(a.created_at);
-      }
-      return a.read ? 1 : -1;
-    });
-  }, [messages, type]);
-
-  // ================= ACTIONS =================
-  const markAsRead = async (id) => {
-    try {
-      await api.post(`/admin/messages/${id}/read`);
-      fetchMessages();
-    } catch {
-      alert("❌ Erreur mise à jour");
-    }
-  };
-
-  const markAsResolved = async (id) => {
-    try {
-      await api.post(`/admin/messages/${id}/resolve`);
-      fetchMessages();
-    } catch {
-      alert("❌ Erreur résolution");
-    }
-  };
-
-  const resolveWithWinner = async (m) => {
-    const winnerId = prompt("ID du gagnant ?");
-    if (!winnerId) return;
-
-    try {
-      await api.post("/admin/resolve-match", {
-        matchId: m.match_id,
-        winnerId,
-        messageId: m.id,
-      });
-
-      fetchMessages();
-    } catch (err) {
-      console.error(err);
-      alert("❌ Erreur résolution litige");
-    }
-  };
-
-  const deleteMessage = async (id) => {
-    if (!confirm("Supprimer ce message ?")) return;
-
-    try {
-      await api.delete(`/admin/messages/${id}`);
-      fetchMessages();
-    } catch {
-      alert("❌ Erreur suppression");
-    }
-  };
-
-  // ================= EMPTY =================
-  if (loading) {
-    return <p style={{ color: "#94a3b8" }}>⏳ Chargement...</p>;
+function formatDate(date) {
+  if (!date) {
+    return "--";
   }
 
-  if (!filtered.length) {
-    return (
-      <p style={{ color: "#94a3b8" }}>
-        Aucun message {type !== "all" ? `(${type})` : ""}
-      </p>
-    );
+  try {
+    return new Date(
+      date
+    ).toLocaleString();
+  } catch {
+    return "--";
+  }
+}
+
+function truncate(
+  text,
+  max = 140
+) {
+  if (!text) {
+    return "";
   }
 
-  // ================= UI =================
+  if (
+    text.length <= max
+  ) {
+    return text;
+  }
+
   return (
-    <div style={container}>
-      {filtered.map((m) => (
-        <div
-          key={m.id}
-          style={{
-            ...card,
-            borderLeft: `4px solid ${typeColor(m.type)}`,
-            opacity: m.resolved ? 0.6 : 1,
-          }}
-        >
-          {/* HEADER */}
-          <div style={header}>
-            <div>
-              <b>{m.username || "Utilisateur inconnu"}</b>
-
-              <div style={meta}>
-                {formatDate(m.created_at)} • {labelType(m.type)}
-              </div>
-            </div>
-
-            <div style={{ display: "flex", gap: 6 }}>
-              {!m.read && <span style={badgeNew}>NEW</span>}
-              {m.resolved && <span style={badgeResolved}>✔</span>}
-            </div>
-          </div>
-
-          {/* CONTEXT */}
-          {m.type === "report" && (
-            <div style={contextBox}>
-              🎮 Match ID: {m.match_id || "N/A"}
-              <br />
-              ⚠️ Blocage signalé
-            </div>
-          )}
-
-          {m.type === "complaint" && (
-            <div style={contextBox}>
-              📥 Réclamation utilisateur
-            </div>
-          )}
-
-          {/* 📸 IMAGE DU PLATEAU */}
-          {m.image && (
-            <div style={{ marginBottom: 10 }}>
-              <img
-                src={m.image}
-                alt="capture plateau"
-                style={{
-                  width: "100%",
-                  borderRadius: 8,
-                  border: "1px solid #334155",
-                }}
-              />
-            </div>
-          )}
-
-          {/* CONTENT */}
-          <p style={content}>{m.content}</p>
-
-          {/* ACTIONS */}
-          <div style={actions}>
-            {!m.read && (
-              <button
-                style={btnPrimary}
-                onClick={() => markAsRead(m.id)}
-              >
-                ✔ Lu
-              </button>
-            )}
-
-            {/* 🔥 Résolution simple */}
-            {!m.resolved && (
-              <button
-                style={btnSuccess}
-                onClick={() => markAsResolved(m.id)}
-              >
-                ✅ Résoudre
-              </button>
-            )}
-
-            {/* 🔥 RÉSOLUTION AVEC GAGNANT (IMPORTANT) */}
-            {m.type === "report" && !m.resolved && (
-              <button
-                style={btnResolve}
-                onClick={() => resolveWithWinner(m)}
-              >
-                ⚖️ Résoudre + payer gagnant
-              </button>
-            )}
-
-            <button
-              style={btnDanger}
-              onClick={() => deleteMessage(m.id)}
-            >
-              🗑 Supprimer
-            </button>
-          </div>
-        </div>
-      ))}
-    </div>
+    text.slice(0, max) +
+    "..."
   );
 }
 
-// ================= HELPERS =================
+function statusColor(
+  status
+) {
+  switch (
+    String(
+      status
+    ).toLowerCase()
+  ) {
+    case "approved":
+    case "resolved":
+    case "done":
+    case "closed":
+      return "#22c55e";
 
-function labelType(type) {
-  if (type === "report") return "🚨 Blocage Dames";
-  if (type === "complaint") return "📥 Réclamation";
-  return "Message";
+    case "pending":
+    case "open":
+      return "#f59e0b";
+
+    case "rejected":
+      return "#ef4444";
+
+    default:
+      return "#64748b";
+  }
 }
 
-function typeColor(type) {
-  if (type === "report") return "#ef4444";
-  if (type === "complaint") return "#0ea5e9";
-  return "#64748b";
+// ======================================================
+// COMPONENT
+// ======================================================
+
+export default function Messages() {
+
+  // ======================================================
+  // STATES
+  // ======================================================
+
+  const [
+    reports,
+    setReports,
+  ] = useState([]);
+
+  const [
+    claims,
+    setClaims,
+  ] = useState([]);
+
+  const [
+    loading,
+    setLoading,
+  ] = useState(true);
+
+  const [
+    refreshing,
+    setRefreshing,
+  ] = useState(false);
+
+  const [
+    error,
+    setError,
+  ] = useState("");
+
+  const [
+    activeTab,
+    setActiveTab,
+  ] = useState("reports");
+
+  const [
+    selected,
+    setSelected,
+  ] = useState(null);
+
+  const [
+    processingId,
+    setProcessingId,
+  ] = useState(null);
+
+  const [
+    search,
+    setSearch,
+  ] = useState("");
+
+  // ======================================================
+  // OFFLINE MODE
+  // ======================================================
+
+  const [
+    isOffline,
+    setIsOffline,
+  ] = useState(
+    !navigator.onLine
+  );
+
+  // ======================================================
+  // NETWORK LISTENER
+  // ======================================================
+
+  useEffect(() => {
+
+    const goOnline =
+      () => {
+        setIsOffline(
+          false
+        );
+      };
+
+    const goOffline =
+      () => {
+        setIsOffline(
+          true
+        );
+      };
+
+    window.addEventListener(
+      "online",
+      goOnline
+    );
+
+    window.addEventListener(
+      "offline",
+      goOffline
+    );
+
+    return () => {
+
+      window.removeEventListener(
+        "online",
+        goOnline
+      );
+
+      window.removeEventListener(
+        "offline",
+        goOffline
+      );
+    };
+
+  }, []);
+
+  // ======================================================
+  // LOAD DATA
+  // ======================================================
+
+  const loadData =
+    useCallback(
+      async (
+        silent = false
+      ) => {
+
+        // ==================================================
+        // OFFLINE
+        // ==================================================
+
+        if (isOffline) {
+
+          setError(
+            "⚠️ Hors ligne"
+          );
+
+          return;
+        }
+
+        try {
+
+          if (!silent) {
+            setLoading(
+              true
+            );
+          }
+
+          setRefreshing(
+            true
+          );
+
+          setError("");
+
+          const [
+            reportsRes,
+            claimsRes,
+          ] =
+            await Promise.all([
+              api.get(
+                "/admin/reports"
+              ),
+
+              api.get(
+                "/admin/claims"
+              ),
+            ]);
+
+          setReports(
+            Array.isArray(
+              reportsRes.data
+            )
+              ? reportsRes.data
+              : reportsRes.data
+                  ?.reports || []
+          );
+
+          setClaims(
+            Array.isArray(
+              claimsRes.data
+            )
+              ? claimsRes.data
+              : claimsRes.data
+                  ?.claims || []
+          );
+
+        } catch (err) {
+
+          console.error(
+            "❌ loadData:",
+            err
+          );
+
+          setError(
+            err?.message ||
+            err?.response
+              ?.data
+              ?.error ||
+            "Impossible de charger les messages"
+          );
+
+        } finally {
+
+          setLoading(
+            false
+          );
+
+          setRefreshing(
+            false
+          );
+        }
+      },
+      [isOffline]
+    );
+
+  // ======================================================
+  // INIT
+  // ======================================================
+
+  useEffect(() => {
+
+    loadData();
+
+    // ==================================================
+    // POLLING
+    // ==================================================
+
+    const interval =
+      setInterval(() => {
+        loadData(true);
+      }, 15000);
+
+    // ==================================================
+    // SOCKET EVENTS
+    // ==================================================
+
+    socket.on(
+      "new_report",
+      () => {
+        loadData(true);
+      }
+    );
+
+    socket.on(
+      "new_claim",
+      () => {
+        loadData(true);
+      }
+    );
+
+    return () => {
+
+      clearInterval(
+        interval
+      );
+
+      socket.off(
+        "new_report"
+      );
+
+      socket.off(
+        "new_claim"
+      );
+    };
+
+  }, [loadData]);
+
+  // ======================================================
+  // FILTERED REPORTS
+  // ======================================================
+
+  const filteredReports =
+    useMemo(() => {
+
+      const q =
+        search.toLowerCase();
+
+      return reports.filter(
+        (r) => {
+
+          return (
+            String(
+              r.id
+            )
+              .toLowerCase()
+              .includes(q) ||
+
+            String(
+              r.match_id || ""
+            )
+              .toLowerCase()
+              .includes(q) ||
+
+            String(
+              r.username ||
+              r.user_name ||
+              ""
+            )
+              .toLowerCase()
+              .includes(q) ||
+
+            String(
+              r.reason ||
+              r.message ||
+              ""
+            )
+              .toLowerCase()
+              .includes(q)
+          );
+        }
+      );
+
+    }, [
+      reports,
+      search,
+    ]);
+
+  // ======================================================
+  // FILTERED CLAIMS
+  // ======================================================
+
+  const filteredClaims =
+    useMemo(() => {
+
+      const q =
+        search.toLowerCase();
+
+      return claims.filter(
+        (c) => {
+
+          return (
+            String(
+              c.id
+            )
+              .toLowerCase()
+              .includes(q) ||
+
+            String(
+              c.subject || ""
+            )
+              .toLowerCase()
+              .includes(q) ||
+
+            String(
+              c.username ||
+              c.user_name ||
+              ""
+            )
+              .toLowerCase()
+              .includes(q) ||
+
+            String(
+              c.message || ""
+            )
+              .toLowerCase()
+              .includes(q)
+          );
+        }
+      );
+
+    }, [
+      claims,
+      search,
+    ]);
+
+  // ======================================================
+  // REPORT APPROVE
+  // ======================================================
+
+  const resolveReport =
+    async (id) => {
+
+      if (
+        !window.confirm(
+          "Marquer ce report comme résolu ?"
+        )
+      ) {
+        return;
+      }
+
+      try {
+
+        setProcessingId(
+          id
+        );
+
+        await api.post(
+          `/admin/reports/${id}/resolve`
+        );
+
+        await loadData(
+          true
+        );
+
+        alert(
+          "✅ Report résolu"
+        );
+
+      } catch (err) {
+
+        console.error(
+          err
+        );
+
+        alert(
+          err?.message ||
+          "Erreur résolution"
+        );
+
+      } finally {
+
+        setProcessingId(
+          null
+        );
+      }
+    };
+
+  // ======================================================
+  // CLAIM APPROVE
+  // ======================================================
+
+  const resolveClaim =
+    async (id) => {
+
+      if (
+        !window.confirm(
+          "Approuver cette réclamation ?"
+        )
+      ) {
+        return;
+      }
+
+      try {
+
+        setProcessingId(
+          id
+        );
+
+        await api.post(
+          `/admin/claims/${id}/approve`
+        );
+
+        await loadData(
+          true
+        );
+
+        alert(
+          "✅ Réclamation approuvée"
+        );
+
+      } catch (err) {
+
+        console.error(
+          err
+        );
+
+        alert(
+          err?.message ||
+          "Erreur approbation"
+        );
+
+      } finally {
+
+        setProcessingId(
+          null
+        );
+      }
+    };
+
+  // ======================================================
+  // REPORT REJECT
+  // ======================================================
+
+  const deleteReport =
+    async (id) => {
+
+      if (
+        !window.confirm(
+          "Rejeter ce report ?"
+        )
+      ) {
+        return;
+      }
+
+      try {
+
+        setProcessingId(
+          id
+        );
+
+        await api.delete(
+          `/admin/reports/${id}`
+        );
+
+        await loadData(
+          true
+        );
+
+        setSelected(
+          null
+        );
+
+        alert(
+          "❌ Report rejeté"
+        );
+
+      } catch (err) {
+
+        console.error(
+          err
+        );
+
+        alert(
+          err?.message ||
+          "Erreur suppression"
+        );
+
+      } finally {
+
+        setProcessingId(
+          null
+        );
+      }
+    };
+
+  // ======================================================
+  // CLAIM REJECT
+  // ======================================================
+
+  const deleteClaim =
+    async (id) => {
+
+      if (
+        !window.confirm(
+          "Rejeter cette réclamation ?"
+        )
+      ) {
+        return;
+      }
+
+      try {
+
+        setProcessingId(
+          id
+        );
+
+        await api.post(
+          `/admin/claims/${id}/reject`,
+          {
+            reason:
+              "Rejeté par administrateur",
+          }
+        );
+
+        await loadData(
+          true
+        );
+
+        alert(
+          "❌ Réclamation rejetée"
+        );
+
+      } catch (err) {
+
+        console.error(
+          err
+        );
+
+        alert(
+          err?.message ||
+          "Erreur rejet"
+        );
+
+      } finally {
+
+        setProcessingId(
+          null
+        );
+      }
+    };
+
+  // ======================================================
+  // PERMANENT DELETE
+  // ======================================================
+
+  const permanentDelete =
+    async (id) => {
+
+      if (
+        !window.confirm(
+          "Supprimer définitivement ce message ?"
+        )
+      ) {
+        return;
+      }
+
+      try {
+
+        setProcessingId(
+          id
+        );
+
+        const route =
+          activeTab ===
+          "reports"
+            ? `/admin/reports/${id}`
+            : `/admin/claims/${id}`;
+
+        await api.delete(
+          route
+        );
+
+        setSelected(
+          null
+        );
+
+        await loadData(
+          true
+        );
+
+        alert(
+          "🗑 Message supprimé"
+        );
+
+      } catch (err) {
+
+        console.error(
+          err
+        );
+
+        alert(
+          err?.message ||
+          "Erreur suppression"
+        );
+
+      } finally {
+
+        setProcessingId(
+          null
+        );
+      }
+    };
+
+  // ======================================================
+  // CURRENT LIST
+  // ======================================================
+
+  const currentList =
+    activeTab ===
+    "reports"
+      ? filteredReports
+      : filteredClaims;
+
+  // ======================================================
+  // ACTIONS JSX
+  // ======================================================
+
+  /*
+  <div style={detailsActions}>
+
+    <button
+      disabled={
+        processingId === selected.id
+      }
+      onClick={() =>
+        activeTab === "reports"
+          ? resolveReport(selected.id)
+          : resolveClaim(selected.id)
+      }
+      style={btnSuccess}
+    >
+      ✅ Approuver
+    </button>
+
+    <button
+      disabled={
+        processingId === selected.id
+      }
+      onClick={() =>
+        activeTab === "reports"
+          ? deleteReport(selected.id)
+          : deleteClaim(selected.id)
+      }
+      style={btnDanger}
+    >
+      ❌ Rejeter
+    </button>
+
+    <button
+      disabled={
+        processingId === selected.id
+      }
+      onClick={() =>
+        permanentDelete(selected.id)
+      }
+      style={btnDelete}
+    >
+      🗑 Supprimer
+    </button>
+
+  </div>
+  */
+
 }
 
-function formatDate(date) {
-  return date ? new Date(date).toLocaleString() : "";
-}
+// ======================================================
+// DELETE BUTTON STYLE
+// ======================================================
 
-// ================= STYLES =================
-
-const container = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 12,
-};
-
-const card = {
-  background: "#1e293b",
-  padding: 15,
-  borderRadius: 10,
-  color: "#e2e8f0",
-};
-
-const header = {
-  display: "flex",
-  justifyContent: "space-between",
-  marginBottom: 8,
-};
-
-const meta = {
-  fontSize: 12,
-  color: "#94a3b8",
-};
-
-const contextBox = {
-  background: "#0f172a",
-  padding: 8,
-  borderRadius: 6,
-  fontSize: 12,
-  marginBottom: 8,
-};
-
-const content = {
-  marginTop: 8,
-  marginBottom: 10,
-};
-
-const actions = {
-  display: "flex",
-  gap: 10,
-  flexWrap: "wrap",
-};
-
-const badgeNew = {
-  background: "#ef4444",
-  padding: "2px 6px",
-  borderRadius: 6,
-  fontSize: 10,
-};
-
-const badgeResolved = {
-  background: "#22c55e",
-  padding: "2px 6px",
-  borderRadius: 6,
-  fontSize: 10,
-};
+// ======================================================
+// GLOBAL BUTTON BASE
+// ======================================================
 
 const btnBase = {
   border: "none",
-  padding: "6px 10px",
-  borderRadius: 6,
-  color: "white",
+  padding: "10px 14px",
+  borderRadius: 10,
+  color: "#fff",
   cursor: "pointer",
+  fontWeight: 700,
+  fontSize: 13,
+  transition: "0.2s ease",
 };
 
-const btnPrimary = { ...btnBase, background: "#0ea5e9" };
-const btnSuccess = { ...btnBase, background: "#22c55e" };
-const btnDanger = { ...btnBase, background: "#ef4444" };
-const btnResolve = { ...btnBase, background: "#f59e0b" };
+// ======================================================
+// BUTTONS
+// ======================================================
+
+const btnSuccess = {
+  ...btnBase,
+  background: "#22c55e",
+};
+
+const btnDanger = {
+  ...btnBase,
+  background: "#ef4444",
+};
+
+const btnDelete = {
+  ...btnBase,
+  background: "#7f1d1d",
+};
+
+// ======================================================
+// DETAILS ACTIONS
+// ======================================================
+
+const detailsActions = {
+  display: "flex",
+  gap: 10,
+  marginTop: 20,
+  flexWrap: "wrap",
+};

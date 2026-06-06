@@ -1,42 +1,76 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import api from "../../services/api";
 
-export default function TransactionsList({ transactions = [], money, refresh }) {
+export default function TransactionsList({
+  transactions = [],
+  money,
+  refresh,
+}) {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+
   const [min, setMin] = useState("");
   const [max, setMax] = useState("");
   const [date, setDate] = useState("");
 
   const [loadingId, setLoadingId] = useState(null);
-  const [actionData, setActionData] = useState({});
-  const [rejectMode, setRejectMode] = useState(null);
 
-  // 🔎 FILTRAGE
+  const [rejectMode, setRejectMode] = useState(null);
+  const [deleteMode, setDeleteMode] = useState(null);
+
+  const [actionData, setActionData] = useState({});
+
+  // ===============================
+  // FILTERS
+  // ===============================
   const filtered = useMemo(() => {
     return transactions.filter((t) => {
-      if (filter !== "all" && t.status !== filter) return false;
-
-      if (
-        search &&
-        !t.username?.toLowerCase().includes(search.toLowerCase())
-      )
+      if (filter !== "all" && t.status !== filter) {
         return false;
+      }
 
-      if (min && Number(t.amount) < Number(min)) return false;
-      if (max && Number(t.amount) > Number(max)) return false;
+      if (typeFilter !== "all" && t.type !== typeFilter) {
+        return false;
+      }
+
+      if (search) {
+        const keyword = search.toLowerCase();
+
+        const found =
+          t.username?.toLowerCase().includes(keyword) ||
+          t.phone?.toLowerCase().includes(keyword) ||
+          t.custom_id?.toLowerCase().includes(keyword) ||
+          t.reference?.toLowerCase().includes(keyword);
+
+        if (!found) return false;
+      }
+
+      if (min && Number(t.amount) < Number(min)) {
+        return false;
+      }
+
+      if (max && Number(t.amount) > Number(max)) {
+        return false;
+      }
 
       if (date) {
         const txDate = new Date(t.created_at)
           .toISOString()
           .slice(0, 10);
-        if (txDate !== date) return false;
+
+        if (txDate !== date) {
+          return false;
+        }
       }
 
       return true;
     });
-  }, [transactions, filter, search, min, max, date]);
+  }, [transactions, filter, typeFilter, search, min, max, date]);
 
+  // ===============================
+  // HELPERS
+  // ===============================
   const handleChange = (id, field, value) => {
     setActionData((prev) => ({
       ...prev,
@@ -47,66 +81,137 @@ export default function TransactionsList({ transactions = [], money, refresh }) 
     }));
   };
 
-  // ✅ APPROVE
+  const clearLocalState = (id) => {
+    setRejectMode(null);
+    setDeleteMode(null);
+
+    setActionData((prev) => {
+      const copy = { ...prev };
+      delete copy[id];
+      return copy;
+    });
+  };
+
+  // ===============================
+  // APPROVE
+  // ===============================
   const approve = async (t) => {
-    const isWithdraw = t.type === "withdraw";
-    const reference = actionData[t.id]?.reference;
-
-    if (isWithdraw && !reference) {
-      return alert("Référence obligatoire pour un retrait");
-    }
-
-    setLoadingId(t.id);
-
     try {
+      setLoadingId(t.id);
+
+      const isWithdraw =
+        t.type === "withdraw" || t.type === "withdrawal";
+
+      const reference = actionData[t.id]?.reference?.trim();
+
+      if (isWithdraw && !reference) {
+        return alert(
+          "La référence de validation est obligatoire."
+        );
+      }
+
       await api.post("/admin/validate", {
         transactionId: Number(t.id),
-        reference: isWithdraw ? reference : t.reference, // 👈 IMPORTANT
+        reference: isWithdraw ? reference : t.reference,
       });
 
+      clearLocalState(t.id);
+
+      // 🔥 balayage automatique
       refresh?.();
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || "Erreur validation");
+
+      alert(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Erreur lors de la validation."
+      );
     } finally {
       setLoadingId(null);
     }
   };
 
-  // ❌ REJET
+  // ===============================
+  // REJECT
+  // ===============================
   const confirmReject = async (id) => {
-    const reason = actionData[id]?.reason;
-
-    if (!reason) {
-      return alert("Raison obligatoire");
-    }
-
-    setLoadingId(id);
-
     try {
+      setLoadingId(id);
+
+      const reason = actionData[id]?.reason?.trim();
+
+      if (!reason) {
+        return alert("La raison du rejet est obligatoire.");
+      }
+
       await api.post("/admin/reject", {
         transactionId: Number(id),
         reason,
       });
 
-      setRejectMode(null);
+      clearLocalState(id);
+
+      // 🔥 balayage automatique
       refresh?.();
     } catch (err) {
       console.error(err);
-      alert(err.response?.data?.message || "Erreur rejet");
+
+      alert(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Erreur lors du rejet."
+      );
     } finally {
       setLoadingId(null);
     }
   };
 
-  if (!transactions.length) return <p>Aucune transaction</p>;
+  // ===============================
+  // DELETE
+  // ===============================
+  const confirmDelete = async (id) => {
+    try {
+      setLoadingId(id);
+
+      await api.post("/admin/delete-transaction", {
+        transactionId: Number(id),
+      });
+
+      clearLocalState(id);
+
+      // 🔥 balayage automatique
+      refresh?.();
+    } catch (err) {
+      console.error(err);
+
+      alert(
+        err.response?.data?.error ||
+          err.response?.data?.message ||
+          "Erreur lors de la suppression."
+      );
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  // ===============================
+  // EMPTY
+  // ===============================
+  if (!transactions.length) {
+    return (
+      <div style={emptyCard}>
+        <p>Aucune transaction disponible.</p>
+      </div>
+    );
+  }
 
   return (
     <div>
-      {/* FILTRES */}
+      {/* ================= FILTERS ================= */}
       <div style={filters}>
         <input
-          placeholder="🔍 username"
+          placeholder="🔍 Username, téléphone, référence..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={input}
@@ -114,29 +219,29 @@ export default function TransactionsList({ transactions = [], money, refresh }) 
 
         <input
           type="number"
-          placeholder="Min"
+          placeholder="Montant min"
           value={min}
           onChange={(e) => setMin(e.target.value)}
-          style={input}
+          style={smallInput}
         />
 
         <input
           type="number"
-          placeholder="Max"
+          placeholder="Montant max"
           value={max}
           onChange={(e) => setMax(e.target.value)}
-          style={input}
+          style={smallInput}
         />
 
         <input
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          style={input}
+          style={smallInput}
         />
       </div>
 
-      {/* STATUS */}
+      {/* ================= STATUS FILTER ================= */}
       <div style={filters}>
         {["all", "pending", "approved", "rejected"].map((f) => (
           <button
@@ -144,100 +249,198 @@ export default function TransactionsList({ transactions = [], money, refresh }) 
             onClick={() => setFilter(f)}
             style={filter === f ? activeBtn : btn}
           >
-            {f}
+            {f.toUpperCase()}
           </button>
         ))}
       </div>
 
-      {/* LISTE */}
+      {/* ================= TYPE FILTER ================= */}
+      <div style={filters}>
+        {["all", "deposit", "withdraw"].map((f) => (
+          <button
+            key={f}
+            onClick={() => setTypeFilter(f)}
+            style={typeFilter === f ? activeBtn : btn}
+          >
+            {f.toUpperCase()}
+          </button>
+        ))}
+      </div>
+
+      {/* ================= LIST ================= */}
       {filtered.map((t) => {
         const isLoading = loadingId === t.id;
-        const isRejecting = rejectMode === t.id;
         const data = actionData[t.id] || {};
+
+        const isRejecting = rejectMode === t.id;
+        const isDeleting = deleteMode === t.id;
+
+        const isWithdraw =
+          t.type === "withdraw" || t.type === "withdrawal";
 
         return (
           <div key={t.id} style={card}>
-            <b>#{t.id}</b> | {t.username}
+            {/* ================= HEADER ================= */}
+            <div style={header}>
+              <div>
+                <h3 style={title}>
+                  #{t.id} — {t.username || "Utilisateur"}
+                </h3>
 
-            <p>💰 {money(t.amount)}</p>
+                <p style={sub}>
+                  {t.custom_id || "Aucun ID"}
+                </p>
+              </div>
 
-            <p>Type: <b>{t.type}</b></p>
+              <div style={amountBox}>
+                {money(t.amount)}
+              </div>
+            </div>
 
-            {/* ✅ DÉPÔT → référence user */}
-            {t.type === "deposit" && (
-              <p>📌 Référence: {t.reference}</p>
+            {/* ================= BODY ================= */}
+            <div style={grid}>
+              <Info label="Type" value={t.type} />
+
+              <Info
+                label="Statut"
+                value={
+                  <span style={statusColor(t.status)}>
+                    {t.status}
+                  </span>
+                }
+              />
+
+              <Info
+                label="Téléphone"
+                value={t.phone || "-"}
+              />
+
+              <Info
+                label="Référence"
+                value={t.reference || "-"}
+              />
+
+              <Info
+                label="Date"
+                value={new Date(
+                  t.created_at
+                ).toLocaleString()}
+              />
+
+              <Info
+                label="Traité"
+                value={t.processed ? "Oui" : "Non"}
+              />
+            </div>
+
+            {/* ================= WITHDRAW INPUT ================= */}
+            {t.status === "pending" && isWithdraw && (
+              <div style={{ marginTop: 15 }}>
+                <input
+                  placeholder="Référence de validation du retrait"
+                  value={data.reference || ""}
+                  onChange={(e) =>
+                    handleChange(
+                      t.id,
+                      "reference",
+                      e.target.value
+                    )
+                  }
+                  style={fullInput}
+                />
+              </div>
             )}
 
-            {/* ✅ RETRAIT */}
-            {t.type === "withdraw" && (
-              <>
-                <p>📞 Bénéficiaire: {t.phone}</p>
-              </>
-            )}
-
-            <p>
-              Status:{" "}
-              <span style={statusColor(t.status)}>
-                {t.status}
-              </span>
-            </p>
-
-            <p>📅 {new Date(t.created_at).toLocaleString()}</p>
-
-            {/* ACTIONS */}
+            {/* ================= ACTIONS ================= */}
             {t.status === "pending" && (
-              <div style={{ marginTop: 10 }}>
-                
-                {/* 🔵 RETRAIT → input admin */}
-                {t.type === "withdraw" && (
-                  <input
-                    placeholder="Référence de validation (obligatoire)"
-                    value={data.reference || ""}
-                    onChange={(e) =>
-                      handleChange(t.id, "reference", e.target.value)
-                    }
-                    style={input}
-                  />
-                )}
+              <div style={actions}>
+                <button
+                  disabled={isLoading}
+                  onClick={() => approve(t)}
+                  style={approveBtn}
+                >
+                  {isLoading
+                    ? "Traitement..."
+                    : "✔ Approuver"}
+                </button>
 
-                <div style={{ marginTop: 10 }}>
+                <button
+                  disabled={isLoading}
+                  onClick={() => setRejectMode(t.id)}
+                  style={rejectBtn}
+                >
+                  ✖ Rejeter
+                </button>
+
+                <button
+                  disabled={isLoading}
+                  onClick={() => setDeleteMode(t.id)}
+                  style={deleteBtn}
+                >
+                  🗑 Supprimer
+                </button>
+              </div>
+            )}
+
+            {/* ================= REJECT MODE ================= */}
+            {isRejecting && (
+              <div style={dangerBox}>
+                <input
+                  placeholder="Raison du rejet"
+                  value={data.reason || ""}
+                  onChange={(e) =>
+                    handleChange(
+                      t.id,
+                      "reason",
+                      e.target.value
+                    )
+                  }
+                  style={fullInput}
+                />
+
+                <div style={miniActions}>
                   <button
-                    onClick={() => approve(t)}
                     disabled={isLoading}
-                    style={approveBtn}
-                  >
-                    ✔ Approuver
-                  </button>
-
-                  <button
-                    onClick={() => setRejectMode(t.id)}
+                    onClick={() => confirmReject(t.id)}
                     style={rejectBtn}
                   >
-                    ✖ Rejeter
+                    Confirmer rejet
+                  </button>
+
+                  <button
+                    onClick={() => setRejectMode(null)}
+                    style={cancelBtn}
+                  >
+                    Annuler
                   </button>
                 </div>
+              </div>
+            )}
 
-                {/* 🔴 REJET DYNAMIQUE */}
-                {isRejecting && (
-                  <div style={{ marginTop: 10 }}>
-                    <input
-                      placeholder="Raison du rejet"
-                      value={data.reason || ""}
-                      onChange={(e) =>
-                        handleChange(t.id, "reason", e.target.value)
-                      }
-                      style={input}
-                    />
+            {/* ================= DELETE MODE ================= */}
+            {isDeleting && (
+              <div style={deleteBox}>
+                <p style={{ marginBottom: 10 }}>
+                  Cette opération supprimera uniquement
+                  l’enregistrement de la transaction.
+                </p>
 
-                    <button
-                      onClick={() => confirmReject(t.id)}
-                      disabled={isLoading}
-                      style={{ ...rejectBtn, marginTop: 5 }}
-                    >
-                      Confirmer rejet
-                    </button>
-                  </div>
-                )}
+                <div style={miniActions}>
+                  <button
+                    disabled={isLoading}
+                    onClick={() => confirmDelete(t.id)}
+                    style={deleteBtn}
+                  >
+                    Confirmer suppression
+                  </button>
+
+                  <button
+                    onClick={() => setDeleteMode(null)}
+                    style={cancelBtn}
+                  >
+                    Annuler
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -247,71 +450,226 @@ export default function TransactionsList({ transactions = [], money, refresh }) 
   );
 }
 
+// =======================================
+// COMPONENT
+// =======================================
+function Info({ label, value }) {
+  return (
+    <div style={infoCard}>
+      <p style={infoLabel}>{label}</p>
+      <div style={infoValue}>{value}</div>
+    </div>
+  );
+}
+
+// =======================================
 // STYLES
+// =======================================
 const card = {
-  background: "#1e293b",
-  padding: 15,
-  borderRadius: 10,
-  marginBottom: 10,
+  background: "#0f172a",
+  border: "1px solid #1e293b",
+  borderRadius: 16,
+  padding: 20,
+  marginBottom: 16,
+};
+
+const header = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  gap: 15,
+  marginBottom: 20,
+  flexWrap: "wrap",
+};
+
+const title = {
+  margin: 0,
+  color: "#fff",
+};
+
+const sub = {
+  margin: 0,
+  color: "#94a3b8",
+  fontSize: 13,
+};
+
+const amountBox = {
+  background: "#111827",
+  color: "#22c55e",
+  padding: "10px 14px",
+  borderRadius: 12,
+  fontWeight: "bold",
+  fontSize: 18,
+};
+
+const grid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+  gap: 12,
+};
+
+const infoCard = {
+  background: "#111827",
+  borderRadius: 12,
+  padding: 12,
+};
+
+const infoLabel = {
+  color: "#94a3b8",
+  fontSize: 12,
+  marginBottom: 5,
+};
+
+const infoValue = {
+  color: "#fff",
+  fontWeight: 600,
+  wordBreak: "break-word",
 };
 
 const filters = {
   display: "flex",
   gap: 10,
-  marginBottom: 10,
+  marginBottom: 14,
   flexWrap: "wrap",
 };
 
 const input = {
-  padding: 6,
-  borderRadius: 6,
-  border: "none",
+  padding: 10,
+  borderRadius: 10,
+  border: "1px solid #334155",
+  background: "#0f172a",
+  color: "#fff",
+  minWidth: 250,
+};
+
+const smallInput = {
+  padding: 10,
+  borderRadius: 10,
+  border: "1px solid #334155",
+  background: "#0f172a",
+  color: "#fff",
+};
+
+const fullInput = {
   width: "100%",
-  maxWidth: 220,
+  padding: 12,
+  borderRadius: 10,
+  border: "1px solid #334155",
+  background: "#020617",
+  color: "#fff",
+  boxSizing: "border-box",
 };
 
 const btn = {
-  padding: "6px 12px",
-  background: "#334155",
+  background: "#1e293b",
   color: "#fff",
   border: "none",
-  borderRadius: 6,
+  padding: "10px 14px",
+  borderRadius: 10,
   cursor: "pointer",
 };
 
 const activeBtn = {
   ...btn,
-  background: "#3b82f6",
+  background: "#2563eb",
+};
+
+const actions = {
+  display: "flex",
+  gap: 10,
+  marginTop: 20,
+  flexWrap: "wrap",
+};
+
+const miniActions = {
+  display: "flex",
+  gap: 10,
+  marginTop: 10,
+  flexWrap: "wrap",
 };
 
 const approveBtn = {
-  background: "#22c55e",
+  background: "#16a34a",
   color: "#fff",
   border: "none",
-  padding: "6px 10px",
-  borderRadius: 6,
-  marginRight: 10,
+  padding: "10px 14px",
+  borderRadius: 10,
   cursor: "pointer",
 };
 
 const rejectBtn = {
-  background: "#ef4444",
+  background: "#dc2626",
   color: "#fff",
   border: "none",
-  padding: "6px 10px",
-  borderRadius: 6,
+  padding: "10px 14px",
+  borderRadius: 10,
   cursor: "pointer",
+};
+
+const deleteBtn = {
+  background: "#475569",
+  color: "#fff",
+  border: "none",
+  padding: "10px 14px",
+  borderRadius: 10,
+  cursor: "pointer",
+};
+
+const cancelBtn = {
+  background: "#334155",
+  color: "#fff",
+  border: "none",
+  padding: "10px 14px",
+  borderRadius: 10,
+  cursor: "pointer",
+};
+
+const dangerBox = {
+  marginTop: 15,
+  background: "#450a0a",
+  padding: 15,
+  borderRadius: 12,
+};
+
+const deleteBox = {
+  marginTop: 15,
+  background: "#1e293b",
+  padding: 15,
+  borderRadius: 12,
+  color: "#fff",
+};
+
+const emptyCard = {
+  background: "#0f172a",
+  padding: 20,
+  borderRadius: 16,
+  textAlign: "center",
+  color: "#94a3b8",
 };
 
 const statusColor = (status) => {
   switch (status) {
     case "approved":
-      return { color: "#22c55e" };
+      return {
+        color: "#22c55e",
+        fontWeight: "bold",
+      };
+
     case "pending":
-      return { color: "#facc15" };
+      return {
+        color: "#facc15",
+        fontWeight: "bold",
+      };
+
     case "rejected":
-      return { color: "#ef4444" };
+      return {
+        color: "#ef4444",
+        fontWeight: "bold",
+      };
+
     default:
-      return { color: "#fff" };
+      return {
+        color: "#fff",
+      };
   }
 };

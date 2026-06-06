@@ -3,7 +3,7 @@ import { io } from "socket.io-client";
 import api from "../api/adminApi";
 
 const SOCKET_URL =
-  (import.meta.env.VITE_API_URL || "http://localhost:3000").replace("/api", "");
+  (import.meta.env.VITE_API_URL || "https://backend-ad3t.onrender.com/api").replace("/api", "");
 
 export default function useAdminDashboard() {
   const [loading, setLoading] = useState(false);
