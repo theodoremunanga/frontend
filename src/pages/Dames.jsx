@@ -14,9 +14,12 @@ import html2canvas from "html2canvas";
 // CONFIG
 // ======================================================
 
-const API = import.meta.env.VITE_API_URL;
+const API =
+  import.meta.env.VITE_API_URL;
 
-const SOCKET_URL = API?.replace(/\/api$/, "");
+const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL ||
+  API?.replace(/\/api$/, "");
 
 const PLAYER_1 = 1;
 const PLAYER_2 = 2;
@@ -457,7 +460,21 @@ export default function Dames({
       socketRef.current.off();
 
       socketRef.current.disconnect();
-    }
+    }   
+       console.log(
+        "MATCH ID:",
+        matchId
+     );
+
+      console.log(
+        "API:",
+        API
+     );
+
+     console.log(
+       "SOCKET URL:",
+       SOCKET_URL
+     );
 
     const socket = io(
       SOCKET_URL,
@@ -505,28 +522,29 @@ export default function Dames({
 
       pingInterval.current =
         setInterval(() => {
-          const start =
-            performance.now();
+          const start = performance.now();
 
-          socket.emit(
-            "ping:test",
-            null,
-            () => {
-              const ms =
-                Math.floor(
-                  performance.now() -
-                    start
-                );
+          socket.emit("ping:test", start);
 
-              setPing(ms);
-            }
-          );
+          socket.once("pong:test", (sentAt) => {
+            const ms = Math.floor(
+              performance.now() - sentAt
+            );
+
+            setPing(ms);
+          });
         }, 5000);
     });
 
     // ======================================================
     // INIT
     // ======================================================
+
+
+    console.log(
+      "MATCH INIT:",
+      data
+    );
 
     socket.on(
       "match:init",
@@ -597,7 +615,11 @@ export default function Dames({
     // ======================================================
     // UPDATE
     // ======================================================
-
+    console.log(
+      "MATCH UPDATE:",
+      data
+    );
+    
     socket.on(
       "match:update",
       (data) => {
@@ -751,10 +773,15 @@ export default function Dames({
 
     socket.on(
       "connect_error",
-      () => {
-        setConnected(false);
+      (err) => {
+       console.error(
+         "SOCKET CONNECT ERROR:",
+         err?.message || err
+       );
 
-        setSendingMove(false);
+       setConnected(false);
+       setSendingMove(false);
+       setLoadingError(true);
       }
     );
 
@@ -769,8 +796,17 @@ export default function Dames({
 
     socket.on(
       "error",
-      () => {
+      (message) => {
+        console.error(
+          "SOCKET SERVER ERROR:",
+          message
+        );
+
         setSendingMove(false);
+
+        if (!board) {
+          setLoadingError(true);
+        }
       }
     );
 
@@ -1086,30 +1122,30 @@ export default function Dames({
         
         const formData = new FormData();
 
-         formData.append("type", "report");
-         formData.append("matchId", matchId);
-         formData.append("description", reason);
-         formData.append("image", blob);
-
-        form.append(
+        formData.append(
           "image",
           blob,
           "report.jpg"
         );
 
-        form.append(
+        formData.append(
           "matchId",
           String(matchId)
         );
 
-        form.append(
+        formData.append(
           "playerSide",
           String(myPlayer)
         );
 
-        form.append(
+        formData.append(
           "board",
           JSON.stringify(board)
+        );
+
+        formData.append(
+          "description",
+          "Signalement depuis le jeu"
         );
 
         const res =
@@ -1124,7 +1160,7 @@ export default function Dames({
                   `Bearer ${token}`,
               },
 
-              body: form,
+              body: formData,
             }
           );
 
