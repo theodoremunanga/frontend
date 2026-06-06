@@ -23,3 +23,5 @@ export const disconnectSocket = () => {
     socket = null;
   }
 };
+
+export default socket;
