@@ -934,7 +934,7 @@ export default function Accueil({
                             <h3>
                               💰{" "}
                               {
-                                m.bet
+                                m.bet_amount
                               }{" "}
                               CDF
                             </h3>
@@ -946,7 +946,7 @@ export default function Accueil({
                             >
                               👤{" "}
                               {
-                                m.creator_name
+                                m.user_id
                               }
                             </div>
 

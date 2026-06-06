@@ -286,7 +286,7 @@ export default function Dames({
   const [gameOver, setGameOver] =
     useState(false);
 
-  const [winner, setWinner] =
+  const [winnerSide, setWinnerSide] =
     useState(null);
 
   const [draw, setDraw] =
@@ -712,10 +712,11 @@ export default function Dames({
     socket.on(
       "match:end",
       ({
-        winnerId,
+        winnerSide,
         draw,
         board,
       }) => {
+
         if (
           board &&
           isValidBoard(board)
@@ -725,7 +726,9 @@ export default function Dames({
 
         setGameOver(true);
 
-        setWinner(winnerId);
+        setWinnerSide(
+        winnerSide || null
+      );
 
         setDraw(draw);
 
@@ -1325,60 +1328,61 @@ export default function Dames({
   // ======================================================
 
   if (gameOver) {
-    const text = draw
-      ? "🤝 Match nul"
-      : Number(winner) ===
+
+      const text = draw
+        ? "🤝 Match nul"
+        : Number(winnerSide) ===
         Number(myPlayer)
-      ? "🎉 Victoire"
-      : "😢 Défaite";
+        ? "🎉 Félicitations ! Vous avez gagné cette partie. Créez un nouveau match pour continuer à gagner."
+        : "😢 Défaite ! Vous avez perdu cette partie, ressayez un autre match.";
 
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-
-          background:
-            "linear-gradient(135deg,#020617,#0f172a)",
-
-          padding: 40,
-
-          color: "white",
-        }}
-      >
-        <h1
+      return (
+        <div
           style={{
-            fontSize: 52,
-            marginBottom: 30,
-          }}
-        >
-          {text}
-        </h1>
-
-        <button
-          onClick={resetGame}
-          style={{
-            padding:
-              "14px 24px",
-
-            border: "none",
-
-            borderRadius: 14,
-
-            cursor: "pointer",
-
-            color: "white",
-
-            fontWeight: 700,
+            minHeight: "100vh",
 
             background:
-              "linear-gradient(135deg,#2563eb,#1d4ed8)",
+              "linear-gradient(135deg,#020617,#0f172a)",
+
+            padding: 40,
+
+            color: "white",
           }}
         >
-          Retour
-        </button>
-      </div>
-    );
-  }
+      <h1
+        style={{
+          fontSize: 52,
+          marginBottom: 30,
+        }}
+      >
+        {text}
+      </h1>
+
+      <button
+        onClick={resetGame}
+        style={{
+          padding:
+            "14px 24px",
+
+          border: "none",
+
+          borderRadius: 14,
+
+          cursor: "pointer",
+
+          color: "white",
+
+          fontWeight: 700,
+
+          background:
+            "linear-gradient(135deg,#2563eb,#1d4ed8)",
+        }}
+      >
+        Retour
+      </button>
+    </div>
+  );
+}
 
   // ======================================================
   // MAIN
