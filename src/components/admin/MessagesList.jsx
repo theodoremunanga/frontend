@@ -12,10 +12,7 @@ import {
 
 import { io } from "socket.io-client";
 
-import api, {
-  SOCKET_URL,
-} from "../services/api";
-
+import api, { SOCKET_URL } from "../../services/api";
 // ======================================================
 // SOCKET
 // ======================================================
@@ -745,7 +742,7 @@ export default function Messages() {
   // ACTIONS JSX
   // ======================================================
 
-  
+  /*
   <div style={detailsActions}>
 
     <button
@@ -789,7 +786,7 @@ export default function Messages() {
     </button>
 
   </div>
-  
+  */
 
 }
 
@@ -797,7 +794,47 @@ export default function Messages() {
 // DELETE BUTTON STYLE
 // ======================================================
 
+// ======================================================
+// GLOBAL BUTTON BASE
+// ======================================================
+
+const btnBase = {
+  border: "none",
+  padding: "10px 14px",
+  borderRadius: 10,
+  color: "#fff",
+  cursor: "pointer",
+  fontWeight: 700,
+  fontSize: 13,
+  transition: "0.2s ease",
+};
+
+// ======================================================
+// BUTTONS
+// ======================================================
+
+const btnSuccess = {
+  ...btnBase,
+  background: "#22c55e",
+};
+
+const btnDanger = {
+  ...btnBase,
+  background: "#ef4444",
+};
+
 const btnDelete = {
   ...btnBase,
   background: "#7f1d1d",
+};
+
+// ======================================================
+// DETAILS ACTIONS
+// ======================================================
+
+const detailsActions = {
+  display: "flex",
+  gap: 10,
+  marginTop: 20,
+  flexWrap: "wrap",
 };
