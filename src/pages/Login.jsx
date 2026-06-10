@@ -32,7 +32,9 @@ export default function Login({ setPage, setIsAuth }) {
         throw new Error("Réponse serveur invalide.");
       }
 
-      const userRole = String(data.role || "USER").toUpperCase();
+      const userRole = String(
+        data?.user?.role || "USER"
+      ).toUpperCase();
 
       // ✅ stockage
       localStorage.setItem("token", data.token);
