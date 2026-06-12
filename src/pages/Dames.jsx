@@ -37,6 +37,10 @@ const SOCKET_TIMEOUT = 15000;
 const CELL_SIZE = Math.floor(
   Math.min(window.innerWidth * 0.9, 680) / 10
 );
+
+const MOBILE =
+  typeof window !== "undefined" &&
+  window.innerWidth < 768;
 // ======================================================
 // VALIDATORS
 // ======================================================
