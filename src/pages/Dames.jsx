@@ -716,13 +716,15 @@ export default function Dames({
     // END
     // ======================================================
 
-    socket.on(
-      "match:end",
-      ({
-        winnerSide,
-        draw,
-        board,
-      }) => {
+      socket.on("match:end", (data) => {
+        setWinnerSide(data.winnerSide);
+        setDraw(data.draw);
+        setGameOver(true);
+
+        if (data.board) {
+        setBoard(data.board);
+      }
+
 
         if (
           board &&
@@ -734,8 +736,8 @@ export default function Dames({
         setGameOver(true);
 
         setWinnerSide(
-        winnerSide || null
-      );
+          winnerSide ?? winner ?? null
+        );
 
         setDraw(draw);
 
