@@ -1171,11 +1171,7 @@ const isOffline = !connected;
         {tab ===
           "messages" && (
           <>
-            <MessagesList
-              messages={paginate(
-                filteredMessages
-              )}
-            />
+            <MessagesList />
 
             <Pagination
               page={page}
