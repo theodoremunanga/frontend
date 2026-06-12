@@ -34,6 +34,9 @@ const MAX_MESSAGES = 100;
 
 const SOCKET_TIMEOUT = 15000;
 
+const CELL_SIZE = Math.floor(
+  Math.min(window.innerWidth * 0.9, 680) / 10
+);
 // ======================================================
 // VALIDATORS
 // ======================================================
@@ -114,8 +117,8 @@ const Cell = memo(function Cell({
         handleClick(r, c)
       }
       style={{
-        width: 68,
-        height: 68,
+        width: CELL_SIZE,
+        height: CELL_SIZE,
 
         background:
           !isDark
@@ -157,8 +160,8 @@ const Cell = memo(function Cell({
       {cell !== 0 && (
         <div
           style={{
-            width: 50,
-            height: 50,
+            width: CELL_SIZE * 0.74,
+            height: CELL_SIZE * 0.74,
 
             borderRadius: "50%",
 
@@ -1334,7 +1337,7 @@ export default function Dames({
         : Number(winnerSide) ===
         Number(myPlayer)
         ? "🎉 Félicitations ! Vous avez gagné cette partie. Créez un nouveau match pour continuer à gagner."
-        : "😢 Défaite ! Vous avez perdu cette partie, ressayez un autre match.";
+        : "🔚 Ce Match est complétement terminé, recommencez un autre.";
 
       return (
         <div
@@ -1405,10 +1408,13 @@ export default function Dames({
         style={{
           maxWidth: 1700,
 
-          margin: "0 auto",
+          margin: "0 auto"
+          
+          ,
 
           display: "flex",
-
+          flexDirection:
+            MOBILE ? "column" : "row",
           gap: 28,
         }}
       >
@@ -1439,7 +1445,7 @@ export default function Dames({
               <h1
                 style={{
                   margin: 0,
-                  fontSize: 36,
+                  fontSize: MOBILE ? 24 : 36,
                 }}
               >
                 ♟️ Dames
@@ -1518,9 +1524,12 @@ export default function Dames({
 
           <div
             style={{
-              display: "flex",
+              display: "grid",
+              gridTemplateColumns:
+                MOBILE
+                  ? "1fr 1fr"
+                  : "repeat(4,1fr)",
               gap: 14,
-              marginBottom: 24,
             }}
           >
             {[
@@ -1703,8 +1712,8 @@ export default function Dames({
 
         <div
           style={{
-            width: 380,
-            height: 820,
+            width: MOBILE ? "100%" : 380,
+            height: MOBILE ? 300 : 820,
 
             background:
               "linear-gradient(180deg,#0f172a,#111827)",
