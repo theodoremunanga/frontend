@@ -12,10 +12,7 @@ import {
 
 import { io } from "socket.io-client";
 
-import api, {
-  SOCKET_URL,
-} from "../services/api";
-
+import api, { SOCKET_URL } from "../../services/api";
 // ======================================================
 // SOCKET
 // ======================================================
@@ -741,57 +738,65 @@ export default function Messages() {
       ? filteredReports
       : filteredClaims;
 
-  // ======================================================
-  // ACTIONS JSX
-  // ======================================================
+ // ======================================================
+ // ACTIONS JSX
+ // ======================================================
 
-  /*
-  <div style={detailsActions}>
+  return selected ? (
+    <div style={detailsActions}>
+      <button
+        disabled={
+          processingId === selected?.id
+        }
+        onClick={() =>
+          activeTab === "reports"
+            ? resolveReport(selected?.id)
+            : resolveClaim(selected?.id)
+        }
+        style={btnSuccess}
+      >
+       ✅ Approuver
+      </button>
 
-    <button
-      disabled={
-        processingId === selected.id
-      }
-      onClick={() =>
-        activeTab === "reports"
-          ? resolveReport(selected.id)
-          : resolveClaim(selected.id)
-      }
-      style={btnSuccess}
-    >
-      ✅ Approuver
-    </button>
+      <button
+        disabled={
+          processingId === selected?.id
+        }
+        onClick={() =>
+          activeTab === "reports"
+            ? deleteReport(selected?.id)
+            : deleteClaim(selected?.id)
+          }
+          style={btnDanger}
+        >
+          ❌ Rejeter
+        </button>
 
-    <button
-      disabled={
-        processingId === selected.id
-      }
-      onClick={() =>
-        activeTab === "reports"
-          ? deleteReport(selected.id)
-          : deleteClaim(selected.id)
-      }
-      style={btnDanger}
-    >
-      ❌ Rejeter
-    </button>
-
-    <button
-      disabled={
-        processingId === selected.id
-      }
-      onClick={() =>
-        permanentDelete(selected.id)
-      }
-      style={btnDelete}
-    >
-      🗑 Supprimer
-    </button>
-
-  </div>
-  */
+        <button
+          disabled={
+            processingId === selected?.id
+          }
+          onClick={() =>
+            permanentDelete(selected?.id)
+          }
+          style={btnDelete}
+        >
+          🗑 Supprimer
+        </button>
+      </div>
+) : null;
 
 }
+
+const btnBase = {
+  border: "none",
+  borderRadius: 12,
+  padding: "12px 16px",
+  cursor: "pointer",
+  color: "#fff",
+  fontWeight: 700,
+  transition: "all 0.2s ease",
+};
 
 // ======================================================
 // DELETE BUTTON STYLE
@@ -800,4 +805,21 @@ export default function Messages() {
 const btnDelete = {
   ...btnBase,
   background: "#7f1d1d",
+};
+
+const btnSuccess = {
+  ...btnBase,
+  background: "#15803d",
+};
+
+const btnDanger = {
+  ...btnBase,
+  background: "#dc2626",
+};
+
+const detailsActions = {
+  display: "flex",
+  gap: 12,
+  flexWrap: "wrap",
+  marginTop: 20,
 };
