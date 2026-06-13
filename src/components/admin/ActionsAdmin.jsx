@@ -32,6 +32,147 @@ export default function AdminUsersList({
   const [sortBy, setSortBy] =
     useState("balance");
 
+const [gamesUser, setGamesUser] =
+  useState(null);
+
+const [games, setGames] =
+  useState([]);
+
+const [gamesLoading, setGamesLoading] =
+  useState(false);
+
+// ======================================================
+// MODALS
+// ======================================================
+
+const [
+  selectedUser,
+  setSelectedUser,
+] = useState(null);
+
+const [
+  showProfile,
+  setShowProfile,
+] = useState(false);
+
+const [
+  showTransactions,
+  setShowTransactions,
+] = useState(false);
+
+const [
+  showGames,
+  setShowGames,
+] = useState(false);
+
+// ======================================================
+// EXTRA ACTIONS
+// ======================================================
+
+const openProfile = (user) => {
+  setSelectedUser(user);
+  setShowProfile(true);
+};
+
+const openGames = (user) => {
+  setSelectedUser(user);
+  setShowGames(true);
+};
+
+const openTransactions = (
+  user
+) => {
+  setSelectedUser(user);
+  setShowTransactions(true);
+};
+
+const refundUser = (
+  id,
+  username
+) => {
+  const amount = prompt(
+    `Montant à rembourser à ${username}`
+  );
+
+  if (!amount) return;
+
+  return actionAdmin(
+    "/admin/users/refund",
+    {
+      userId: id,
+      amount: Number(amount),
+    },
+    "post",
+    `refund-${id}`
+  );
+};
+
+const debitUser = (
+  id,
+  username
+) => {
+  const amount = prompt(
+    `Montant à débiter de ${username}`
+  );
+
+  if (!amount) return;
+
+  return actionAdmin(
+    "/admin/users/debit",
+    {
+      userId: id,
+      amount: Number(amount),
+    },
+    "post",
+    `debit-${id}`
+  );
+};
+
+const sendMessage = (
+  id,
+  username
+) => {
+  const message = prompt(
+    `Message à envoyer à ${username}`
+  );
+
+  if (!message) return;
+
+  return actionAdmin(
+    "/admin/users/message",
+    {
+      userId: id,
+      message,
+    },
+    "post",
+    `message-${id}`
+  );
+};
+
+const openGamesHistory =
+  async (user) => {
+    try {
+      setGamesLoading(true);
+
+      const { data } =
+        await api.get(
+          `/admin/users/${user.id}/games`
+        );
+
+      setGames(
+        data.games || []
+      );
+
+      setGamesUser(user);
+
+      setShowGames(true);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setGamesLoading(false);
+    }
+  };
+
   // ======================================================
   // HELPERS
   // ======================================================
@@ -90,7 +231,7 @@ export default function AdminUsersList({
             .includes(q) ||
 
           String(
-            u.number || ""
+            u.phone || ""
           )
             .toLowerCase()
             .includes(q)
@@ -510,7 +651,7 @@ export default function AdminUsersList({
                       userTitle
                     }
                   >
-                    #{u.number} •{" "}
+                    #{u.phone} •{" "}
                     {
                       u.username
                     }
@@ -592,20 +733,41 @@ export default function AdminUsersList({
               <div style={infoGrid}>
                 <InfoItem
                   label="KYC"
-                  value={
-                    u.kyc_status
-                  }
+                  value={u.kyc_status}
                   color={getKycColor(
                     u.kyc_status
                   )}
                 />
 
                 <InfoItem
-                  label="Jours actifs"
+                  label="Parties"
                   value={
-                    u.days_active ||
-                    0
+                    u.games_played || 0
                   }
+                />
+
+                <InfoItem
+                  label="Victoires"
+                  value={
+                    u.games_won || 0
+                  }
+                  color="#22c55e"
+                />
+
+                <InfoItem
+                  label="Défaites"
+                  value={
+                    u.games_lost || 0
+                  }
+                  color="#ef4444"
+                />
+
+                <InfoItem
+                  label="Win Rate"
+                  value={`${Math.round(
+                    u.win_rate || 0
+                  )}%`}
+                  color="#3b82f6"
                 />
 
                 <InfoItem
@@ -614,22 +776,114 @@ export default function AdminUsersList({
                     u.is_suspended
                       ? "Oui"
                       : "Non"
-                  }
+                    }
                   color={
                     u.is_suspended
                       ? "#ef4444"
                       : "#22c55e"
-                  }
-                />
+                    }
+                  />
               </div>
 
+              <div style={usersGrid}>
+                
+                {showProfile &&
+                  selectedUser && (
+                    <PlayerProfileModal
+                      user={selectedUser}
+                      money={safeMoney}
+                      onClose={() =>
+                        setShowProfile(false)
+                      }
+                    />
+                  )}
+                </div>
+
               {/* ACTIONS */}
+
+              <button
+                disabled={busy}
+                onClick={() =>
+                  openProfile(u)
+                }
+                style={activeBtn}
+              >
+                👤 Profil
+              </button>
+
+              <button
+                disabled={busy}
+                onClick={() =>
+                  openGames(u)
+                }
+                style={btn}
+              >
+                🎮 Parties
+              </button>
+
+              <button
+                disabled={busy}
+                onClick={() =>
+                  openTransactions(u)
+                }
+                style={btn}
+              >
+                💳 Transactions
+              </button>
+
+              <button
+                disabled={busy}
+                onClick={() =>
+                  sendMessage(
+                    u.id,
+                    u.username
+                  )
+                }
+                style={btn}
+              >
+                ✉️ Message
+              </button>
+
+              <button
+                disabled={busy}
+                onClick={() =>
+                  debitUser(
+                    u.id,
+                    u.username
+                  )
+                }
+                style={warningBtn}
+              >
+                💸 Débiter
+              </button>
+
+              <button
+                disabled={busy}
+                onClick={() =>
+                  refundUser(
+                    u.id,
+                    u.username
+                  )
+                }
+                  style={successBtn}
+                >
+                  ↩️ Rembourser
+                </button>
 
               <div
                 style={
                   actionsWrapper
-                }
+                  }
               >
+                <button
+                  onClick={() =>
+                    openProfile(u)
+                  }
+                    style={activeBtn}
+                >
+                   👁 Profil
+                </button>
+                
                 <button
                   disabled={busy}
                   onClick={() =>
@@ -815,9 +1069,13 @@ function InfoItem({
   label,
   value,
   color,
+  onClick,
 }) {
   return (
-    <div style={infoItem}>
+    <div
+      style={infoItem}
+      onClick={onClick}
+    >
       <div style={infoLabel}>
         {label}
       </div>
@@ -836,6 +1094,270 @@ function InfoItem({
   );
 }
 
+function PlayerProfileModal({
+  user,
+  money,
+  onClose,
+}) {
+  const winRate =
+    Number(
+      user.win_rate ||
+      (
+        (user.games_won || 0) /
+        Math.max(
+          user.games_played || 1,
+          1
+        )
+      ) * 100
+    );
+
+  return (
+    <div style={modalOverlay}>
+      <div style={profileModal}>
+        {/* HEADER */}
+
+        <div style={modalHeader}>
+          <div>
+            <div
+              style={
+                modalTitle
+              }
+            >
+              👤 Profil Joueur
+            </div>
+
+            <div
+              style={
+                modalSubtitle
+              }
+            >
+              Analyse complète
+              du compte
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            style={
+              closeBtn
+            }
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* TOP */}
+
+        <div
+          style={
+            profileTop
+          }
+        >
+          <div>
+            <div
+              style={
+                profileName
+              }
+            >
+              {
+                user.username
+              }
+            </div>
+
+            <div
+              style={
+                profileId
+              }
+            >
+              {
+                user.custom_id
+              }
+            </div>
+          </div>
+
+          <div
+            style={{
+              ...roleBadge,
+              background:
+                roleColor(
+                  user.role
+                ),
+            }}
+          >
+            {user.role}
+          </div>
+        </div>
+
+        {/* INFOS */}
+
+        <div
+          style={
+            profileGrid
+          }
+        >
+          <ProfileItem
+            label="Téléphone"
+            value={
+              user.number ||
+              "-"
+            }
+          />
+
+          <ProfileItem
+            label="Inscription"
+            value={
+              user.created_at
+                ? new Date(
+                    user.created_at
+                  ).toLocaleDateString()
+                : "-"
+            }
+          />
+
+          <ProfileItem
+            label="Dernière connexion"
+            value={
+              user.last_login
+                ? new Date(
+                    user.last_login
+                  ).toLocaleString()
+                : "-"
+            }
+          />
+
+          <ProfileItem
+            label="Parties jouées"
+            value={
+              user.games_played ||
+              0
+            }
+          />
+
+          <ProfileItem
+            label="Victoires"
+            value={
+              user.games_won ||
+              0
+            }
+          />
+
+          <ProfileItem
+            label="Défaites"
+            value={
+              user.games_lost ||
+              0
+            }
+          />
+
+          <ProfileItem
+            label="Taux victoire"
+            value={`${Math.round(
+              winRate
+            )}%`}
+          />
+
+          <ProfileItem
+            label="Gains"
+            value={money(
+              user.total_won
+            )}
+          />
+
+          <ProfileItem
+            label="Pertes"
+            value={money(
+              user.total_lost
+            )}
+          />
+
+          <ProfileItem
+            label="Solde"
+            value={money(
+              user.balance
+            )}
+          />
+
+          <ProfileItem
+            label="Solde gelé"
+            value={money(
+              user.balance_locked
+            )}
+          />
+
+          <ProfileItem
+            label="KYC"
+            value={
+              user.kyc_status
+            }
+          />
+
+          <ProfileItem
+            label="Suspension"
+            value={
+              user.is_suspended
+                ? "Oui"
+                : "Non"
+            }
+          />
+        </div>
+
+        {/* FRAUD SCORE */}
+
+        <div
+          style={
+            fraudCard
+          }
+        >
+          <div
+            style={
+              fraudTitle
+            }
+          >
+            🚨 Analyse Risque
+          </div>
+
+          <div
+            style={
+              fraudBody
+            }
+          >
+            {winRate > 90 &&
+              "Taux de victoire anormal"}
+
+            {winRate <
+              90 &&
+              "Aucune anomalie détectée"}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ProfileItem({
+  label,
+  value,
+}) {
+  return (
+    <div style={profileItem}>
+      <div
+        style={
+          profileItemLabel
+        }
+      >
+        {label}
+      </div>
+
+      <div
+        style={
+          profileItemValue
+        }
+      >
+        {value}
+      </div>
+    </div>
+  );
+} 
 // ======================================================
 // HELPERS
 // ======================================================
@@ -1136,4 +1658,122 @@ const loadingOverlay = {
     "center",
   fontWeight: 700,
   fontSize: 18,
+};
+
+const modalOverlay = {
+  position: "fixed",
+  inset: 0,
+  background:
+    "rgba(0,0,0,.7)",
+  backdropFilter:
+    "blur(5px)",
+  zIndex: 9999,
+  display: "flex",
+  justifyContent:
+    "center",
+  alignItems: "center",
+  padding: 20,
+};
+
+const profileModal = {
+  width: "100%",
+  maxWidth: 1100,
+  maxHeight: "90vh",
+  overflowY: "auto",
+  background:
+    "#0f172a",
+  borderRadius: 24,
+  padding: 24,
+  border:
+    "1px solid rgba(255,255,255,.08)",
+};
+
+const modalHeader = {
+  display: "flex",
+  justifyContent:
+    "space-between",
+  alignItems: "center",
+  marginBottom: 24,
+};
+
+const modalTitle = {
+  fontSize: 28,
+  fontWeight: 800,
+};
+
+const modalSubtitle = {
+  color: "#94a3b8",
+  marginTop: 5,
+};
+
+const closeBtn = {
+  border: "none",
+  background:
+    "rgba(255,255,255,.08)",
+  color: "#fff",
+  width: 45,
+  height: 45,
+  borderRadius: 12,
+  cursor: "pointer",
+};
+
+const profileTop = {
+  display: "flex",
+  justifyContent:
+    "space-between",
+  alignItems: "center",
+  marginBottom: 25,
+};
+
+const profileName = {
+  fontSize: 24,
+  fontWeight: 800,
+};
+
+const profileId = {
+  color: "#94a3b8",
+};
+
+const profileGrid = {
+  display: "grid",
+  gridTemplateColumns:
+    "repeat(auto-fill,minmax(220px,1fr))",
+  gap: 16,
+};
+
+const profileItem = {
+  background:
+    "rgba(255,255,255,.04)",
+  borderRadius: 16,
+  padding: 16,
+};
+
+const profileItemLabel = {
+  color: "#94a3b8",
+  fontSize: 12,
+  marginBottom: 8,
+};
+
+const profileItemValue = {
+  fontWeight: 700,
+  fontSize: 16,
+};
+
+const fraudCard = {
+  marginTop: 24,
+  padding: 20,
+  borderRadius: 18,
+  background:
+    "rgba(239,68,68,.12)",
+  border:
+    "1px solid rgba(239,68,68,.3)",
+};
+
+const fraudTitle = {
+  fontWeight: 800,
+  marginBottom: 8,
+};
+
+const fraudBody = {
+  color: "#fca5a5",
 };
