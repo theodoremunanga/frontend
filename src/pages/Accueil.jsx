@@ -939,15 +939,8 @@ export default function Accueil({
                               CDF
                             </h3>
 
-                            <div
-                              style={
-                                smallText
-                              }
-                            >
-                              👤{" "}
-                              {
-                                m.user_id
-                              }
+                            <div style={smallText}>
+                              👤 {m.creator_name}
                             </div>
 
                             {m.opponent_name && (
@@ -1066,11 +1059,7 @@ export default function Accueil({
                             </div>
 
                             <h3>
-                              💰{" "}
-                              {
-                                m.bet
-                              }{" "}
-                              CDF
+                              💰 {m.bet} CDF
                             </h3>
 
                             <div
