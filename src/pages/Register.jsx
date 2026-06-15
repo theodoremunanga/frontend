@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import api from "../services/api";
 
 // 🌍 LISTE DES PAYS
 const countries = [
-  { name: "Afghanistan", code: "+93" },
+  { name: "RDC", code: "+243" },
   { name: "Afrique du Sud", code: "+27" },
   { name: "Allemagne", code: "+49" },
   { name: "Angola", code: "+244" },
@@ -31,7 +31,6 @@ const countries = [
   { name: "Kenya", code: "+254" },
   { name: "Maroc", code: "+212" },
   { name: "Nigeria", code: "+234" },
-  { name: "RDC", code: "+243" },
   { name: "R.Congo", code: "+242" },
   { name: "Royaume-Uni", code: "+44" },
   { name: "Sénégal", code: "+221" },
@@ -40,13 +39,16 @@ const countries = [
   { name: "Turquie", code: "+90" },
 ];
 
-// 🎯 Générateur ID type A1B23C
+// 🎯 Générateur USER ID
 const generateUserId = () => {
   const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   const numbers = "0123456789";
 
-  const randLetter = () => letters[Math.floor(Math.random() * letters.length)];
-  const randNumber = () => numbers[Math.floor(Math.random() * numbers.length)];
+  const randLetter = () =>
+    letters[Math.floor(Math.random() * letters.length)];
+
+  const randNumber = () =>
+    numbers[Math.floor(Math.random() * numbers.length)];
 
   return (
     randLetter() +
@@ -59,109 +61,233 @@ const generateUserId = () => {
 };
 
 // 💰 Générateur Wallet
-const generateWallet = () => {
-  return {
-    walletId: "WLT-" + Date.now() + "-" + Math.floor(Math.random() * 10000),
-    balance: 0,
-    currency: "USD",
-    createdAt: new Date().toISOString(),
-  };
-};
+const generateWallet = () => ({
+  walletId:
+    "WLT-" +
+    Date.now() +
+    "-" +
+    Math.floor(Math.random() * 100000),
+  balance: 0,
+  currency: "USD",
+  createdAt: new Date().toISOString(),
+});
 
 export default function Register({ setPage }) {
   const [form, setForm] = useState({
     username: "",
     email: "",
     password: "",
+    confirmPassword: "",
+    birthDate: "",
     phone: "",
     countryCode: "+243",
     country: "RDC",
+    acceptTerms: false,
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  // 🎂 CALCUL ÂGE
+  const age = useMemo(() => {
+    if (!form.birthDate) return 0;
+
+    const today = new Date();
+    const birth = new Date(form.birthDate);
+
+    let age = today.getFullYear() - birth.getFullYear();
+
+    const month = today.getMonth() - birth.getMonth();
+
+    if (
+      month < 0 ||
+      (month === 0 &&
+        today.getDate() < birth.getDate())
+    ) {
+      age--;
+    }
+
+    return age;
+  }, [form.birthDate]);
+
+  // ✍️ INPUT CHANGE
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value, type, checked } =
+      e.target;
+
+    setForm((prev) => ({
+      ...prev,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : value,
+    }));
   };
 
+  // 🌍 PAYS
   const handleCountryChange = (e) => {
-    const selected = countries.find(c => c.code === e.target.value);
-    setForm({
-      ...form,
+    const selected = countries.find(
+      (c) => c.code === e.target.value
+    );
+
+    setForm((prev) => ({
+      ...prev,
       countryCode: selected.code,
       country: selected.name,
-    });
+    }));
   };
 
+  // 🔒 PASSWORD VALIDATION
   const validatePassword = (password) =>
-    /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d).{8,}$/.test(password);
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(
+      password
+    );
 
+  // 📧 EMAIL VALIDATION
+  const validateEmail = (email) =>
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+  // 📱 PHONE VALIDATION
   const validatePhone = (phone) =>
     /^\d{6,15}$/.test(phone);
 
-  const register = async () => {
+  // 🚀 REGISTER
+  const register = async (e) => {
+    e.preventDefault();
+
     setError("");
     setSuccess("");
-
-    const { username, email, password, phone, countryCode, country } = form;
-
-    if (!username || !email || !password || !phone) {
-      return setError("⚠️ Tous les champs sont obligatoires.");
-    }
-
-    if (!validatePassword(password)) {
-      return setError("🔒 Mot de passe faible.");
-    }
-
-    if (!validatePhone(phone)) {
-      return setError("📱 Numéro invalide.");
-    }
 
     try {
       setLoading(true);
 
-      // 🔁 Génération ID + retry simple
-      let userId;
-      for (let i = 0; i < 3; i++) {
-        userId = generateUserId();
-        if (userId) break;
+      const {
+        username,
+        email,
+        password,
+        confirmPassword,
+        birthDate,
+        phone,
+        countryCode,
+        country,
+        acceptTerms,
+      } = form;
+
+      // 🧹 CLEAN DATA
+      const cleanUsername =
+        username.trim().charAt(0).toUpperCase() +
+        username.trim().slice(1);
+
+      const cleanEmail = email
+        .trim()
+        .toLowerCase();
+
+      const cleanPhone = phone.replace(
+        /\s/g,
+        ""
+      );
+
+      // ✅ VALIDATIONS
+      if (
+        !cleanUsername ||
+        !cleanEmail ||
+        !password ||
+        !confirmPassword ||
+        !birthDate ||
+        !cleanPhone
+      ) {
+        return setError(
+          "⚠️ Veuillez remplir tous les champs."
+        );
       }
 
-      // 💰 Wallet unique
+      if (cleanUsername.length < 3) {
+        return setError(
+          "⚠️ Nom utilisateur invalide."
+        );
+      }
+
+      if (!validateEmail(cleanEmail)) {
+        return setError(
+          "📧 Adresse email invalide."
+        );
+      }
+
+      if (!validatePhone(cleanPhone)) {
+        return setError(
+          "📱 Numéro de téléphone invalide."
+        );
+      }
+
+      if (age < 18) {
+        return setError(
+          "🔞 L'inscription est réservée aux personnes âgées de 18 ans ou plus."
+        );
+      }
+
+      if (!validatePassword(password)) {
+        return setError(
+          "🔒 Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule et un chiffre."
+        );
+      }
+
+      if (password !== confirmPassword) {
+        return setError(
+          "❌ Les mots de passe ne correspondent pas."
+        );
+      }
+
+      if (!acceptTerms) {
+        return setError(
+          "📄 Vous devez accepter les conditions d'utilisation."
+        );
+      }
+
+      // 🎯 USER ID
+      const userId = generateUserId();
+
+      // 💰 WALLET
       const wallet = generateWallet();
 
-      const res = await api.post("/auth/register", {
-        userId,
-        username,
-        email: email.trim().toLowerCase(),
-        password,
-        phone: countryCode + phone,
-        country,
-        wallet,
-      });
+      // 📡 API CALL
+      const res = await api.post(
+        "/auth/register",
+        {
+          userId,
+          username: cleanUsername,
+          email: cleanEmail,
+          password,
+          birthDate,
+          age,
+          phone:
+            countryCode + cleanPhone,
+          country,
+          wallet,
+        }
+      );
 
-      const finalUserId = res?.data?.userId || userId;
+      const finalUserId =
+        res?.data?.userId || userId;
 
-      console.log("✅ USER ID =", finalUserId);
-      console.log("💰 WALLET =", wallet);
-
-      setSuccess(`✅ Compte créé (ID: ${finalUserId})`);
+      setSuccess(
+        `✅ Compte créé avec succès. ID : ${finalUserId}`
+      );
 
       setTimeout(() => {
         setPage("login");
-      }, 1500);
+      }, 1800);
 
     } catch (err) {
-      console.error("❌ REGISTER ERROR:", err);
+      console.error(err);
 
       const message =
         err?.response?.data?.error ||
         err?.response?.data?.message ||
-        "Erreur lors de l'inscription";
+        "❌ Impossible de créer le compte.";
 
       setError(message);
+
     } finally {
       setLoading(false);
     }
@@ -171,46 +297,204 @@ export default function Register({ setPage }) {
     <div style={container}>
       <div style={card}>
 
-        <div style={{ textAlign: "center", marginBottom: 20 }}>
-          <h1 style={{ fontSize: 26, fontWeight: "bold" }}>6BetBall 🎮</h1>
-          <p style={{ fontSize: 14, color: "#cbd5f5" }}>
-            Créez votre compte pour commencer.
+        {/* HEADER */}
+        <div style={header}>
+          <h1 style={logo}>
+            6BetBall
+          </h1>
+
+          <p style={subtitle}>
+            Rejoignez la plateforme moderne
+            des Jeux compétitifs en ligne.
           </p>
         </div>
 
-        <h2>📝 Inscription</h2>
+        <h2 style={title}>
+          Créer un compte
+        </h2>
 
-        {error && <div style={errorStyle}>{error}</div>}
-        {success && <div style={successStyle}>{success}</div>}
+        {error && (
+          <div style={errorStyle}>
+            {error}
+          </div>
+        )}
 
-        <input name="username" placeholder="👤 Nom utilisateur" onChange={handleChange} style={input} />
-        <input name="email" type="email" placeholder="📧 Email" onChange={handleChange} style={input} />
-        <input name="password" type="password" placeholder="🔑 Mot de passe" onChange={handleChange} style={input} />
+        {success && (
+          <div style={successStyle}>
+            {success}
+          </div>
+        )}
 
-        <div style={{ display: "flex", gap: 10 }}>
-          <select onChange={handleCountryChange} style={{ ...input, width: "40%" }}>
-            {countries.map((c) => (
-              <option key={c.name + c.code} value={c.code}>
-                {c.name} ({c.code})
-              </option>
-            ))}
-          </select>
+        <form onSubmit={register}>
+
+          {/* USERNAME */}
+          <input
+            type="text"
+            name="username"
+            placeholder="🆔 Nom utilisateur"
+            value={form.username}
+            onChange={(e) => {
+              const value = e.target.value;
+
+              setForm((prev) => ({
+                ...prev,
+                username:
+                  value.charAt(0).toUpperCase() +
+                  value.slice(1),
+              }));
+            }}
+            style={input}
+          />
+
+          {/* EMAIL */}
+          <input
+            type="email"
+            name="email"
+            placeholder="📧 Adresse email"
+            value={form.email}
+            onChange={handleChange}
+            style={input}
+          />
+
+          <div style={infoBox}>
+            ℹ️ Cette adresse email sera
+            utilisée pour la sécurité du
+            compte, les notifications et
+            les paiements/retraits.
+          </div>
+
+          {/* DATE */}
+          <label style={label}>
+            🎂 Date de naissance
+          </label>
 
           <input
-            name="phone"
-            placeholder="📱 Numéro"
+            type="date"
+            name="birthDate"
+            value={form.birthDate}
             onChange={handleChange}
-            style={{ ...input, width: "60%" }}
+            style={input}
           />
-        </div>
 
-        <button onClick={register} disabled={loading} style={button}>
-          {loading ? "⏳ Inscription..." : "Créer mon compte"}
-        </button>
+          {form.birthDate && (
+            <div style={ageInfo}>
+              Âge détecté :
+              <strong>
+                {" "}
+                {age} ans
+              </strong>
+            </div>
+          )}
 
+          {/* PASSWORD */}
+          <input
+            type="password"
+            name="password"
+            placeholder="🔑 Mot de passe"
+            value={form.password}
+            onChange={handleChange}
+            style={input}
+          />
+
+          {/* CONFIRM PASSWORD */}
+          <input
+            type="password"
+            name="confirmPassword"
+            placeholder="🔐 Confirmer le mot de passe"
+            value={form.confirmPassword}
+            onChange={handleChange}
+            style={input}
+          />
+
+          {/* PHONE */}
+          <div style={phoneContainer}>
+            <select
+              onChange={
+                handleCountryChange
+              }
+              style={countrySelect}
+              value={form.countryCode}
+            >
+              {countries.map((c) => (
+                <option
+                  key={
+                    c.name + c.code
+                  }
+                  value={c.code}
+                >
+                  {c.name} ({c.code})
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="text"
+              name="phone"
+              placeholder="📱 Numéro téléphone"
+              value={form.phone}
+              onChange={handleChange}
+              style={phoneInput}
+            />
+          </div>
+
+          <div style={infoBox}>
+            ℹ️ Ce numéro sera utilisé
+            pour les paiements Mobile
+            Money, retraits et la
+            sécurisation du compte.
+          </div>
+
+          {/* TERMS */}
+          <label
+            style={
+              checkboxContainer
+            }
+          >
+            <input
+              type="checkbox"
+              name="acceptTerms"
+              checked={
+                form.acceptTerms
+              }
+              onChange={handleChange}
+            />
+
+            <span>
+              J'accepte les conditions
+              d'utilisation et la
+              politique de
+              confidentialité de
+              6BetBall.
+            </span>
+          </label>
+
+          {/* BUTTON */}
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              ...button,
+              opacity: loading
+                ? 0.7
+                : 1,
+              cursor: loading
+                ? "not-allowed"
+                : "pointer",
+            }}
+          >
+            {loading
+              ? "⏳ Création du compte..."
+              : "Créer mon compte"}
+          </button>
+
+        </form>
+
+        {/* LOGIN */}
         <p
-          onClick={() => setPage("login")}
-          style={{ marginTop: 15, textAlign: "center", cursor: "pointer", color: "#38bdf8" }}
+          onClick={() =>
+            setPage("login")
+          }
+          style={loginText}
         >
           Déjà un compte ? Se connecter
         </p>
@@ -221,56 +505,153 @@ export default function Register({ setPage }) {
 }
 
 // 🎨 STYLES
+
 const container = {
   minHeight: "100vh",
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
-  background: "#0f172a",
-  color: "white",
-  padding: 20
+  background:
+    "linear-gradient(135deg, #020617, #0f172a)",
+  padding: 20,
 };
 
 const card = {
   width: "100%",
-  maxWidth: 420,
-  background: "#1e293b",
+  maxWidth: 480,
+  background: "#111827",
+  borderRadius: 20,
   padding: 30,
-  borderRadius: 16,
-  boxShadow: "0 10px 30px rgba(0,0,0,0.4)"
+  boxShadow:
+    "0 15px 40px rgba(0,0,0,0.45)",
+  color: "white",
+};
+
+const header = {
+  textAlign: "center",
+  marginBottom: 25,
+};
+
+const logo = {
+  fontSize: 32,
+  marginBottom: 10,
+};
+
+const subtitle = {
+  color: "#cbd5e1",
+  fontSize: 14,
+  lineHeight: 1.5,
+};
+
+const title = {
+  marginBottom: 20,
 };
 
 const input = {
   width: "100%",
+  padding: 14,
+  borderRadius: 10,
+  border: "1px solid #334155",
+  background: "#1e293b",
+  color: "white",
+  marginBottom: 12,
+  outline: "none",
+  fontSize: 14,
+  boxSizing: "border-box",
+};
+
+const label = {
+  display: "block",
+  marginBottom: 6,
+  fontSize: 14,
+  color: "#cbd5e1",
+};
+
+const phoneContainer = {
+  display: "flex",
+  gap: 10,
+};
+
+const countrySelect = {
+  width: "38%",
+  padding: 14,
+  borderRadius: 10,
+  border: "1px solid #334155",
+  background: "#1e293b",
+  color: "white",
+};
+
+const phoneInput = {
+  width: "62%",
+  padding: 14,
+  borderRadius: 10,
+  border: "1px solid #334155",
+  background: "#1e293b",
+  color: "white",
+};
+
+const infoBox = {
+  background: "#172554",
+  border: "1px solid #1d4ed8",
+  color: "#bfdbfe",
   padding: 12,
-  marginBottom: 10,
-  borderRadius: 8,
-  border: "none",
-  background: "#334155",
-  color: "white"
+  borderRadius: 10,
+  fontSize: 13,
+  marginBottom: 14,
+  lineHeight: 1.5,
+};
+
+const checkboxContainer = {
+  display: "flex",
+  gap: 10,
+  alignItems: "flex-start",
+  fontSize: 13,
+  color: "#cbd5e1",
+  marginBottom: 20,
+  lineHeight: 1.5,
+};
+
+const ageInfo = {
+  marginBottom: 12,
+  fontSize: 13,
+  color: "#93c5fd",
 };
 
 const button = {
   width: "100%",
-  padding: 12,
-  borderRadius: 8,
+  padding: 15,
+  borderRadius: 12,
   border: "none",
-  background: "linear-gradient(90deg, #2563eb, #7c3aed)",
+  background:
+    "linear-gradient(90deg, #2563eb, #7c3aed)",
   color: "white",
   fontWeight: "bold",
-  cursor: "pointer"
+  fontSize: 15,
+  transition: "0.2s",
+};
+
+const loginText = {
+  marginTop: 20,
+  textAlign: "center",
+  cursor: "pointer",
+  color: "#38bdf8",
+  fontWeight: "500",
 };
 
 const errorStyle = {
   background: "#7f1d1d",
-  padding: 10,
-  borderRadius: 8,
-  marginBottom: 10
+  border: "1px solid #dc2626",
+  padding: 12,
+  borderRadius: 10,
+  marginBottom: 15,
+  color: "#fecaca",
 };
 
 const successStyle = {
   background: "#14532d",
-  padding: 10,
-  borderRadius: 8,
-  marginBottom: 10
+  border: "1px solid #16a34a",
+  padding: 12,
+  borderRadius: 10,
+  marginBottom: 15,
+  color: "#bbf7d0",
 };

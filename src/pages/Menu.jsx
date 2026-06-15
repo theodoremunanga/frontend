@@ -589,7 +589,7 @@ export default function Menu({
           <MenuButton
             icon="👤"
             title="Profil"
-            subtitle="Modifier votre profil et vos informations"
+            subtitle="Visitez et modifiez les détails de votre compte"
             onClick={() =>
               setPage(
                 "profile"
@@ -613,7 +613,7 @@ export default function Menu({
           <MenuButton
             icon="🤖"
             title="Bots IA"
-            subtitle="Affrontez des intelligences artificielles"
+            subtitle="Louez des bots intelligents pour vos matchs"
             onClick={() =>
               setPage("bots")
             }

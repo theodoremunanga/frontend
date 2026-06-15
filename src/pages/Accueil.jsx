@@ -590,7 +590,7 @@ export default function Accueil({
 
               body: JSON.stringify({
                 matchId: match.id,
-                level: "hard",
+                level: "medium",
                 user_id: 999,
               }),
             }

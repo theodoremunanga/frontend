@@ -673,6 +673,11 @@ export default function Dames({
            data
          );
 
+          console.log(
+            "🔥 BOARD:",
+            JSON.stringify(data.board)
+          );
+
         if (
           !data ||
           !isValidBoard(
@@ -717,33 +722,31 @@ export default function Dames({
     // ======================================================
 
       socket.on("match:end", (data) => {
-        setWinnerSide(data.winnerSide);
-        setDraw(data.draw);
-        setGameOver(true);
 
-        if (data.board) {
-        setBoard(data.board);
-      }
-
-
-        if (
-          board &&
-          isValidBoard(board)
-        ) {
-          setBoard(board);
-        }
-
-        setGameOver(true);
-
-        setWinnerSide(
-          winnerSide ?? winner ?? null
+        console.log(
+          "🏆 MATCH END:",
+          data
         );
 
-        setDraw(draw);
+        if (
+          data.board &&
+          isValidBoard(data.board)
+        ) {
+          setBoard(data.board);
+        }
+
+        setWinnerSide(
+          data.winner ?? null
+        );
+
+        setDraw(
+          Boolean(data.draw)
+        );
+
+        setGameOver(true);
 
         setSendingMove(false);
-      }
-    );
+      });
 
     // ======================================================
     // CHAT
