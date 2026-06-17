@@ -22,6 +22,7 @@ import AdsManager from "./admin/AdsManager";
 import AdsEditor from "./admin/AdsEditor";
 
 import GestionTournois from "./admin/GestionTournois";
+import Parametres from "./admin/Parametres";
 
 // ======================================================
 // CONFIG
@@ -112,6 +113,7 @@ const tabTitles = {
   "ads-editor": "Ads Editor",
   tournaments: "Gestion Tournois",
   perceptor: "Perceptor",
+  settings: "Paramètres",
 };
 
 // ======================================================
@@ -846,6 +848,14 @@ const isOffline = !connected;
       label: "Perceptor",
       icon: "🧠",
     },
+
+    {
+      key: "settings",
+      label: "Paramètres",
+      icon: "⚙️",
+    },
+
+
   ];
 
   // ======================================================
@@ -1210,6 +1220,12 @@ const isOffline = !connected;
         {tab ===
           "perceptor" && (
           <PerceptorCM />
+        )}
+
+        {/* PARAMETRES */}
+
+        {tab === "settings" && (
+          <Parametres />
         )}
       </main>
     </div>
