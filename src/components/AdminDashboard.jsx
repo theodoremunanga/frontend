@@ -6,6 +6,7 @@ import {
   useMemo,
 } from "react";
 
+
 import api from "../services/api";
 import { io } from "socket.io-client";
 
@@ -23,6 +24,15 @@ import AdsEditor from "./admin/AdsEditor";
 
 import GestionTournois from "./admin/GestionTournois";
 import Parametres from "./admin/Parametres";
+
+import {
+  getAISettings,
+  getAIWallet,
+  updateAISettings,
+  creditBot,
+  debitBot,
+  transferToSystem,
+} from "../services/aiService";
 
 // ======================================================
 // CONFIG
@@ -163,14 +173,10 @@ export default function AdminDashboard() {
   // ======================================================
 
   const [ai, setAi] = useState({
-    enabled: false,
-    balance: 0,
-    profit: 0,
-    loss: 0,
+    settings: {},
+    wallet: {},
+    stats: {},
   });
-
-  const [fundAmount, setFundAmount] =
-    useState("");
 
   // ======================================================
   // SEARCH
@@ -244,7 +250,6 @@ export default function AdminDashboard() {
           dashRes,
           txRes,
           matchRes,
-          aiRes,
           usersRes,
           messagesRes,
         ] = await Promise.all([
@@ -258,7 +263,6 @@ export default function AdminDashboard() {
             "/admin/matches"
           ),
 
-          api.get("/admin/ai"),
 
           api.get("/admin/users"),
 
@@ -313,8 +317,11 @@ export default function AdminDashboard() {
   // SOCKET
   // ======================================================
 
- useEffect(() => {
+useEffect(() => {
+
   fetchData();
+
+  refreshAI();
 
   const token =
     localStorage.getItem("token");
@@ -521,6 +528,18 @@ export default function AdminDashboard() {
     tab,
   ]);
 
+  useEffect(() => {
+    const load = async () => {
+      const settings = await getAISettings();
+      const wallet = await getAIWallet();
+
+      setSettings(settings.data);
+      setWallet(wallet.data);
+    };
+
+    load();
+  }, []);
+
   // ======================================================
   // FILTERS
   // ======================================================
@@ -669,120 +688,85 @@ const isOffline = !connected;
     );
 
   // ======================================================
-  // AI ACTIONS
+  // AI SETTINGS
   // ======================================================
-
-  const toggleAI =
-    async () => {
-      try {
-        setActionLoading(true);
-
-        const res =
-          await api.post(
-            "/admin/ai/toggle"
-          );
-
-        setAi((prev) => ({
-          ...prev,
-          enabled:
-            res.data.enabled,
-        }));
-
-        pushNotif(
-          res.data.enabled
-            ? "🟢 IA activée"
-            : "🔴 IA désactivée",
-          "success"
-        );
-      } catch (err) {
-        console.error(err);
-
-        pushNotif(
-          "❌ Erreur IA",
-          "error"
-        );
-      } finally {
-        setActionLoading(false);
-      }
-    };
-
-  const fundAI =
-    async () => {
-      const amount =
-        Number(fundAmount);
-
-      if (
-        !amount ||
-        amount <= 0
-      ) {
-        pushNotif(
-          "❌ Montant invalide",
-          "error"
-        );
-
-        return;
-      }
-
-      try {
-        setActionLoading(true);
-
-        await api.post(
-          "/admin/ai/fund",
-          {
-            amount,
-          }
-        );
-
-        pushNotif(
-          "💰 IA financée",
-          "success"
-        );
-
-        setFundAmount("");
-
-        fetchData();
-      } catch (err) {
-        console.error(err);
-
-        pushNotif(
-          "❌ Erreur financement",
-          "error"
-        );
-      } finally {
-        setActionLoading(false);
-      }
-    };
 
   const refreshAI =
     async () => {
-      try {
-        const res =
-          await api.get(
-            "/admin/ai/stats"
-          );
 
-        setAi((prev) => ({
-          ...prev,
-          ...res.data,
-        }));
+    try {
 
-        pushNotif(
-          "🤖 IA actualisée",
-          "success"
-        );
-      } catch (err) {
-        console.error(err);
-      }
-    };
+      const [
+        settingsRes,
+        walletRes
+      ] = await Promise.all([
+        getAISettings(),
+        getAIWallet(),
+      ]);
+
+      setAi({
+        settings:
+          settingsRes.data.settings ||
+          settingsRes.data,
+
+        wallet:
+          walletRes.data.wallet ||
+          walletRes.data,
+
+        stats: {},
+      });
+
+    } catch (err) {
+
+      console.error(
+        "AI REFRESH ERROR",
+        err
+      );
+    }
+  };
+
+  const saveSettings =
+    async (payload) => {
+
+    await updateAISettings(
+      payload
+    );
+
+    await refreshAI();
+  };
+
+  const creditBotHandler =
+    async (amount) => {
+
+    await creditBot(amount);
+
+    await refreshAI();
+  };
+
+  const debitBotHandler =
+    async (amount) => {
+
+    await debitBot(amount);
+
+    await refreshAI();
+  };
+
+  const transferHandler =
+    async (amount) => {
+
+    await transferToSystem(
+      amount
+    );
+
+    await refreshAI();
+  };
+
+  
 
   // ======================================================
   // REFRESH
   // ======================================================
 
-  const refresh =
-    useCallback(() => {
-      fetchData();
-    }, [fetchData]);
 
   // ======================================================
   // MENU ITEMS
@@ -1073,16 +1057,18 @@ const isOffline = !connected;
         {tab === "ai" && (
           <AIControlPanel
             ai={ai}
-            fundAmount={
-              fundAmount
+            saveSettings={
+              saveSettings
             }
-            setFundAmount={
-              setFundAmount
+            creditBot={
+              creditBotHandler
             }
-            toggleAI={
-              toggleAI
+            debitBot={
+              debitBotHandler
             }
-            fundAI={fundAI}
+            transferToSystem={
+              transferHandler
+            }
             refreshAI={
               refreshAI
             }
