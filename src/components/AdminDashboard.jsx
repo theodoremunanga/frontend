@@ -283,8 +283,6 @@ export default function AdminDashboard() {
           safeArray(matchRes.data)
         );
 
-        setAi(aiRes.data || {});
-
         setUsers(
           safeArray(usersRes.data)
         );
@@ -1066,7 +1064,7 @@ const isOffline = !connected;
             debitBot={
               debitBotHandler
             }
-            transferToSystem={
+            transferToPlatform={
               transferHandler
             }
             refreshAI={
@@ -1094,7 +1092,7 @@ const isOffline = !connected;
                 formatMoney
               }
               refresh={
-                refresh
+                fetchData
               }
             />
 
@@ -1123,7 +1121,7 @@ const isOffline = !connected;
                 formatMoney
               }
               refresh={
-                refresh
+                fetchData
               }
             />
 

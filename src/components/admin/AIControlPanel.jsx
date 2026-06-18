@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+
 export default function AIControlPanel({
   ai,
   saveSettings,
@@ -10,6 +11,7 @@ export default function AIControlPanel({
   money,
   actionLoading = false,
 }) {
+
 
   const [difficulty, setDifficulty] =
     useState(50);
@@ -23,6 +25,7 @@ export default function AIControlPanel({
   const [enabled, setEnabled] =
     useState(true);
 
+
   const [creditAmount, setCreditAmount] =
     useState("");
 
@@ -32,28 +35,47 @@ export default function AIControlPanel({
   const [transferAmount, setTransferAmount] =
     useState("");
 
+
+
+  const wallet =
+    ai?.wallet || {};
+
+
+
   useEffect(() => {
 
-    if (!ai?.settings) return;
+
+    if (!ai?.settings)
+      return;
+
 
     setEnabled(
-      ai.settings.enabled
+      Boolean(
+        ai.settings.enabled
+      )
     );
+
 
     setDifficulty(
-      ai.settings
-        .experience_percent || 50
+      ai.settings.experience_percent ?? 50
     );
+
 
     setSpawnRate(
-      ai.settings.spawn_rate || 50
+      ai.settings.spawn_rate ?? 50
     );
+
 
     setMaxBots(
-      ai.settings.max_active_bots || 100
+      ai.settings.max_active_bots ?? 100
     );
 
+
   }, [ai]);
+
+
+
+
 
   // =====================================
   // SAVE SETTINGS
@@ -64,33 +86,51 @@ export default function AIControlPanel({
 
       try {
 
+
         await saveSettings({
+
           enabled,
+
           experience_percent:
             difficulty,
+
           spawn_rate:
             spawnRate,
+
           max_active_bots:
             maxBots,
+
         });
+
 
         await refreshAI();
 
-        alert(
-          "✅ Paramètres IA enregistrés"
-        );
-
-      } catch (err) {
-
-        console.error(err);
 
         alert(
-          err?.response?.data
-            ?.message ||
-            "Erreur sauvegarde"
+          "✅ Configuration IA sauvegardée"
         );
+
+
+      } catch(error) {
+
+
+        console.error(
+          error
+        );
+
+
+        alert(
+          error?.response?.data?.message ||
+          "Erreur sauvegarde IA"
+        );
+
       }
+
     };
+
+
+
+
 
   // =====================================
   // CREDIT BOT
@@ -99,41 +139,64 @@ export default function AIControlPanel({
   const handleCredit =
     async () => {
 
-      const amount =
-        Number(creditAmount);
 
-      if (
+      const amount =
+        Number(
+          creditAmount
+        );
+
+
+      if(
         !amount ||
         amount <= 0
-      ) {
+      ){
+
         return alert(
           "Montant invalide"
         );
+
       }
+
+
 
       try {
 
-        await creditBot(amount);
+
+        await creditBot(
+          amount
+        );
+
 
         setCreditAmount("");
 
         await refreshAI();
 
-        alert(
-          "✅ Bot crédité"
-        );
-
-      } catch (err) {
-
-        console.error(err);
 
         alert(
-          err?.response?.data
-            ?.message ||
-            "Erreur crédit"
+          "✅ Wallet IA crédité"
         );
+
+
+      }catch(error){
+
+
+        console.error(error);
+
+
+        alert(
+          error?.response?.data?.message ||
+          "Erreur crédit IA"
+        );
+
+
       }
+
     };
+
+
+
+
+
 
   // =====================================
   // DEBIT BOT
@@ -142,49 +205,77 @@ export default function AIControlPanel({
   const handleDebit =
     async () => {
 
-      const amount =
-        Number(debitAmount);
 
-      if (
+      const amount =
+        Number(
+          debitAmount
+        );
+
+
+      if(
         !amount ||
-        amount <= 0
-      ) {
+        amount <=0
+      ){
+
         return alert(
           "Montant invalide"
         );
+
       }
 
-      const confirmDebit =
-        window.confirm(
-          `Débiter ${money(amount)} du bot #9999 ?`
-        );
 
-      if (!confirmDebit)
-        return;
+
+      if(
+        !window.confirm(
+          `Débiter ${money(amount)} du wallet IA #9999 ?`
+        )
+      )
+      return;
+
+
 
       try {
 
-        await debitBot(amount);
+
+        await debitBot(
+          amount
+        );
+
 
         setDebitAmount("");
 
         await refreshAI();
 
-        alert(
-          "✅ Bot débité"
-        );
 
-      } catch (err) {
-
-        console.error(err);
 
         alert(
-          err?.response?.data
-            ?.message ||
-            "Erreur débit"
+          "✅ Wallet IA débité"
         );
+
+
+
+      }catch(error){
+
+
+        console.error(error);
+
+
+        alert(
+          error?.response?.data?.message ||
+          "Erreur débit IA"
+        );
+
+
       }
+
+
     };
+
+
+
+
+
+
 
   // =====================================
   // TRANSFER SYSTEM
@@ -193,114 +284,148 @@ export default function AIControlPanel({
   const handleTransfer =
     async () => {
 
-      const amount =
-        Number(transferAmount);
 
-      if (
+      const amount =
+        Number(
+          transferAmount
+        );
+
+
+
+      if(
         !amount ||
-        amount <= 0
-      ) {
+        amount<=0
+      ){
+
         return alert(
           "Montant invalide"
         );
+
       }
 
-      const confirmTransfer =
-        window.confirm(
-          `Transférer ${money(amount)} du bot #9999 vers le système #7777 ?`
-        );
 
-      if (!confirmTransfer)
-        return;
 
-      try {
+      if(
+        !window.confirm(
+          `Transférer ${money(amount)} du wallet IA #9999 vers système #7777 ?`
+        )
+      )
+      return;
+
+
+
+      try{
+
 
         await transferToSystem(
           amount
         );
 
+
         setTransferAmount("");
 
+
         await refreshAI();
+
+
 
         alert(
           "✅ Transfert effectué"
         );
 
-      } catch (err) {
 
-        console.error(err);
+
+      }catch(error){
+
+
+        console.error(error);
+
 
         alert(
-          err?.response?.data
-            ?.message ||
-            "Erreur transfert"
+          error?.response?.data?.message ||
+          "Erreur transfert"
         );
+
+
       }
+
+
     };
 
+
+
+
+
+
+
   return (
+
     <div style={card}>
 
-      {/* HEADER */}
 
       <div style={header}>
 
-        <h2 style={{ margin: 0 }}>
+
+        <h2 style={{margin:0}}>
           🤖 AI CONTROL CENTER
         </h2>
+
+
 
         <span
           style={{
             ...badge,
             background:
               enabled
-                ? "#14532d"
-                : "#7f1d1d",
+              ? "#14532d"
+              : "#7f1d1d"
           }}
         >
-          {enabled
+
+          {
+            enabled
             ? "ACTIVE"
-            : "OFFLINE"}
+            : "OFFLINE"
+          }
+
         </span>
+
 
       </div>
 
+
+
+
+
       {/* WALLET */}
+
 
       <div style={grid}>
 
-        <div style={box}>
-          <span style={label}>
-            Disponible
-          </span>
 
-          <strong>
-            💰{" "}
-            {money(
-              ai?.wallet
-                ?.balance_available ||
-                0
-            )}
-          </strong>
-        </div>
+        <WalletBox
+          title="Disponible"
+          value={
+            wallet.balance_available
+          }
+          icon="💰"
+          money={money}
+        />
 
-        <div style={box}>
-          <span style={label}>
-            Gelé
-          </span>
 
-          <strong>
-            ❄️{" "}
-            {money(
-              ai?.wallet
-                ?.balance_frozen ||
-                0
-            )}
-          </strong>
-        </div>
+        <WalletBox
+          title="Bloqué en jeu"
+          value={
+            wallet.balance_locked
+          }
+          icon="🔒"
+          money={money}
+        />
+
+
 
         <div style={box}>
+
           <span style={label}>
             Bot
           </span>
@@ -308,268 +433,89 @@ export default function AIControlPanel({
           <strong>
             #9999
           </strong>
+
         </div>
 
+
+
         <div style={box}>
+
           <span style={label}>
             Système
           </span>
 
+
           <strong>
             #7777
           </strong>
+
         </div>
 
-      </div>
-
-      <hr style={divider} />
-
-      {/* CONFIG */}
-
-      <div style={section}>
-
-        <h3>
-          ⚙️ Configuration IA
-        </h3>
-
-        <label>
-          Activer IA
-        </label>
-
-        <input
-          type="checkbox"
-          checked={enabled}
-          onChange={(e) =>
-            setEnabled(
-              e.target.checked
-            )
-          }
-        />
-
-        <label>
-          Difficulté :
-          {" "}
-          {difficulty}%
-        </label>
-
-        <input
-          type="range"
-          min="10"
-          max="100"
-          value={difficulty}
-          onChange={(e) =>
-            setDifficulty(
-              Number(
-                e.target.value
-              )
-            )
-          }
-        />
-
-        <label>
-          Spawn Rate :
-          {" "}
-          {spawnRate}%
-        </label>
-
-        <input
-          type="range"
-          min="0"
-          max="100"
-          value={spawnRate}
-          onChange={(e) =>
-            setSpawnRate(
-              Number(
-                e.target.value
-              )
-            )
-          }
-        />
-
-        <label>
-          Max Bots
-        </label>
-
-        <input
-          type="number"
-          value={maxBots}
-          onChange={(e) =>
-            setMaxBots(
-              Number(
-                e.target.value
-              )
-            )
-          }
-          style={input}
-        />
-
-        <button
-          style={saveBtn}
-          onClick={
-            handleSaveSettings
-          }
-          disabled={
-            actionLoading
-          }
-        >
-          💾 Enregistrer
-        </button>
 
       </div>
 
-      <hr style={divider} />
 
-      {/* CREDIT */}
 
-      <div style={section}>
 
-        <h3>
-          💰 Créditer Bot
-        </h3>
 
-        <input
-          type="number"
-          value={creditAmount}
-          onChange={(e) =>
-            setCreditAmount(
-              e.target.value
-            )
-          }
-          placeholder="Montant"
-          style={input}
-        />
+      <hr style={divider}/>
 
-        <button
-          style={blueBtn}
-          onClick={
-            handleCredit
-          }
-        >
-          Créditer #9999
-        </button>
 
-      </div>
 
-      {/* DEBIT */}
 
-      <div style={section}>
 
-        <h3>
-          ⬇️ Débiter Bot
-        </h3>
+      <SettingsSection
+        enabled={enabled}
+        setEnabled={setEnabled}
+        difficulty={difficulty}
+        setDifficulty={setDifficulty}
+        spawnRate={spawnRate}
+        setSpawnRate={setSpawnRate}
+        maxBots={maxBots}
+        setMaxBots={setMaxBots}
+        save={handleSaveSettings}
+        loading={actionLoading}
+      />
 
-        <input
-          type="number"
-          value={debitAmount}
-          onChange={(e) =>
-            setDebitAmount(
-              e.target.value
-            )
-          }
-          placeholder="Montant"
-          style={input}
-        />
 
-        <button
-          style={redBtn}
-          onClick={
-            handleDebit
-          }
-        >
-          Débiter #9999
-        </button>
 
-      </div>
 
-      {/* TRANSFER */}
 
-      <div style={section}>
 
-        <h3>
-          🏦 Vers Système
-        </h3>
+      <MoneyAction
+        title="💰 Créditer Wallet IA"
+        value={creditAmount}
+        setValue={setCreditAmount}
+        action={handleCredit}
+        button="Créditer #9999"
+        color="#2563eb"
+      />
 
-        <input
-          type="number"
-          value={
-            transferAmount
-          }
-          onChange={(e) =>
-            setTransferAmount(
-              e.target.value
-            )
-          }
-          placeholder="Montant"
-          style={input}
-        />
 
-        <button
-          style={orangeBtn}
-          onClick={
-            handleTransfer
-          }
-        >
-          Transférer vers #7777
-        </button>
 
-      </div>
+      <MoneyAction
+        title="⬇️ Débiter Wallet IA"
+        value={debitAmount}
+        setValue={setDebitAmount}
+        action={handleDebit}
+        button="Débiter #9999"
+        color="#dc2626"
+      />
 
-      <hr style={divider} />
 
-      {/* STATS */}
 
-      <div style={grid}>
+      <MoneyAction
+        title="🏦 Vers système"
+        value={transferAmount}
+        setValue={setTransferAmount}
+        action={handleTransfer}
+        button="Transférer #7777"
+        color="#d97706"
+      />
 
-        <div style={box}>
-          <span style={label}>
-            Parties
-          </span>
 
-          <strong>
-            🎮{" "}
-            {ai?.stats
-              ?.matches || 0}
-          </strong>
-        </div>
 
-        <div style={box}>
-          <span style={label}>
-            Victoires
-          </span>
 
-          <strong>
-            🏆{" "}
-            {ai?.stats?.wins ||
-              0}
-          </strong>
-        </div>
-
-        <div style={box}>
-          <span style={label}>
-            Défaites
-          </span>
-
-          <strong>
-            ❌{" "}
-            {ai?.stats
-              ?.losses || 0}
-          </strong>
-        </div>
-
-        <div style={box}>
-          <span style={label}>
-            Win Rate
-          </span>
-
-          <strong>
-            📊{" "}
-            {ai?.stats
-              ?.win_rate || 0}
-            %
-          </strong>
-        </div>
-
-      </div>
 
       <button
         style={refreshBtn}
@@ -578,114 +524,320 @@ export default function AIControlPanel({
         🔄 Actualiser
       </button>
 
+
+
     </div>
+
   );
+
 }
 
+
+
+
+
+
+function WalletBox({
+  title,
+  value,
+  icon,
+  money
+}){
+
+
+return (
+
+<div style={box}>
+
+<span style={label}>
+{title}
+</span>
+
+
+<strong>
+{icon}
+{" "}
+{money(
+ Number(value || 0)
+)}
+</strong>
+
+
+</div>
+
+);
+
+
+}
+
+
+
+
+
+
+
+function MoneyAction({
+title,
+value,
+setValue,
+action,
+button,
+color
+}){
+
+
+return (
+
+<div style={section}>
+
+
+<h3>
+{title}
+</h3>
+
+
+<input
+type="number"
+value={value}
+onChange={
+e=>setValue(e.target.value)
+}
+placeholder="Montant"
+style={input}
+/>
+
+
+
+<button
+style={{
+...blueBtn,
+background:color
+}}
+onClick={action}
+>
+
+{button}
+
+</button>
+
+
+</div>
+
+
+);
+
+
+}
+
+
+
+
+
+
+
+function SettingsSection({
+enabled,
+setEnabled,
+difficulty,
+setDifficulty,
+spawnRate,
+setSpawnRate,
+maxBots,
+setMaxBots,
+save,
+loading
+}){
+
+
+return (
+
+<div style={section}>
+
+
+<h3>
+⚙️ Configuration IA
+</h3>
+
+
+<label>
+Activer IA
+</label>
+
+
+<input
+type="checkbox"
+checked={enabled}
+onChange={
+e=>setEnabled(e.target.checked)
+}
+/>
+
+
+
+<label>
+Difficulté {difficulty}%
+</label>
+
+
+<input
+type="range"
+min="10"
+max="100"
+value={difficulty}
+onChange={
+e=>setDifficulty(Number(e.target.value))
+}
+/>
+
+
+
+<label>
+Spawn Rate {spawnRate}%
+</label>
+
+
+<input
+type="range"
+min="0"
+max="100"
+value={spawnRate}
+onChange={
+e=>setSpawnRate(Number(e.target.value))
+}
+/>
+
+
+
+<label>
+Max Bots
+</label>
+
+
+<input
+type="number"
+value={maxBots}
+onChange={
+e=>setMaxBots(Number(e.target.value))
+}
+style={input}
+/>
+
+
+
+<button
+style={saveBtn}
+onClick={save}
+disabled={loading}
+>
+💾 Enregistrer
+</button>
+
+
+</div>
+
+
+);
+
+
+}
+
+
+
+
+
+
 const card = {
-  background: "#1e293b",
-  color: "#fff",
-  padding: 20,
-  borderRadius: 14,
-  display: "flex",
-  flexDirection: "column",
-  gap: 16,
+background:"#1e293b",
+color:"#fff",
+padding:20,
+borderRadius:14,
+display:"flex",
+flexDirection:"column",
+gap:16
 };
 
-const header = {
-  display: "flex",
-  justifyContent:
-    "space-between",
-  alignItems: "center",
+
+const header={
+display:"flex",
+justifyContent:"space-between",
+alignItems:"center"
 };
 
-const badge = {
-  padding: "6px 12px",
-  borderRadius: 999,
-  fontWeight: "bold",
+
+const badge={
+padding:"6px 12px",
+borderRadius:999,
+fontWeight:"bold"
 };
 
-const grid = {
-  display: "grid",
-  gridTemplateColumns:
-    "repeat(auto-fit,minmax(160px,1fr))",
-  gap: 10,
+
+const grid={
+display:"grid",
+gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",
+gap:10
 };
 
-const box = {
-  background: "#0f172a",
-  padding: 12,
-  borderRadius: 10,
+
+const box={
+background:"#0f172a",
+padding:12,
+borderRadius:10
 };
 
-const label = {
-  display: "block",
-  opacity: 0.7,
-  fontSize: 12,
-  marginBottom: 5,
+
+const label={
+display:"block",
+opacity:.7,
+fontSize:12,
+marginBottom:5
 };
 
-const section = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 10,
+
+const section={
+display:"flex",
+flexDirection:"column",
+gap:10
 };
 
-const input = {
-  padding: 10,
-  borderRadius: 10,
-  border: "none",
-  background: "#0f172a",
-  color: "#fff",
+
+const input={
+padding:10,
+borderRadius:10,
+border:"none",
+background:"#0f172a",
+color:"#fff"
 };
 
-const divider = {
-  border:
-    "1px solid rgba(255,255,255,.08)",
+
+const divider={
+border:"1px solid rgba(255,255,255,.08)"
 };
 
-const saveBtn = {
-  padding: 12,
-  border: "none",
-  borderRadius: 10,
-  background: "#7c3aed",
-  color: "#fff",
-  cursor: "pointer",
+
+const saveBtn={
+padding:12,
+border:"none",
+borderRadius:10,
+background:"#7c3aed",
+color:"#fff",
+cursor:"pointer"
 };
 
-const blueBtn = {
-  padding: 12,
-  border: "none",
-  borderRadius: 10,
-  background: "#2563eb",
-  color: "#fff",
-  cursor: "pointer",
+
+const blueBtn={
+padding:12,
+border:"none",
+borderRadius:10,
+color:"#fff",
+cursor:"pointer"
 };
 
-const redBtn = {
-  padding: 12,
-  border: "none",
-  borderRadius: 10,
-  background: "#dc2626",
-  color: "#fff",
-  cursor: "pointer",
-};
 
-const orangeBtn = {
-  padding: 12,
-  border: "none",
-  borderRadius: 10,
-  background: "#d97706",
-  color: "#fff",
-  cursor: "pointer",
+const refreshBtn={
+padding:12,
+border:"none",
+borderRadius:10,
+background:"#16a34a",
+color:"#fff",
+cursor:"pointer"
 };
-
-const refreshBtn = {
-  padding: 12,
-  border: "none",
-  borderRadius: 10,
-  background: "#16a34a",
-  color: "#fff",
-  cursor: "pointer",
-};
-
