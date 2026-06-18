@@ -89,6 +89,15 @@ export default function AIControlPanel({
 
       try {
 
+        if(typeof saveSettings !== "function"){
+          throw new Error(
+            "saveSettings non fourni"
+          );
+        }
+
+
+
+
 
         await saveSettings({
 
@@ -169,6 +178,10 @@ export default function AIControlPanel({
           amount
         );
 
+        if(typeof creditBot !== "function"){
+          throw new Error("creditBot non fourni");
+        }
+
 
         setCreditAmount("");
 
@@ -243,6 +256,9 @@ export default function AIControlPanel({
         await debitBot(
           amount
         );
+
+        if(typeof saveSettings !== "function")
+          throw new Error("saveSettings absent");
 
 
         setDebitAmount("");
@@ -521,8 +537,11 @@ export default function AIControlPanel({
 
 
       <button
-        style={refreshBtn}
-        onClick={refreshAI}
+        onClick={()=>{
+          if(typeof refreshAI==="function"){
+            refreshAI();
+          }
+        }}
       >
         🔄 Actualiser
       </button>

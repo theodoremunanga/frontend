@@ -172,11 +172,6 @@ export default function AdminDashboard() {
   // AI
   // ======================================================
 
-  const [ai, setAi] = useState({
-    settings: {},
-    wallet: {},
-    stats: {},
-  });
 
   // ======================================================
   // SEARCH
@@ -310,6 +305,40 @@ export default function AdminDashboard() {
         setLoading(false);
       }
     }, [pushNotif]);
+
+    const refreshAI =
+    async () => {
+
+    try {
+
+      const [
+        settingsRes,
+        walletRes
+      ] = await Promise.all([
+        getAISettings(),
+        getAIWallet(),
+      ]);
+
+      setAi({
+        settings:
+          settingsRes.data.settings ||
+          settingsRes.data,
+
+        wallet:
+          walletRes.data.wallet ||
+          walletRes.data,
+
+        stats: {},
+      });
+
+    } catch (err) {
+
+      console.error(
+        "AI REFRESH ERROR",
+        err
+      );
+    }
+  };
 
   // ======================================================
   // SOCKET
@@ -526,17 +555,7 @@ useEffect(() => {
     tab,
   ]);
 
-  useEffect(() => {
-    const load = async () => {
-      const settings = await getAISettings();
-      const wallet = await getAIWallet();
 
-      setSettings(settings.data);
-      setWallet(wallet.data);
-    };
-
-    load();
-  }, []);
 
   // ======================================================
   // FILTERS
@@ -689,40 +708,6 @@ const isOffline = !connected;
   // AI SETTINGS
   // ======================================================
 
-  const refreshAI =
-    async () => {
-
-    try {
-
-      const [
-        settingsRes,
-        walletRes
-      ] = await Promise.all([
-        getAISettings(),
-        getAIWallet(),
-      ]);
-
-      setAi({
-        settings:
-          settingsRes.data.settings ||
-          settingsRes.data,
-
-        wallet:
-          walletRes.data.wallet ||
-          walletRes.data,
-
-        stats: {},
-      });
-
-    } catch (err) {
-
-      console.error(
-        "AI REFRESH ERROR",
-        err
-      );
-    }
-  };
-
   const saveSettings =
     async (payload) => {
 
@@ -754,10 +739,10 @@ const isOffline = !connected;
 
     await transferToSystem(
       amount
+      
     );
 
-    await refreshAI();
-  };
+  }; await refreshAI();
 
   
 
@@ -1064,7 +1049,7 @@ const isOffline = !connected;
             debitBot={
               debitBotHandler
             }
-            transferToPlatform={
+            transferToSystem={
               transferHandler
             }
             refreshAI={
