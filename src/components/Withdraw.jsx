@@ -7,8 +7,8 @@ export default function Withdraw({ refresh }) {
   const [loading, setLoading] = useState(false);
 
   const submit = async () => {
-    if (!amount || Number(amount) < 500) {
-      return alert("Montant minimum = 500");
+    if (!amount || Number(amount) < 1000) {
+      return alert("Montant minimum = 1000");
     }
 
     try {

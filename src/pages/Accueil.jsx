@@ -124,7 +124,7 @@ export default function Accueil({
 
   const isFetching = useRef(false);
 
-  const MIN_BET = 500;
+  const MIN_BET = 200;
 
   const token =
     localStorage.getItem("token");
