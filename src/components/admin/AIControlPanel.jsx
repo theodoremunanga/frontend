@@ -1,135 +1,146 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function AIControlPanel({
   ai,
-  fundAmount,
-  setFundAmount,
-  toggleAI,
-  fundAI,
-  debitAI, // 🔥 NEW
+  saveSettings,
+  creditBot,
+  debitBot,
+  transferToSystem,
   refreshAI,
   money,
-  actionLoading,
+  actionLoading = false,
 }) {
 
-  // 🔥 NEW
+  const [difficulty, setDifficulty] =
+    useState(50);
+
+  const [spawnRate, setSpawnRate] =
+    useState(50);
+
+  const [maxBots, setMaxBots] =
+    useState(100);
+
+  const [enabled, setEnabled] =
+    useState(true);
+
+  const [creditAmount, setCreditAmount] =
+    useState("");
+
   const [debitAmount, setDebitAmount] =
     useState("");
 
-  // ======================================================
-  // TOGGLE AI
-  // ======================================================
+  const [transferAmount, setTransferAmount] =
+    useState("");
 
-  const handleToggle = async () => {
+  useEffect(() => {
 
-    try {
+    if (!ai?.settings) return;
 
-      if (typeof toggleAI !== "function") {
+    setEnabled(
+      ai.settings.enabled
+    );
 
-        console.warn(
-          "toggleAI non défini"
+    setDifficulty(
+      ai.settings
+        .experience_percent || 50
+    );
+
+    setSpawnRate(
+      ai.settings.spawn_rate || 50
+    );
+
+    setMaxBots(
+      ai.settings.max_active_bots || 100
+    );
+
+  }, [ai]);
+
+  // =====================================
+  // SAVE SETTINGS
+  // =====================================
+
+  const handleSaveSettings =
+    async () => {
+
+      try {
+
+        await saveSettings({
+          enabled,
+          experience_percent:
+            difficulty,
+          spawn_rate:
+            spawnRate,
+          max_active_bots:
+            maxBots,
+        });
+
+        await refreshAI();
+
+        alert(
+          "✅ Paramètres IA enregistrés"
         );
 
-        return;
+      } catch (err) {
+
+        console.error(err);
+
+        alert(
+          err?.response?.data
+            ?.message ||
+            "Erreur sauvegarde"
+        );
       }
+    };
 
-      const newState =
-        !Boolean(ai?.enabled);
+  // =====================================
+  // CREDIT BOT
+  // =====================================
 
-      await toggleAI(newState);
-
-      if (
-        typeof refreshAI ===
-        "function"
-      ) {
-        await refreshAI();
-      }
-
-    } catch (err) {
-
-      console.error(
-        "❌ TOGGLE AI ERROR:",
-        err
-      );
-
-      alert(
-        "Erreur lors du changement IA"
-      );
-    }
-  };
-
-  // ======================================================
-  // FUND AI
-  // ======================================================
-
-  const handleFund = async () => {
-
-    try {
+  const handleCredit =
+    async () => {
 
       const amount =
-        Number(fundAmount);
+        Number(creditAmount);
 
       if (
         !amount ||
         amount <= 0
       ) {
-
-        alert(
+        return alert(
           "Montant invalide"
         );
-
-        return;
       }
 
-      if (
-        typeof fundAI !==
-        "function"
-      ) {
+      try {
+
+        await creditBot(amount);
+
+        setCreditAmount("");
+
+        await refreshAI();
 
         alert(
-          "fundAI non défini"
+          "✅ Bot crédité"
         );
 
-        return;
+      } catch (err) {
+
+        console.error(err);
+
+        alert(
+          err?.response?.data
+            ?.message ||
+            "Erreur crédit"
+        );
       }
+    };
 
-      await fundAI(amount);
+  // =====================================
+  // DEBIT BOT
+  // =====================================
 
-      if (
-        typeof refreshAI ===
-        "function"
-      ) {
-        await refreshAI();
-      }
-
-      setFundAmount("");
-
-      alert(
-        "✅ Wallet IA crédité"
-      );
-
-    } catch (err) {
-
-      console.error(
-        "❌ FUND AI ERROR:",
-        err
-      );
-
-      alert(
-        err?.response?.data
-          ?.message ||
-          "Erreur financement IA"
-      );
-    }
-  };
-
-  // ======================================================
-  // DEBIT AI
-  // ======================================================
-
-  const handleDebit = async () => {
-
-    try {
+  const handleDebit =
+    async () => {
 
       const amount =
         Number(debitAmount);
@@ -138,294 +149,447 @@ export default function AIControlPanel({
         !amount ||
         amount <= 0
       ) {
-
-        alert(
+        return alert(
           "Montant invalide"
         );
-
-        return;
       }
 
-      if (
-        typeof debitAI !==
-        "function"
-      ) {
+      const confirmDebit =
+        window.confirm(
+          `Débiter ${money(amount)} du bot #9999 ?`
+        );
+
+      if (!confirmDebit)
+        return;
+
+      try {
+
+        await debitBot(amount);
+
+        setDebitAmount("");
+
+        await refreshAI();
 
         alert(
-          "debitAI non défini"
+          "✅ Bot débité"
         );
 
-        return;
-      }
+      } catch (err) {
 
-      // 🔥 confirmation sécurité
-      const confirmed =
-        window.confirm(
-          `Débiter ${money(amount)} du wallet IA ?`
+        console.error(err);
+
+        alert(
+          err?.response?.data
+            ?.message ||
+            "Erreur débit"
         );
-
-      if (!confirmed) {
-        return;
       }
+    };
 
-      await debitAI(amount);
+  // =====================================
+  // TRANSFER SYSTEM
+  // =====================================
+
+  const handleTransfer =
+    async () => {
+
+      const amount =
+        Number(transferAmount);
 
       if (
-        typeof refreshAI ===
-        "function"
+        !amount ||
+        amount <= 0
       ) {
-        await refreshAI();
+        return alert(
+          "Montant invalide"
+        );
       }
 
-      setDebitAmount("");
+      const confirmTransfer =
+        window.confirm(
+          `Transférer ${money(amount)} du bot #9999 vers le système #7777 ?`
+        );
 
-      alert(
-        "✅ Wallet IA débité"
-      );
+      if (!confirmTransfer)
+        return;
 
-    } catch (err) {
+      try {
 
-      console.error(
-        "❌ DEBIT AI ERROR:",
-        err
-      );
+        await transferToSystem(
+          amount
+        );
 
-      alert(
-        err?.response?.data
-          ?.message ||
-          "Erreur débit IA"
-      );
-    }
-  };
+        setTransferAmount("");
+
+        await refreshAI();
+
+        alert(
+          "✅ Transfert effectué"
+        );
+
+      } catch (err) {
+
+        console.error(err);
+
+        alert(
+          err?.response?.data
+            ?.message ||
+            "Erreur transfert"
+        );
+      }
+    };
 
   return (
     <div style={card}>
 
-      {/* ================================================= */}
       {/* HEADER */}
-      {/* ================================================= */}
 
       <div style={header}>
+
         <h2 style={{ margin: 0 }}>
           🤖 AI CONTROL CENTER
         </h2>
 
         <span
           style={{
-            ...statusBadge,
-
+            ...badge,
             background:
-              ai?.enabled
+              enabled
                 ? "#14532d"
                 : "#7f1d1d",
           }}
         >
-          {ai?.enabled
+          {enabled
             ? "ACTIVE"
             : "OFFLINE"}
         </span>
+
       </div>
 
-      {/* ================================================= */}
-      {/* STATS */}
-      {/* ================================================= */}
+      {/* WALLET */}
 
-      <div style={statsContainer}>
+      <div style={grid}>
 
-        <div style={statBox}>
+        <div style={box}>
           <span style={label}>
-            Balance
+            Disponible
           </span>
 
           <strong>
             💰{" "}
             {money(
-              ai?.balance || 0
-            )}
-          </strong>
-        </div>
-
-        <div style={statBox}>
-          <span style={label}>
-            Frozen
-          </span>
-
-          <strong
-            style={{
-              color: "#f59e0b",
-            }}
-          >
-            ❄️{" "}
-            {money(
-              ai?.balance_locked ||
+              ai?.wallet
+                ?.balance_available ||
                 0
             )}
           </strong>
         </div>
 
-        <div style={statBox}>
+        <div style={box}>
           <span style={label}>
-            Profit
+            Gelé
           </span>
 
-          <strong
-            style={{
-              color: "#22c55e",
-            }}
-          >
-            📈{" "}
+          <strong>
+            ❄️{" "}
             {money(
-              ai?.profit || 0
+              ai?.wallet
+                ?.balance_frozen ||
+                0
             )}
           </strong>
         </div>
 
-        <div style={statBox}>
+        <div style={box}>
           <span style={label}>
-            Loss
+            Bot
           </span>
 
-          <strong
-            style={{
-              color: "#ef4444",
-            }}
-          >
-            📉{" "}
-            {money(
-              ai?.loss || 0
-            )}
+          <strong>
+            #9999
+          </strong>
+        </div>
+
+        <div style={box}>
+          <span style={label}>
+            Système
+          </span>
+
+          <strong>
+            #7777
           </strong>
         </div>
 
       </div>
 
-      {/* ================================================= */}
-      {/* TOGGLE */}
-      {/* ================================================= */}
-
-      <button
-        onClick={handleToggle}
-        style={{
-          ...mainButton,
-
-          background:
-            ai?.enabled
-              ? "#dc2626"
-              : "#16a34a",
-        }}
-        disabled={actionLoading}
-      >
-        {actionLoading
-          ? "Processing..."
-          : ai?.enabled
-          ? "🛑 Disable AI"
-          : "✅ Enable AI"}
-      </button>
-
       <hr style={divider} />
 
-      {/* ================================================= */}
-      {/* FUND */}
-      {/* ================================================= */}
+      {/* CONFIG */}
 
       <div style={section}>
 
-        <h3 style={sectionTitle}>
-          💰 Fund AI Wallet
+        <h3>
+          ⚙️ Configuration IA
         </h3>
+
+        <label>
+          Activer IA
+        </label>
+
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(e) =>
+            setEnabled(
+              e.target.checked
+            )
+          }
+        />
+
+        <label>
+          Difficulté :
+          {" "}
+          {difficulty}%
+        </label>
+
+        <input
+          type="range"
+          min="10"
+          max="100"
+          value={difficulty}
+          onChange={(e) =>
+            setDifficulty(
+              Number(
+                e.target.value
+              )
+            )
+          }
+        />
+
+        <label>
+          Spawn Rate :
+          {" "}
+          {spawnRate}%
+        </label>
+
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={spawnRate}
+          onChange={(e) =>
+            setSpawnRate(
+              Number(
+                e.target.value
+              )
+            )
+          }
+        />
+
+        <label>
+          Max Bots
+        </label>
 
         <input
           type="number"
-          placeholder="Enter amount"
-          value={fundAmount}
+          value={maxBots}
           onChange={(e) =>
-            setFundAmount(
-              e.target.value
+            setMaxBots(
+              Number(
+                e.target.value
+              )
             )
           }
           style={input}
         />
 
         <button
-          onClick={handleFund}
-          style={{
-            ...actionBtn,
-            background:
-              "#2563eb",
-          }}
-          disabled={actionLoading}
+          style={saveBtn}
+          onClick={
+            handleSaveSettings
+          }
+          disabled={
+            actionLoading
+          }
         >
-          💰 Fund Wallet
+          💾 Enregistrer
         </button>
 
       </div>
 
-      {/* ================================================= */}
-      {/* DEBIT */}
-      {/* ================================================= */}
+      <hr style={divider} />
+
+      {/* CREDIT */}
 
       <div style={section}>
 
-        <h3 style={sectionTitle}>
-          ⬇️ Debit AI Wallet
+        <h3>
+          💰 Créditer Bot
         </h3>
 
         <input
           type="number"
-          placeholder="Enter amount"
+          value={creditAmount}
+          onChange={(e) =>
+            setCreditAmount(
+              e.target.value
+            )
+          }
+          placeholder="Montant"
+          style={input}
+        />
+
+        <button
+          style={blueBtn}
+          onClick={
+            handleCredit
+          }
+        >
+          Créditer #9999
+        </button>
+
+      </div>
+
+      {/* DEBIT */}
+
+      <div style={section}>
+
+        <h3>
+          ⬇️ Débiter Bot
+        </h3>
+
+        <input
+          type="number"
           value={debitAmount}
           onChange={(e) =>
             setDebitAmount(
               e.target.value
             )
           }
+          placeholder="Montant"
           style={input}
         />
 
         <button
-          onClick={handleDebit}
-          style={{
-            ...actionBtn,
-            background:
-              "#b91c1c",
-          }}
-          disabled={actionLoading}
+          style={redBtn}
+          onClick={
+            handleDebit
+          }
         >
-          ⬇️ Debit Wallet
+          Débiter #9999
         </button>
 
       </div>
 
-      {/* ================================================= */}
-      {/* REFRESH */}
-      {/* ================================================= */}
+      {/* TRANSFER */}
+
+      <div style={section}>
+
+        <h3>
+          🏦 Vers Système
+        </h3>
+
+        <input
+          type="number"
+          value={
+            transferAmount
+          }
+          onChange={(e) =>
+            setTransferAmount(
+              e.target.value
+            )
+          }
+          placeholder="Montant"
+          style={input}
+        />
+
+        <button
+          style={orangeBtn}
+          onClick={
+            handleTransfer
+          }
+        >
+          Transférer vers #7777
+        </button>
+
+      </div>
+
+      <hr style={divider} />
+
+      {/* STATS */}
+
+      <div style={grid}>
+
+        <div style={box}>
+          <span style={label}>
+            Parties
+          </span>
+
+          <strong>
+            🎮{" "}
+            {ai?.stats
+              ?.matches || 0}
+          </strong>
+        </div>
+
+        <div style={box}>
+          <span style={label}>
+            Victoires
+          </span>
+
+          <strong>
+            🏆{" "}
+            {ai?.stats?.wins ||
+              0}
+          </strong>
+        </div>
+
+        <div style={box}>
+          <span style={label}>
+            Défaites
+          </span>
+
+          <strong>
+            ❌{" "}
+            {ai?.stats
+              ?.losses || 0}
+          </strong>
+        </div>
+
+        <div style={box}>
+          <span style={label}>
+            Win Rate
+          </span>
+
+          <strong>
+            📊{" "}
+            {ai?.stats
+              ?.win_rate || 0}
+            %
+          </strong>
+        </div>
+
+      </div>
 
       <button
+        style={refreshBtn}
         onClick={refreshAI}
-        style={refresh}
-        disabled={actionLoading}
       >
-        🔄 Refresh stats
+        🔄 Actualiser
       </button>
 
     </div>
   );
 }
 
-// ======================================================
-// STYLES
-// ======================================================
-
 const card = {
   background: "#1e293b",
+  color: "#fff",
   padding: 20,
   borderRadius: 14,
-  color: "white",
   display: "flex",
   flexDirection: "column",
-  gap: 14,
-  boxShadow:
-    "0 4px 20px rgba(0,0,0,0.25)",
+  gap: 16,
 };
 
 const header = {
@@ -435,37 +599,30 @@ const header = {
   alignItems: "center",
 };
 
-const statusBadge = {
+const badge = {
   padding: "6px 12px",
   borderRadius: 999,
-  fontSize: 12,
   fontWeight: "bold",
 };
 
-const statsContainer = {
+const grid = {
   display: "grid",
   gridTemplateColumns:
-    "repeat(auto-fit,minmax(120px,1fr))",
+    "repeat(auto-fit,minmax(160px,1fr))",
   gap: 10,
 };
 
-const statBox = {
+const box = {
   background: "#0f172a",
   padding: 12,
   borderRadius: 10,
-  display: "flex",
-  flexDirection: "column",
-  gap: 6,
 };
 
 const label = {
-  fontSize: 12,
+  display: "block",
   opacity: 0.7,
-};
-
-const divider = {
-  border:
-    "1px solid rgba(255,255,255,0.08)",
+  fontSize: 12,
+  marginBottom: 5,
 };
 
 const section = {
@@ -474,47 +631,61 @@ const section = {
   gap: 10,
 };
 
-const sectionTitle = {
-  margin: 0,
-  fontSize: 16,
-};
-
 const input = {
-  padding: 12,
+  padding: 10,
   borderRadius: 10,
   border: "none",
-  outline: "none",
   background: "#0f172a",
-  color: "white",
-  width: "100%",
-  boxSizing: "border-box",
+  color: "#fff",
 };
 
-const mainButton = {
+const divider = {
+  border:
+    "1px solid rgba(255,255,255,.08)",
+};
+
+const saveBtn = {
   padding: 12,
   border: "none",
   borderRadius: 10,
-  color: "white",
-  fontWeight: "bold",
+  background: "#7c3aed",
+  color: "#fff",
   cursor: "pointer",
-  transition: "0.2s",
 };
 
-const actionBtn = {
+const blueBtn = {
   padding: 12,
   border: "none",
   borderRadius: 10,
-  color: "white",
-  fontWeight: "bold",
+  background: "#2563eb",
+  color: "#fff",
   cursor: "pointer",
 };
 
-const refresh = {
+const redBtn = {
   padding: 12,
+  border: "none",
+  borderRadius: 10,
+  background: "#dc2626",
+  color: "#fff",
+  cursor: "pointer",
+};
+
+const orangeBtn = {
+  padding: 12,
+  border: "none",
+  borderRadius: 10,
+  background: "#d97706",
+  color: "#fff",
+  cursor: "pointer",
+};
+
+const refreshBtn = {
+  padding: 12,
+  border: "none",
+  borderRadius: 10,
   background: "#16a34a",
-  border: "none",
-  borderRadius: 10,
-  color: "white",
-  fontWeight: "bold",
+  color: "#fff",
   cursor: "pointer",
 };
+
