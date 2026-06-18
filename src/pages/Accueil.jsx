@@ -464,148 +464,339 @@ export default function Accueil({
     }
   };
 
-  // ================= CREATE =================
-  const handleCreateChallenge =
-    async (gameId) => {
-      if (gameId !== "dames") {
-        return setError(
-          "🚧 Seul le jeu Dames est disponible actuellement."
-        );
-      }
+ // ================= CREATE =================
+const handleCreateChallenge =
+  async (gameId) => {
 
-      if (isOffline) {
-        return setError(
-          "📡 Hors ligne"
-        );
-     }
+    if (gameId !== "dames") {
+      return setError(
+        "🚧 Seul le jeu Dames est disponible actuellement."
+      );
+    }
 
-      const raw =
-        getAmount(gameId);
 
-      const amount = raw
-        ? Number(raw)
-        : null;
+    if (isOffline) {
+      return setError(
+        "📡 Hors ligne"
+      );
+    }
 
-      const mode = getMode(gameId);
 
-      const joId = getJoId(gameId);
+    const mode = getMode(gameId);
 
-      if (
+
+    const raw =
+      getAmount(gameId);
+
+
+    const amount =
+      mode === "training"
+      ?
+      0
+      :
+      raw
+      ?
+      Number(raw)
+      :
+      null;
+
+
+
+    const joId =
+      getJoId(gameId);
+
+
+
+    // ============================
+    // VALIDATION MISE
+    // SAUF MATCH GRATUIT
+    // ============================
+
+    if (
+      mode !== "training" &&
+      (
         !amount ||
         amount < MIN_BET
-      ) {
-        return setError(
-          `⚠️ Mise minimum : ${MIN_BET} CDF`
-        );
-      }
+      )
+    ) {
 
-      if (
-        mode === "jo" &&
-        !joId
-      ) {
-        return setError(
-          "⚠️ ID du JO requis"
-        );
-      }
+      return setError(
+        `⚠️ Mise minimum : ${MIN_BET} CDF`
+      );
 
-      try {
-        const res = await fetch(
-          `${API}/match/create`,
+    }
+
+
+
+    if (
+      mode === "jo" &&
+      !joId
+    ) {
+
+      return setError(
+        "⚠️ ID du JO requis"
+      );
+
+    }
+
+
+
+    try {
+
+
+      let res;
+
+
+
+      // =================================
+      // 🎯 MATCH GRATUIT
+      // =================================
+
+      if(mode === "training")
+      {
+
+        res =
+        await fetch(
+          `${API}/training/create`,
           {
-            method: "POST",
 
-            headers: {
+            method:"POST",
+
+            headers:{
               "Content-Type":
-                "application/json",
+              "application/json",
 
               Authorization:
-                "Bearer " + token,
+              "Bearer "+token,
             },
 
-            body: JSON.stringify({
-              game: gameId,
-              bet: amount,
-              mode,
-              joId,
-            }),
+
+            body:JSON.stringify({
+
+              game:gameId
+
+            })
+
           }
         );
 
-        const data = await res
-          .json()
-          .catch(() => ({}));
 
-        if (
-          !res.ok ||
-          data?.error
-        ) {
-          return setError(
-            data?.error ||
-              "❌ Création échouée"
-          );
-        }
-
-        if (!data?.matchId) {
-          return setError(
-            "❌ matchId manquant"
-          );
-        }
-
-        const match = {
-          id: data.matchId,
-          game: gameId,
-          bet: amount,
-        };
-
-        await fetchData();
-
-        if (mode === "user") {
-          setGameConfig({
-            matchId: match.id,
-            game: gameId,
-            mode: "waiting",
-            bet: amount,
-          });
-
-          setTimeout(
-            () => setPage("waiting"),
-            0
-          );
-        } else if (
-          mode === "ai"
-        ) {
-          await fetch(
-            `${API}/match/create/bot`,
-            {
-              method: "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json",
-
-                Authorization:
-                  "Bearer " +
-                  token,
-              },
-
-              body: JSON.stringify({
-                matchId: match.id,
-                level: "medium",
-                user_id: 999,
-              }),
-            }
-          );
-
-          goToGame(match);
-        }
-      } catch (err) {
-        console.error(err);
-
-        setError(
-          "❌ Connexion serveur"
-        );
       }
-    };
+
+      // =================================
+      // 💰 MATCH CLASSIQUE
+      // =================================
+
+      else
+      {
+
+        res =
+        await fetch(
+          `${API}/match/create`,
+          {
+
+            method:"POST",
+
+            headers:{
+              "Content-Type":
+              "application/json",
+
+              Authorization:
+              "Bearer "+token,
+            },
+
+
+            body:JSON.stringify({
+
+              game:gameId,
+
+              bet:amount,
+
+              mode,
+
+              joId
+
+            })
+
+          }
+        );
+
+      }
+
+
+
+      const data =
+      await res
+      .json()
+      .catch(
+        ()=>({})
+      );
+
+
+
+      if(
+        !res.ok ||
+        data?.error
+      )
+      {
+
+        return setError(
+          data?.error ||
+          "❌ Création échouée"
+        );
+
+      }
+
+
+
+      if(!data?.matchId)
+      {
+
+        return setError(
+          "❌ matchId manquant"
+        );
+
+      }
+
+
+
+      const match = {
+
+        id:data.matchId,
+
+        game:gameId,
+
+        bet:amount
+
+      };
+
+
+
+      await fetchData();
+
+
+
+      // =================================
+      // 👤 VS JOUEUR
+      // =================================
+
+      if(mode==="user")
+      {
+
+        setGameConfig({
+
+          matchId:match.id,
+
+          game:gameId,
+
+          mode:"waiting",
+
+          bet:amount
+
+        });
+
+
+
+        setTimeout(
+          ()=>setPage("waiting"),
+          0
+        );
+
+      }
+
+
+
+      // =================================
+      // ⚡ MATCH DIRECT (IA PAYANTE)
+      // =================================
+
+      else if(mode==="ai")
+      {
+
+        await fetch(
+          `${API}/match/create/bot`,
+          {
+
+            method:"POST",
+
+            headers:{
+
+              "Content-Type":
+              "application/json",
+
+              Authorization:
+              "Bearer "+token,
+
+            },
+
+
+            body:JSON.stringify({
+
+              matchId:
+              match.id,
+
+              level:"medium",
+
+              user_id:999
+
+            })
+
+          }
+        );
+
+
+
+        goToGame(match);
+
+      }
+
+
+
+      // =================================
+      // 🎯 MATCH GRATUIT
+      // =================================
+
+      else if(mode==="training")
+      {
+
+        setGameConfig({
+
+          matchId:match.id,
+
+          game:gameId,
+
+          mode:"playing",
+
+          bet:0
+
+        });
+
+
+
+        setTimeout(
+          ()=>setPage("game"),
+          0
+        );
+
+      }
+
+
+    }
+    catch(err)
+    {
+
+      console.error(err);
+
+
+      setError(
+        "❌ Connexion serveur"
+      );
+
+    }
+
+};
+
+    
 
   // ================= FEED MERGE =================
   const feedSections =
@@ -1264,9 +1455,11 @@ export default function Accueil({
                                   </option>
 
                                   <option value="ai">
-                                    🤖
-                                    vs
-                                    IA
+                                  ⚡ Match Direct
+                                  </option>
+
+                                  <option value="training">
+                                  🎯 Match Gratuit
                                   </option>
 
                                   <option value="jo">
