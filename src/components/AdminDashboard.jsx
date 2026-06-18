@@ -742,7 +742,7 @@ const isOffline = !connected;
       
     );
 
-  }; await refreshAI();
+  }; 
 
   
 
