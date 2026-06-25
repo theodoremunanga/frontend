@@ -38,9 +38,9 @@ const games = [
     name: "Football",
     icon: "⚽",
     id: "football",
-    available: false,
+    available: true,
     description:
-      "Disponible prochainement dans une future mise à jour.",
+      "Le jeu officiel Football maintenant disponible sur 6BetBall.",
   },
 
   {
@@ -468,9 +468,12 @@ export default function Accueil({
 const handleCreateChallenge =
   async (gameId) => {
 
-    if (gameId !== "dames") {
+    if (
+      gameId !== "dames" &&
+      gameId !== "football"
+    ) {
       return setError(
-        "🚧 Seul le jeu Dames est disponible actuellement."
+        "🚧 Jeu indisponible actuellement."
       );
     }
 

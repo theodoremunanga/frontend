@@ -9,12 +9,19 @@ import Infos from "./pages/Infos";
 import Menu from "./pages/Menu";
 import Dames from "./pages/Dames";
 
+
+
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
 import ProfileRadar from "./components/Profile/ProfileRadar";
 import AdsPage from "./pages/AdsPage";
 import SponsoredBanner from "./components/ads/SponsoredBanner";
+
+import FootballHome
+from "./football/pages/FootballHome";
+import FootballMatch
+from "./football/pages/FootballMatch";
 
 // ✅ MESSAGE PAGE
 import Messages from "./pages/Messages";
@@ -381,19 +388,21 @@ export default function App() {
                 actif
               </h2>
             </div>
-          ) : safeGame ===
-            "dames" ? (
+          ) : safeGame === "dames" ? (
             <Dames
-              gameConfig={
-                gameConfig
-              }
-              setPage={
-                setPage
-              }
-              resetGame={
-                resetGame
-              }
+              gameConfig={gameConfig}
+              setPage={setPage}
+              resetGame={resetGame}
+           />
+
+          ) : safeGame === "football" ? (
+
+            <FootballMatch
+              gameConfig={gameConfig}
+              setPage={setPage}
+              resetGame={resetGame}
             />
+
           ) : (
             <div
               style={{
@@ -415,6 +424,30 @@ export default function App() {
           )}
         </>
       )}
+
+      {
+      page === "football" && (
+
+      <FootballHome
+
+      setPage={setPage}
+
+      setGameConfig={
+      (config)=>{
+
+      setGameConfig(config);
+
+      localStorage.setItem(
+      "gameConfig",
+      JSON.stringify(config)
+      );
+
+      }}
+
+      />
+
+      )
+      }
 
       {/* =========================
           👤 PROFILE
