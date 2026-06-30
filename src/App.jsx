@@ -35,6 +35,7 @@ import {
 // =========================
 function WaitingMatch({
   matchId,
+  game,
   setPage,
   setGameConfig,
 }) {
@@ -74,7 +75,7 @@ function WaitingMatch({
           ) {
             const updated = {
               matchId,
-              game: "dames",
+              game,
             };
 
             setGameConfig(
@@ -361,6 +362,9 @@ export default function App() {
           <WaitingMatch
             matchId={
               gameConfig.matchId
+            }
+            game={
+              gameConfig.game
             }
             setPage={setPage}
             setGameConfig={

@@ -29,6 +29,21 @@ export const getFootballMatch = async (
 
 };
 
+export const createFootballMatch = async (
+  data
+) => {
+
+  const response =
+    await api.post(
+      "/match/create",
+      data
+    );
+
+
+  return response.data;
+
+};
+
 
 
 export const startFootballMatch = async (
@@ -44,3 +59,4 @@ export const startFootballMatch = async (
   return response.data;
 
 };
+

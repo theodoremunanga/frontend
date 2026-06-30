@@ -467,15 +467,22 @@ export default function Accueil({
  // ================= CREATE =================
 const handleCreateChallenge =
   async (gameId) => {
+    if(gameId === "football")
+    {
 
-    if (
-      gameId !== "dames" &&
-      gameId !== "football"
-    ) {
-      return setError(
-        "🚧 Jeu indisponible actuellement."
+      setPage("football");
+
+      return;
+
+    }
+
+     if(gameId !== "dames")
+      {
+        return setError(
+          "🚧 Jeu indisponible actuellement."
       );
     }
+
 
 
     if (isOffline) {
