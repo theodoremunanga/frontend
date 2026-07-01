@@ -5,7 +5,6 @@ export default function AIControlPanel({
   ai,
   saveSettings,
   creditBot,
-  debitBot,
   transferToSystem,
   refreshAI,
   money,
@@ -27,9 +26,6 @@ export default function AIControlPanel({
 
 
   const [creditAmount, setCreditAmount] =
-    useState("");
-
-  const [debitAmount, setDebitAmount] =
     useState("");
 
   const [transferAmount, setTransferAmount] =
@@ -213,81 +209,7 @@ export default function AIControlPanel({
 
 
 
-  // =====================================
-  // DEBIT BOT
-  // =====================================
-
-  const handleDebit =
-    async () => {
-
-
-      const amount =
-        Number(
-          debitAmount
-        );
-
-
-      if(
-        !amount ||
-        amount <=0
-      ){
-
-        return alert(
-          "Montant invalide"
-        );
-
-      }
-
-
-
-      if(
-        !window.confirm(
-          `Débiter ${money(amount)} du wallet IA #9999 ?`
-        )
-      )
-      return;
-
-
-
-      try {
-
-
-        await debitBot(
-          amount
-        );
-
-        if(typeof saveSettings !== "function")
-          throw new Error("saveSettings absent");
-
-
-        setDebitAmount("");
-
-        await refreshAI();
-
-
-
-        alert(
-          "✅ Wallet IA débité"
-        );
-
-
-
-      }catch(error){
-
-
-        console.error(error);
-
-
-        alert(
-          error?.response?.data?.message ||
-          "Erreur débit IA"
-        );
-
-
-      }
-
-
-    };
+  
 
 
 
@@ -507,17 +429,6 @@ export default function AIControlPanel({
         action={handleCredit}
         button="Créditer #9999"
         color="#2563eb"
-      />
-
-
-
-      <MoneyAction
-        title="⬇️ Débiter Wallet IA"
-        value={debitAmount}
-        setValue={setDebitAmount}
-        action={handleDebit}
-        button="Débiter #9999"
-        color="#dc2626"
       />
 
 

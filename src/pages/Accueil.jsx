@@ -723,40 +723,42 @@ const handleCreateChallenge =
       else if(mode==="ai")
       {
 
-        await fetch(
+        const botRes = await fetch(
           `${API}/match/create/bot`,
-          {
-
-            method:"POST",
-
-            headers:{
-
-              "Content-Type":
-              "application/json",
-
-              Authorization:
-              "Bearer "+token,
-
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+              Authorization: "Bearer " + token,
             },
-
-
-            body:JSON.stringify({
-
-              matchId:
-              match.id,
-
-              level:"medium",
-
-              user_id:999
-
-            })
-
+            body: JSON.stringify({
+              matchId: match.id,
+              level: "medium",
+              user_id: 999,
+            }),
           }
         );
 
+        const botData = await botRes
+          .json()
+          .catch(() => ({}));
 
+        if (!botRes.ok || botData.error) {
+          await fetch(
+            `${API}/match/${match.id}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: "Bearer " + token,
+            },
+          }
+        ).catch(() => {});
+          return setError(
+            "⚠️ Match Direct non disponible pour le moment. Créez un Match VS Joueur ou rejoignez les défis ouverts."
+        );
+      }
 
-        goToGame(match);
+      goToGame(match);
 
       }
 
