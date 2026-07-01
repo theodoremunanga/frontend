@@ -168,6 +168,11 @@ export default function AdminDashboard() {
   const [users, setUsers] =
     useState([]);
 
+  const [ai, setAi] = useState({
+    settings: {},
+    wallet: {},
+  });
+
   // ======================================================
   // AI
   // ======================================================
@@ -306,39 +311,23 @@ export default function AdminDashboard() {
       }
     }, [pushNotif]);
 
-    const refreshAI =
-    async () => {
+    const refreshAI = async () => {
+      try {
 
-    try {
+        const [settingsRes, walletRes] = await Promise.all([
+          getAISettings(),
+          getAIWallet(),
+        ]);
 
-      const [
-        settingsRes,
-        walletRes
-      ] = await Promise.all([
-        getAISettings(),
-        getAIWallet(),
-      ]);
+        setAi({
+          settings: settingsRes.data,
+          wallet: walletRes.data,
+        });
 
-      setAi({
-        settings:
-          settingsRes.data.settings ||
-          settingsRes.data,
-
-        wallet:
-          walletRes.data.wallet ||
-          walletRes.data,
-
-        stats: {},
-      });
-
-    } catch (err) {
-
-      console.error(
-        "AI REFRESH ERROR",
-        err
-      );
-    }
-  };
+      } catch (err) {
+        console.error("AI REFRESH ERROR", err);
+      }
+    };
 
   // ======================================================
   // SOCKET
