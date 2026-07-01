@@ -37,11 +37,10 @@ export default function AIControlPanel({
 
 
 
- const wallet =
-  ai?.wallet ?? {
-    balance_available:0,
-    balance_locked:0
- };
+  const wallet = {
+    balance_available: ai?.user?.balance ?? 0,
+    balance_locked: ai?.user?.balance_locked ?? 0
+  };
 
 
 

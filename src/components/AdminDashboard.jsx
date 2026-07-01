@@ -314,20 +314,35 @@ export default function AdminDashboard() {
     const refreshAI = async () => {
       try {
 
-        const [settingsRes, walletRes] = await Promise.all([
-          getAISettings(),
-          getAIWallet(),
-        ]);
+        const [
+          settingsRes,
+            usersRes
+          ] = await Promise.all([
+            getAISettings(),
+            api.get("/admin/users")
+          ]);
+
+       
+
+        const bot = usersRes.data.find(
+          u =>
+            Number(u.id) === 9999 ||
+            Number(u.custom_id) === 9999
+        );
 
         setAi({
           settings: settingsRes.data,
-          wallet: walletRes.data,
+          wallet: {
+            balance_available: bot?.balance ?? 0,
+            balance_locked: bot?.balance_locked ?? 0
+          },
+          user: bot
         });
 
-      } catch (err) {
-        console.error("AI REFRESH ERROR", err);
-      }
-    };
+        } catch (err) {
+          console.error(err);
+        }
+      };
 
   // ======================================================
   // SOCKET
