@@ -331,7 +331,7 @@ export default function AdminDashboard() {
         );
 
         setAi({
-          settings: settingsRes.data,
+          settings: settingsRes.data.settings,
           wallet: {
             balance_available: bot?.balance ?? 0,
             balance_locked: bot?.balance_locked ?? 0
