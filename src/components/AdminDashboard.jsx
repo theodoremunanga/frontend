@@ -16,7 +16,7 @@ import MatchesList from "./admin/MatchesList";
 import MessagesList from "./admin/MessagesList";
 import AIControlPanel from "./admin/AIControlPanel";
 
-import ActionsAdmin from "../components/admin/ActionsAdmin";
+import AdminUsers from "../components/admin/AdminUsers/AdminUsers";
 import PerceptorCM from "../components/admin/PerceptorCM";
 
 import AdsManager from "./admin/AdsManager";
@@ -1070,31 +1070,11 @@ const isOffline = !connected;
 
         {/* USERS */}
 
-        {tab ===
-          "users" && (
-          <>
-            <ActionsAdmin
-              users={paginate(
-                filteredUsers
-              )}
-              money={
-                formatMoney
-              }
-              refresh={
-                fetchData
-              }
-            />
-
-            <Pagination
-              page={page}
-              setPage={
-                setPage
-              }
-              total={
-                filteredUsers.length
-              }
-            />
-          </>
+        {tab === "users" && (
+          <AdminUsers
+            users={filteredUsers}
+              refresh={fetchData}
+          />
         )}
 
         {/* TRANSACTIONS */}

@@ -494,9 +494,24 @@ const handleCreateChallenge =
 
     const mode = getMode(gameId);
 
+    // Vérifier si le Match Direct est disponible
+    if (mode === "ai") {
+      const checkRes = await fetch(`${API}/ai-settings`, {
+        headers: {
+        Authorization: "Bearer " + token,
+      },
+    });
 
-    const raw =
-      getAmount(gameId);
+    const settings = await checkRes.json().catch(() => ({}));
+
+    if (!checkRes.ok || settings.enabled === false) {
+      return setError(
+        "⚠️ Le Match Direct est momentanément indisponible. Veuillez choisir « VS Joueur »."
+      );
+    }
+  }
+
+  const raw = getAmount(gameId);
 
 
     const amount =

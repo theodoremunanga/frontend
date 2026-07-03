@@ -1,5 +1,6 @@
 import { useState } from "react";
 import api from "../../services/api";
+import BoardPreview from "./BoardPreview";
 
 // ======================================================
 // TOKEN INTERCEPTOR
@@ -489,17 +490,47 @@ export default function MatchesList({
                 Chargement...
               </p>
             ) : (
-              <pre
-                style={
-                  stateBox
-                }
-              >
-                {JSON.stringify(
-                  matchState,
-                  null,
-                  2
+              <>
+                {matchState?.board && (
+
+                  <div
+                    style={{
+                      marginBottom:20,
+                      textAlign:"center"
+                    }}
+                  >
+                    <BoardPreview
+                      board={matchState.board}
+                      size={36}
+                    />
+                </div>
+
                 )}
-              </pre>
+
+                <div style={stateBox}>
+
+                    <p>
+                        <b>Etat :</b> {matchState.status}
+                    </p>
+
+                    <p>
+                        <b>Tour :</b> Joueur {matchState.turn}
+                    </p>
+
+                    <p>
+                        <b>Mode :</b> {matchState.mode}
+                    </p>
+
+                    <p>
+                        <b>Dernier coup :</b>
+
+                        {matchState.last_move
+                          ? JSON.stringify(matchState.last_move)
+                          : "Aucun"}
+                    </p>
+
+                  </div>
+            </>
             )}
 
             <button

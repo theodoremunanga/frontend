@@ -1,14 +1,131 @@
 import { useEffect, useState } from "react";
 import api from "../../services/api";
 
-export default function Parametres() {
+// ================= UI STYLE SYSTEM =================
 
+const page = {
+  minHeight: "100vh",
+  background: "#0b1220",
+  color: "white",
+  padding: 24,
+  fontFamily: "system-ui",
+};
+
+const container = {
+  maxWidth: 1200,
+  margin: "0 auto",
+  display: "flex",
+  flexDirection: "column",
+  gap: 18,
+};
+
+const header = {
+  fontSize: 26,
+  fontWeight: 800,
+  marginBottom: 10,
+};
+
+const grid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+  gap: 16,
+};
+
+const card = {
+  background: "linear-gradient(145deg,#111827,#0f172a)",
+  border: "1px solid rgba(255,255,255,0.08)",
+  borderRadius: 16,
+  padding: 16,
+  boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
+};
+
+const title = {
+  fontSize: 16,
+  fontWeight: 700,
+  marginBottom: 10,
+  color: "#e5e7eb",
+};
+
+const label = {
+  fontSize: 12,
+  opacity: 0.7,
+  marginBottom: 6,
+};
+
+const input = {
+  width: "100%",
+  padding: 12,
+  borderRadius: 12,
+  border: "1px solid rgba(255,255,255,0.1)",
+  background: "#0b1220",
+  color: "white",
+  outline: "none",
+};
+
+const textarea = {
+  ...input,
+  minHeight: 90,
+  resize: "vertical",
+};
+
+const row = {
+  display: "flex",
+  gap: 10,
+  flexWrap: "wrap",
+  marginTop: 10,
+};
+
+const btn = {
+  padding: "10px 12px",
+  borderRadius: 10,
+  border: "none",
+  cursor: "pointer",
+  fontWeight: 700,
+  fontSize: 13,
+};
+
+const primary = {
+  ...btn,
+  background: "#2563eb",
+  color: "white",
+};
+
+const danger = {
+  ...btn,
+  background: "#ef4444",
+  color: "white",
+};
+
+const warning = {
+  ...btn,
+  background: "#f59e0b",
+  color: "white",
+};
+
+const success = {
+  ...btn,
+  background: "#22c55e",
+  color: "white",
+};
+
+const badge = (active) => ({
+  display: "inline-block",
+  padding: "4px 10px",
+  borderRadius: 999,
+  fontSize: 12,
+  fontWeight: 700,
+  background: active ? "#22c55e" : "#ef4444",
+});
+
+// ================= COMPONENT =================
+
+export default function Parametres() {
   const [loading, setLoading] = useState(true);
 
   const [settings, setSettings] = useState({
     platform_enabled: true,
     maintenance_mode: false,
-    maintenance_message: ""
+    maintenance_message: "",
   });
 
   const [userId, setUserId] = useState("");
@@ -20,419 +137,213 @@ export default function Parametres() {
 
   const loadSettings = async () => {
     try {
-
       const res = await api.get("/admin/settings");
-
       setSettings(res.data);
-
     } catch (err) {
-
       console.error(err);
-
     } finally {
-
       setLoading(false);
-
     }
   };
 
   const togglePlatform = async (enabled) => {
-    try {
-
-      await api.put("/admin/settings/platform", {
-        enabled
-      });
-
-      loadSettings();
-
-    } catch (err) {
-
-      console.error(err);
-
-    }
+    await api.put("/admin/settings/platform", { enabled });
+    loadSettings();
   };
 
   const toggleMaintenance = async (enabled) => {
-    try {
-
-      await api.put("/admin/settings/maintenance", {
-        enabled,
-        message: settings.maintenance_message
-      });
-
-      loadSettings();
-
-    } catch (err) {
-
-      console.error(err);
-
-    }
+    await api.put("/admin/settings/maintenance", {
+      enabled,
+      message: settings.maintenance_message,
+    });
+    loadSettings();
   };
 
   const saveMaintenanceMessage = async () => {
-    try {
-
-      await api.put("/admin/settings/maintenance", {
-        enabled: settings.maintenance_mode,
-        message: settings.maintenance_message
-      });
-
-      alert("Message enregistré");
-
-    } catch (err) {
-
-      console.error(err);
-
-    }
+    await api.put("/admin/settings/maintenance", {
+      enabled: settings.maintenance_mode,
+      message: settings.maintenance_message,
+    });
+    alert("Message sauvegardé");
   };
 
   const resetPassword = async () => {
     if (!userId) return;
-
-    try {
-
-      const res = await api.post(
-        `/admin/users/${userId}/reset-password`
-      );
-
-      alert(
-        `Nouveau mot de passe : ${res.data.newPassword}`
-      );
-
-    } catch (err) {
-
-      console.error(err);
-
-    }
+    const res = await api.post(`/admin/users/${userId}/reset-password`);
+    alert(`Nouveau mot de passe : ${res.data.newPassword}`);
   };
 
   const suspendUser = async () => {
     if (!userId) return;
-
-    try {
-
-      await api.put(
-        `/admin/users/${userId}/suspend`
-      );
-
-      alert("Utilisateur suspendu");
-
-    } catch (err) {
-
-      console.error(err);
-
-    }
+    await api.put(`/admin/users/${userId}/suspend`);
+    alert("Utilisateur suspendu");
   };
 
   const activateUser = async () => {
     if (!userId) return;
-
-    try {
-
-      await api.put(
-        `/admin/users/${userId}/activate`
-      );
-
-      alert("Utilisateur réactivé");
-
-    } catch (err) {
-
-      console.error(err);
-
-    }
+    await api.put(`/admin/users/${userId}/activate`);
+    alert("Utilisateur activé");
   };
 
   const deleteUser = async () => {
-
-    const confirmDelete = window.confirm(
-      "Supprimer définitivement cet utilisateur ?"
-    );
-
-    if (!confirmDelete) return;
-
-    try {
-
-      await api.delete(
-        `/admin/users/${userId}`
-      );
-
-      alert("Utilisateur supprimé");
-
-    } catch (err) {
-
-      console.error(err);
-
-    }
+    if (!userId) return;
+    if (!window.confirm("Supprimer cet utilisateur ?")) return;
+    await api.delete(`/admin/users/${userId}`);
+    alert("Utilisateur supprimé");
   };
 
   const deleteMatch = async () => {
-
-    const confirmDelete = window.confirm(
-      "Supprimer ce match ?"
-    );
-
-    if (!confirmDelete) return;
-
-    try {
-
-      await api.delete(
-        `/admin/matches/${matchId}`
-      );
-
-      alert("Match supprimé");
-
-    } catch (err) {
-
-      console.error(err);
-
-    }
+    if (!matchId) return;
+    if (!window.confirm("Supprimer ce match ?")) return;
+    await api.delete(`/admin/matches/${matchId}`);
+    alert("Match supprimé");
   };
 
   const resetWallets = async () => {
-
-    const confirmReset = window.confirm(
-      "Vider tous les wallets ?"
-    );
-
-    if (!confirmReset) return;
-
-    try {
-
-      await api.post(
-        "/admin/wallets/reset",
-        {
-          confirm: true
-        }
-      );
-
-      alert("Wallets vidés");
-
-    } catch (err) {
-
-      console.error(err);
-
-    }
+    if (!window.confirm("Vider tous les wallets ?")) return;
+    await api.post("/admin/wallets/reset", { confirm: true });
+    alert("Wallets vidés");
   };
 
   const clearTransactions = async () => {
-
-    const confirmClear = window.confirm(
-      "Supprimer toutes les transactions ?"
-    );
-
-    if (!confirmClear) return;
-
-    try {
-
-      await api.post(
-        "/admin/transactions/clear"
-      );
-
-      alert("Transactions supprimées");
-
-    } catch (err) {
-
-      console.error(err);
-
-    }
+    if (!window.confirm("Supprimer transactions ?")) return;
+    await api.post("/admin/transactions/clear");
+    alert("Transactions supprimées");
   };
 
   const clearMatches = async () => {
-
-    const confirmClear = window.confirm(
-      "Supprimer tous les matches ?"
-    );
-
-    if (!confirmClear) return;
-
-    try {
-
-      await api.post(
-        "/admin/matches/clear"
-      );
-
-      alert("Matches supprimés");
-
-    } catch (err) {
-
-      console.error(err);
-
-    }
+    if (!window.confirm("Supprimer tous les matches ?")) return;
+    await api.post("/admin/matches/clear");
+    alert("Matches supprimés");
   };
 
   if (loading) {
     return (
-      <div className="admin-loading">
-        Chargement...
+      <div style={page}>
+        <div style={{ textAlign: "center" }}>⏳ Chargement...</div>
       </div>
     );
   }
 
   return (
-    <div className="admin-settings">
+    <div style={page}>
+      <div style={container}>
+        <div style={header}>⚙️ Paramètres Système</div>
 
-      <h2>Paramètres Système</h2>
+        <div style={grid}>
+          {/* PLATFORM */}
+          <div style={card}>
+            <div style={title}>Plateforme</div>
 
-      {/* Plateforme */}
+            <div style={badge(settings.platform_enabled)}>
+              {settings.platform_enabled ? "ACTIVE" : "OFF"}
+            </div>
 
-      <section className="settings-card">
-        <h3>Plateforme</h3>
+            <div style={row}>
+              <button style={success} onClick={() => togglePlatform(true)}>
+                Activer
+              </button>
+              <button style={danger} onClick={() => togglePlatform(false)}>
+                Désactiver
+              </button>
+            </div>
+          </div>
 
-        <p>
-          Statut :
-          {" "}
-          <strong>
-            {settings.platform_enabled
-              ? "ACTIVE"
-              : "DÉSACTIVÉE"}
-          </strong>
-        </p>
+          {/* MAINTENANCE */}
+          <div style={card}>
+            <div style={title}>Maintenance</div>
 
-        <button
-          onClick={() => togglePlatform(true)}
-        >
-          Activer
-        </button>
+            <div style={badge(settings.maintenance_mode)}>
+              {settings.maintenance_mode ? "ON" : "OFF"}
+            </div>
 
-        <button
-          onClick={() => togglePlatform(false)}
-        >
-          Désactiver
-        </button>
-      </section>
+            <textarea
+              style={textarea}
+              value={settings.maintenance_message}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  maintenance_message: e.target.value,
+                })
+              }
+            />
 
-      {/* Maintenance */}
+            <div style={row}>
+              <button style={primary} onClick={saveMaintenanceMessage}>
+                Sauver
+              </button>
+              <button style={warning} onClick={() => toggleMaintenance(true)}>
+                ON
+              </button>
+              <button style={danger} onClick={() => toggleMaintenance(false)}>
+                OFF
+              </button>
+            </div>
+          </div>
 
-      <section className="settings-card">
-        <h3>Maintenance</h3>
+          {/* USERS */}
+          <div style={card}>
+            <div style={title}>Utilisateur</div>
 
-        <p>
-          Mode :
-          {" "}
-          <strong>
-            {settings.maintenance_mode
-              ? "ACTIF"
-              : "INACTIF"}
-          </strong>
-        </p>
+            <input
+              style={input}
+              placeholder="User ID"
+              value={userId}
+              onChange={(e) => setUserId(e.target.value)}
+            />
 
-        <textarea
-          rows="4"
-          value={settings.maintenance_message}
-          onChange={(e) =>
-            setSettings({
-              ...settings,
-              maintenance_message:
-                e.target.value
-            })
-          }
-        />
+            <div style={row}>
+              <button style={primary} onClick={resetPassword}>
+                Reset Pass
+              </button>
+              <button style={warning} onClick={suspendUser}>
+                Suspendre
+              </button>
+              <button style={success} onClick={activateUser}>
+                Activer
+              </button>
+              <button style={danger} onClick={deleteUser}>
+                Supprimer
+              </button>
+            </div>
+          </div>
 
-        <div>
+          {/* MATCH */}
+          <div style={card}>
+            <div style={title}>Match</div>
 
-          <button
-            onClick={saveMaintenanceMessage}
-          >
-            Enregistrer Message
-          </button>
+            <input
+              style={input}
+              placeholder="Match ID"
+              value={matchId}
+              onChange={(e) => setMatchId(e.target.value)}
+            />
 
-          <button
-            onClick={() =>
-              toggleMaintenance(true)
-            }
-          >
-            Activer
-          </button>
+            <div style={row}>
+              <button style={danger} onClick={deleteMatch}>
+                Supprimer
+              </button>
+              <button style={warning} onClick={clearMatches}>
+                Tout supprimer
+              </button>
+            </div>
+          </div>
 
-          <button
-            onClick={() =>
-              toggleMaintenance(false)
-            }
-          >
-            Désactiver
-          </button>
+          {/* ECONOMY */}
+          <div style={card}>
+            <div style={title}>Économie</div>
 
+            <div style={row}>
+              <button style={warning} onClick={resetWallets}>
+                Reset Wallets
+              </button>
+              <button style={danger} onClick={clearTransactions}>
+                Clear Transactions
+              </button>
+            </div>
+          </div>
         </div>
-      </section>
-
-      {/* Utilisateurs */}
-
-      <section className="settings-card">
-        <h3>Gestion Utilisateur</h3>
-
-        <input
-          type="number"
-          placeholder="ID Utilisateur"
-          value={userId}
-          onChange={(e) =>
-            setUserId(e.target.value)
-          }
-        />
-
-        <div>
-
-          <button onClick={resetPassword}>
-            Réinitialiser Mot de Passe
-          </button>
-
-          <button onClick={suspendUser}>
-            Suspendre
-          </button>
-
-          <button onClick={activateUser}>
-            Réactiver
-          </button>
-
-          <button onClick={deleteUser}>
-            Supprimer
-          </button>
-
-        </div>
-      </section>
-
-      {/* Wallets */}
-
-      <section className="settings-card">
-        <h3>Wallets</h3>
-
-        <button onClick={resetWallets}>
-          Vider Tous les Wallets
-        </button>
-      </section>
-
-      {/* Transactions */}
-
-      <section className="settings-card">
-        <h3>Transactions</h3>
-
-        <button onClick={clearTransactions}>
-          Supprimer Historique
-        </button>
-      </section>
-
-      {/* Matches */}
-
-      <section className="settings-card">
-        <h3>Matches</h3>
-
-        <input
-          type="number"
-          placeholder="ID Match"
-          value={matchId}
-          onChange={(e) =>
-            setMatchId(e.target.value)
-          }
-        />
-
-        <button onClick={deleteMatch}>
-          Supprimer Match
-        </button>
-
-        <button onClick={clearMatches}>
-          Supprimer Tous les Matches
-        </button>
-      </section>
-
+      </div>
     </div>
   );
 }
