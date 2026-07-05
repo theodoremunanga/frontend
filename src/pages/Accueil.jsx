@@ -496,7 +496,7 @@ const handleCreateChallenge =
 
     // Vérifier si le Match Direct est disponible
     if (mode === "ai") {
-      const checkRes = await fetch(`${API}/ai-settings`, {
+      const checkRes = await fetch(`${API}/ai/settings`, {
         headers: {
         Authorization: "Bearer " + token,
       },
