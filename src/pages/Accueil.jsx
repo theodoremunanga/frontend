@@ -496,15 +496,21 @@ const handleCreateChallenge =
 
     // Vérifier si le Match Direct est disponible
     if (mode === "ai") {
-      const checkRes = await fetch(`${API}/ai/settings`, {
+      const checkRes = await fetch(`${API}/ai/status`, {
         headers: {
-        Authorization: "Bearer " + token,
-      },
+          Authorization: `Bearer ${token}`,
+        },
     });
 
-    const settings = await checkRes.json().catch(() => ({}));
+    const status = await checkRes.json().catch(() => ({}));
 
-    if (!checkRes.ok || settings.enabled === false) {
+    if (!checkRes.ok) {
+      return setError(
+        "⚠️ Impossible de vérifier la disponibilité du Match Direct. Veuillez réessayer."
+      );
+    }
+
+    if (!status.enabled) {
       return setError(
         "⚠️ Le Match Direct est momentanément indisponible. Veuillez choisir « VS Joueur »."
       );
@@ -1050,23 +1056,18 @@ const handleCreateChallenge =
                     {ad.title}
                   </h2>
 
-                  {ad.image && (
-                    <img
-                      src={
-                        ad.image.startsWith("http")
-                          ? ad.image
-                          : `${BASE_URL}/uploads/ads/${ad.image}`
-                      }
-                      alt={ad.title}
-                      style={adImage}
-                      onError={(e) =>
-                        console.log(
-                          "❌ IMAGE ERROR:",
-                          e.target.src
-                        )
-                      }
-                    />
-                  )}
+                  <img
+                    src={
+                      ad.image.startsWith("http")
+                        ? ad.image
+                        : ad.image.startsWith("/uploads/")
+                        ? `${BASE_URL}${ad.image}`
+                        : `${BASE_URL}/uploads/ads/${ad.image}`
+                    }
+                    alt={ad.title}
+                    style={adImage}
+                    onError={(e) => console.log("❌ IMAGE ERROR:", e.target.src)}
+                  />
 
                   <p
                     style={
