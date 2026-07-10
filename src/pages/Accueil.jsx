@@ -1055,18 +1055,18 @@ const handleCreateChallenge =
                       src={
                         ad.image.startsWith("http")
                           ? ad.image
-                          : `${BASE_URL}${ad.image}`
-                  }
-                  alt={ad.title}
-                  style={adImage}
-                  onError={(e) =>
-                    console.log(
-                      "❌ IMAGE ERROR:",
-                     e.target.src
-                    )
-                  }
-               />
-             )}
+                          : `${BASE_URL}/uploads/ads/${ad.image}`
+                      }
+                      alt={ad.title}
+                      style={adImage}
+                      onError={(e) =>
+                        console.log(
+                          "❌ IMAGE ERROR:",
+                          e.target.src
+                        )
+                      }
+                    />
+                  )}
 
                   <p
                     style={
