@@ -211,10 +211,8 @@ export default function AdsManager() {
           <div className="grid gap-5">
             {ads.map((ad) => (
               <div
-                key={
-                  ad.id ||
-                  ad._id
-                }
+                key={ad.id}
+
                 className="
                   bg-[#111827]
                   border
@@ -233,6 +231,34 @@ export default function AdsManager() {
                 {/* LEFT */}
                 {/* ====================================================== */}
 
+                  {(ad.image || ad.video) && (
+
+                    <div className="w-36 h-24 rounded-xl overflow-hidden bg-gray-900">
+
+                      {ad.image ? (
+
+                        <img
+                          src={ad.image}
+                          alt={ad.title}
+                          className="w-full h-full object-cover"
+                        />
+
+                    ) : (
+
+                      <video
+                        src={ad.video}
+                        className="w-full h-full object-cover"
+                        muted
+                      />
+
+                    )}
+
+                  </div>
+
+                )}
+
+                
+
                 <div className="flex-1">
                   <div className="flex items-center gap-3 flex-wrap">
                     <h2 className="text-2xl font-bold">
@@ -248,19 +274,18 @@ export default function AdsManager() {
                         text-xs
                         font-bold
                         ${
-                          ad.status ===
-                            "active" ||
-                          ad.active
+                          ad.status === "active"
+                          
                             ? "bg-green-500/20 text-green-400"
                             : "bg-red-500/20 text-red-400"
                         }
                       `}
                     >
-                      {ad.status ===
-                        "active" ||
-                      ad.active
-                        ? "ACTIVE"
-                        : "INACTIVE"}
+                      {
+                        ad.status === "active"
+                          ? "ACTIVE"
+                          : "INACTIVE"
+                        }
                     </span>
                   </div>
 
@@ -312,10 +337,7 @@ export default function AdsManager() {
 
                   <button
                     onClick={() =>
-                      handleToggle(
-                        ad.id ||
-                          ad._id
-                      )
+                      handleToggle(ad.id)
                     }
                     className="
                       bg-yellow-500
@@ -333,10 +355,7 @@ export default function AdsManager() {
 
                   <button
                     onClick={() =>
-                      handleDelete(
-                        ad.id ||
-                          ad._id
-                      )
+                      handleDelete(ad.id)
                     }
                     className="
                       bg-red-500

@@ -112,24 +112,19 @@ export default function AdsEditor({
       import.meta.env.VITE_API_URL?.replace("/api", "");
 
         if (ad.video) {
+
           setMediaType("video");
 
-          setPreview(
-            ad.video.startsWith("http")
-              ? ad.video
-              : `${BACKEND_URL}${ad.video}`
-           );
+          setPreview(ad.video);
 
-         } else if (ad.image) {
-           setMediaType("image");
+        } else if (ad.image) {
 
-        setPreview(
-          ad.image.startsWith("http")
-            ? ad.image
-            : `${BACKEND_URL}${ad.image}`
-         );
-       }
-  }, [ad]);
+          setMediaType("image");
+
+          setPreview(ad.image);
+
+        }
+      }, [ad]);
 
   // ======================================================
   // AUTO CALCULATE END DATE
@@ -416,35 +411,41 @@ export default function AdsEditor({
   // ======================================================
 
   const categories = useMemo(
-    () => [
-      {
-        value: "home_feed",
-        label:
-          "Accueil Publication",
-      },
+  () => [
 
-      {
-        value: "sidebar",
-        label: "Sidebar",
-      },
+    {
+      value: "home_feed",
+      label: "Fil d'accueil",
+    },
 
-      {
-        value: "casino",
-        label: "Casino",
-      },
+    {
+      value: "home_banner",
+      label: "Bannière d'accueil",
+    },
 
-      {
-        value: "match_ads",
-        label: "Matchs",
-      },
+    {
+      value: "carousel",
+      label: "Carousel",
+    },
 
-      {
-        value: "bonus",
-        label: "Bonus",
-      },
-    ],
-    []
-  );
+    {
+      value: "pre_match",
+      label: "Avant match",
+    },
+
+    {
+      value: "post_match",
+      label: "Après match",
+    },
+
+    {
+      value: "sponsored_post",
+      label: "Publication sponsorisée",
+    },
+
+  ],
+  []
+);
 
   // ======================================================
   // CLEANUP

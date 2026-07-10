@@ -6,64 +6,56 @@ import axios from "axios";
  * =====================================================
  */
 
-// API
 export const API_URL =
   import.meta.env.VITE_API_URL ||
   "https://backend-ad3t.onrender.com/api";
 
-// SOCKET
 export const SOCKET_URL =
   import.meta.env.VITE_SOCKET_URL ||
   "https://backend-ad3t.onrender.com";
 
 /**
  * =====================================================
- * AXIOS MAIN INSTANCE
+ * AXIOS DEFAULT
  * =====================================================
  */
 
 const api = axios.create({
+
   baseURL: API_URL,
 
   timeout: 20000,
 
   withCredentials: true,
+
 });
 
 /**
  * =====================================================
- * SPECIALIZED INSTANCES
+ * ADS API
  * =====================================================
  */
 
-// ================= ADMIN =================
-
-const adminApi = axios.create({
-  baseURL: `${API_URL}/admin`,
-
-  timeout: 20000,
-
-  withCredentials: true,
-});
-
-// ================= PUBLIC ADS =================
-
 const publicAdsApi = axios.create({
+
   baseURL: `${API_URL}/ads`,
 
   timeout: 20000,
 
   withCredentials: true,
+
 });
 
 /**
  * =====================================================
- * TOKEN HELPER
+ * TOKEN
  * =====================================================
  */
 
 function getToken() {
+
   return localStorage.getItem("token");
+
 }
 
 /**
@@ -73,24 +65,34 @@ function getToken() {
  */
 
 const attachToken = (config) => {
+
   const token = getToken();
 
   if (token) {
+
     config.headers.Authorization =
       `Bearer ${token}`;
+
   }
 
   return config;
+
 };
 
 api.interceptors.request.use(
+
   attachToken,
+
   (error) => Promise.reject(error)
+
 );
 
-adminApi.interceptors.request.use(
+publicAdsApi.interceptors.request.use(
+
   attachToken,
+
   (error) => Promise.reject(error)
+
 );
 
 /**
@@ -103,13 +105,18 @@ function handleError(
   error,
   label = "API Error"
 ) {
+
   console.error(
+
     `❌ ${label}:`,
+
     error?.response?.data ||
-      error.message
+    error.message
+
   );
 
   throw error;
+
 }
 
 /**
@@ -119,16 +126,31 @@ function handleError(
  */
 
 export async function createAd(adData) {
+
   try {
-    const response = await adminApi.post(
-      "/ads",
-      adData
-    );
+
+    const response =
+      await publicAdsApi.post(
+
+        "/create",
+
+        adData
+
+      );
 
     return response.data;
-  } catch (error) {
-    handleError(error, "Create ad");
+
   }
+
+  catch (error) {
+
+    handleError(
+      error,
+      "Create Ad"
+    );
+
+  }
+
 }
 
 /**
@@ -138,15 +160,25 @@ export async function createAd(adData) {
  */
 
 export async function getAllAds() {
+
   try {
-    const response = await adminApi.get(
-      "/ads"
-    );
+
+    const response =
+      await publicAdsApi.get("/");
 
     return response.data.ads || [];
-  } catch (error) {
-    handleError(error, "Get all ads");
+
   }
+
+  catch (error) {
+
+    handleError(
+      error,
+      "Get All Ads"
+    );
+
+  }
+
 }
 
 /**
@@ -156,15 +188,29 @@ export async function getAllAds() {
  */
 
 export async function getAdById(id) {
+
   try {
-    const response = await adminApi.get(
-      `/ads/${id}`
-    );
+
+    const response =
+      await publicAdsApi.get(
+
+        `/${id}`
+
+      );
 
     return response.data.ad;
-  } catch (error) {
-    handleError(error, "Get ad");
+
   }
+
+  catch (error) {
+
+    handleError(
+      error,
+      "Get Ad"
+    );
+
+  }
+
 }
 
 /**
@@ -177,16 +223,31 @@ export async function updateAd(
   id,
   data
 ) {
+
   try {
-    const response = await adminApi.put(
-      `/ads/${id}`,
-      data
-    );
+
+    const response =
+      await publicAdsApi.put(
+
+        `/${id}`,
+
+        data
+
+      );
 
     return response.data;
-  } catch (error) {
-    handleError(error, "Update ad");
+
   }
+
+  catch (error) {
+
+    handleError(
+      error,
+      "Update Ad"
+    );
+
+  }
+
 }
 
 /**
@@ -196,40 +257,61 @@ export async function updateAd(
  */
 
 export async function deleteAd(id) {
+
   try {
+
     const response =
-      await adminApi.delete(
-        `/ads/${id}`
+      await publicAdsApi.delete(
+
+        `/${id}`
+
       );
 
     return response.data;
-  } catch (error) {
-    handleError(error, "Delete ad");
+
   }
+
+  catch (error) {
+
+    handleError(
+      error,
+      "Delete Ad"
+    );
+
+  }
+
 }
 
 /**
  * =====================================================
- * TOGGLE AD STATUS
+ * TOGGLE STATUS
  * =====================================================
  */
 
-export async function toggleAdStatus(
-  id
-) {
+export async function toggleAdStatus(id) {
+
   try {
+
     const response =
-      await adminApi.patch(
-        `/ads/${id}/toggle`
+      await publicAdsApi.patch(
+
+        `/${id}/status`
+
       );
 
     return response.data;
-  } catch (error) {
+
+  }
+
+  catch (error) {
+
     handleError(
       error,
-      "Toggle ad status"
+      "Toggle Status"
     );
+
   }
+
 }
 
 /**
@@ -241,31 +323,45 @@ export async function toggleAdStatus(
 export async function getActiveAds(
   category = ""
 ) {
+
   try {
+
     const response =
       await publicAdsApi.get(
+
         "/active",
+
         {
-          params: category
-            ? { category }
-            : {},
+          params:
+            category
+              ? { category }
+              : {},
         }
+
       );
 
     return (
       response.data.ads ||
-      response.data ||
       []
     );
-  } catch (error) {
+
+  }
+
+  catch (error) {
+
     console.error(
-      "❌ Get active ads:",
+
+      "❌ Get Active Ads:",
+
       error?.response?.data ||
-        error.message
+      error.message
+
     );
 
     return [];
+
   }
+
 }
 
 /**
@@ -275,20 +371,34 @@ export async function getActiveAds(
  */
 
 export async function trackAdView(id) {
+
   if (!id) return;
 
   try {
+
     await publicAdsApi.post(
+
       `/${id}/view`,
+
       {}
+
     );
-  } catch (error) {
-    console.error(
-      "❌ Track view error:",
-      error?.response?.data ||
-        error.message
-    );
+
   }
+
+  catch (error) {
+
+    console.error(
+
+      "❌ Track View:",
+
+      error?.response?.data ||
+      error.message
+
+    );
+
+  }
+
 }
 
 /**
@@ -297,23 +407,35 @@ export async function trackAdView(id) {
  * =====================================================
  */
 
-export async function trackAdClick(
-  id
-) {
+export async function trackAdClick(id) {
+
   if (!id) return;
 
   try {
+
     await publicAdsApi.post(
+
       `/${id}/click`,
+
       {}
+
     );
-  } catch (error) {
-    console.error(
-      "❌ Track click error:",
-      error?.response?.data ||
-        error.message
-    );
+
   }
+
+  catch (error) {
+
+    console.error(
+
+      "❌ Track Click:",
+
+      error?.response?.data ||
+      error.message
+
+    );
+
+  }
+
 }
 
 /**
@@ -323,108 +445,231 @@ export async function trackAdClick(
  */
 
 export async function openAdLink(ad) {
-  if (!ad?.id) return;
+
+  if (!ad) return;
 
   try {
+
     await trackAdClick(ad.id);
 
     if (ad.link) {
+
       window.open(
+
         ad.link,
+
         "_blank",
+
         "noopener,noreferrer"
+
       );
+
     }
-  } catch (error) {
-    console.error(
-      "❌ Open ad link error:",
-      error
-    );
+
   }
+
+  catch (error) {
+
+    console.error(
+
+      "❌ Open Ad Link:",
+
+      error
+
+    );
+
+  }
+
 }
 
 /**
  * =====================================================
- * CATEGORY HELPERS
+ * HOME FEED ADS
+ * =====================================================
+ */
+
+export async function getHomeFeedAds() {
+
+  try {
+
+    const response =
+      await publicAdsApi.get(
+        "/home-feed"
+      );
+
+    return response.data.ads || [];
+
+  }
+
+  catch (error) {
+
+    console.error(error);
+
+    return [];
+
+  }
+
+}
+
+/**
+ * =====================================================
+ * HOME BANNER ADS
  * =====================================================
  */
 
 export async function getHomeBannerAds() {
-  return await getActiveAds(
-    "home_banner"
-  );
-}
 
-export async function getHomeFeedAds() {
-  return await getActiveAds(
-    "home_feed"
-  );
-}
+  try {
 
-export async function getPreMatchAds() {
-  return await getActiveAds(
-    "pre_match"
-  );
-}
+    const response =
+      await publicAdsApi.get(
+        "/home-banner"
+      );
 
-export async function getPostMatchAds() {
-  return await getActiveAds(
-    "post_match"
-  );
-}
+    return response.data.ads || [];
 
-export async function getCarouselAds() {
-  return await getActiveAds(
-    "carousel"
-  );
-}
+  }
 
-export async function getSponsoredPosts() {
-  return await getActiveAds(
-    "sponsored_post"
-  );
+  catch (error) {
+
+    console.error(error);
+
+    return [];
+
+  }
+
 }
 
 /**
  * =====================================================
- * COMMENTS
+ * CAROUSEL ADS
  * =====================================================
  */
 
-export async function getAdComments(
-  adId
-) {
+export async function getCarouselAds() {
+
   try {
+
     const response =
       await publicAdsApi.get(
-        `/${adId}/comments`
+        "/carousel"
       );
 
-    return (
-      response.data.comments || []
-    );
-  } catch (error) {
+    return response.data.ads || [];
+
+  }
+
+  catch (error) {
+
     console.error(error);
 
     return [];
+
   }
+
 }
+
+/**
+ * =====================================================
+ * AUTRES CATEGORIES
+ * =====================================================
+ */
+
+export async function getPreMatchAds() {
+
+  return await getActiveAds(
+    "pre_match"
+  );
+
+}
+
+export async function getPostMatchAds() {
+
+  return await getActiveAds(
+    "post_match"
+  );
+
+}
+
+export async function getSponsoredPosts() {
+
+  return await getActiveAds(
+    "sponsored_post"
+  );
+
+}
+
+/**
+ * =====================================================
+ * GET COMMENTS
+ * =====================================================
+ */
+
+export async function getAdComments(adId) {
+
+  try {
+
+    const response =
+      await publicAdsApi.get(
+
+        `/${adId}/comments`
+
+      );
+
+    return (
+      response.data.comments ||
+      []
+    );
+
+  }
+
+  catch (error) {
+
+    console.error(error);
+
+    return [];
+
+  }
+
+}
+
+/**
+ * =====================================================
+ * ADD COMMENT
+ * =====================================================
+ */
 
 export async function addAdComment(
   adId,
   comment
 ) {
+
   try {
+
     const response =
-      await adminApi.post(
-        `/ads/${adId}/comments`,
-        { comment }
+      await publicAdsApi.post(
+
+        `/${adId}/comments`,
+
+        {
+          comment,
+        }
+
       );
 
     return response.data;
-  } catch (error) {
-    console.error(error);
+
   }
+
+  catch (error) {
+
+    handleError(
+      error,
+      "Add Comment"
+    );
+
+  }
+
 }
 
 /**
@@ -434,8 +679,9 @@ export async function addAdComment(
  */
 
 export {
-  adminApi,
+
   publicAdsApi,
+
 };
 
 export default api;
