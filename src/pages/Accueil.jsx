@@ -496,21 +496,15 @@ const handleCreateChallenge =
 
     // Vérifier si le Match Direct est disponible
     if (mode === "ai") {
-      const checkRes = await fetch(`${API}/ai/status`, {
+      const checkRes = await fetch(`${API}/ai/settings`, {
         headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        Authorization: "Bearer " + token,
+      },
     });
 
-    const status = await checkRes.json().catch(() => ({}));
+    const settings = await checkRes.json().catch(() => ({}));
 
-    if (!checkRes.ok) {
-      return setError(
-        "⚠️ Impossible de vérifier la disponibilité du Match Direct. Veuillez réessayer."
-      );
-    }
-
-    if (!status.enabled) {
+    if (!checkRes.ok || settings.enabled === false) {
       return setError(
         "⚠️ Le Match Direct est momentanément indisponible. Veuillez choisir « VS Joueur »."
       );
