@@ -387,33 +387,38 @@ export default function Navbar({
         )}
       </div>
 
-      {/* WALLET */}
+      {/* DOWNLOAD APP */}
 
-      <div style={wallet}>
-        {isOffline ? (
-          <span
-            style={{
-              color:
-                "#ef4444",
-            }}
+        <button
+          style={downloadButton}
+            onClick={() =>
+              window.open(
+                "https://backend-ad3t.onrender.com/downloads/6BetBall.apk",
+                "_blank"
+              )
+            }
           >
-            🔴 Hors ligne
-          </span>
-        ) : loading ? (
-          "⏳ ..."
-        ) : (
-          <>
-            💰{" "}
-            {formatBalance(
-              balance
-            )}{" "}
-            CDF
-          </>
-        )}
+            📱⬇️ Télécharger 6BetBallApp
+          </button>
+
+          {/* WALLET */}
+
+          <div style={wallet}>
+            {isOffline ? (
+              <span style={{ color: "#ef4444" }}>
+                🔴 Hors ligne
+              </span>
+            ) : loading ? (
+              "⏳ ..."
+            ) : (
+              <>
+                💰 {formatBalance(balance)} CDF
+              </>
+            )}
+          </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
 // ======================================================
 // STYLES
@@ -538,4 +543,18 @@ const logoStyle = {
   borderRadius: 10,
 
   objectFit: "cover",
+};
+
+const downloadButton = {
+  background:
+    "linear-gradient(90deg,#22c55e,#16a34a)",
+  color: "#fff",
+  border: "none",
+  borderRadius: 10,
+  padding: "10px 18px",
+  marginRight: 15,
+  fontWeight: "bold",
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+  transition: "0.2s",
 };
