@@ -57,12 +57,25 @@ const BravmanGame = ({
 
                     }
 
+                    if (!data.match) {
+
+                        throw new Error(
+                            "Les données du match sont introuvables."
+                        );
+
+                    }
+
                     setMatch(
                         data.match
                     );
 
                 }
                 catch (err) {
+
+                    console.error(
+                        "❌ BRAVMAN LOAD MATCH ERROR:",
+                        err
+                    );
 
                     setError(
                         err.response?.data?.message ||
@@ -121,10 +134,115 @@ const BravmanGame = ({
     }
 
 
-    const user =
-        JSON.parse(
-            localStorage.getItem("user")
+    if (!match) {
+
+        return (
+
+            <div className="bravman-game-loading">
+
+                <h2>
+                    Match introuvable.
+                </h2>
+
+                <button
+                    onClick={resetGame}
+                >
+                    Retour
+                </button>
+
+            </div>
+
         );
+
+    }
+
+
+    const storedUser =
+        localStorage.getItem("user");
+
+    if (!storedUser) {
+
+        return (
+
+            <div className="bravman-game-loading">
+
+                <h2>
+                    Utilisateur non connecté.
+                </h2>
+
+                <button
+                    onClick={resetGame}
+                >
+                    Retour
+                </button>
+
+            </div>
+
+        );
+
+    }
+
+
+    let user;
+
+    try {
+
+        user =
+            JSON.parse(
+                storedUser
+            );
+
+    }
+    catch (err) {
+
+        console.error(
+            "❌ USER JSON ERROR:",
+            err
+        );
+
+        return (
+
+            <div className="bravman-game-loading">
+
+                <h2>
+                    Session utilisateur invalide.
+                </h2>
+
+                <button
+                    onClick={resetGame}
+                >
+                    Retour
+                </button>
+
+            </div>
+
+        );
+
+    }
+
+
+    if (!user?.id) {
+
+        return (
+
+            <div className="bravman-game-loading">
+
+                <h2>
+                    Utilisateur introuvable.
+                </h2>
+
+                <button
+                    onClick={resetGame}
+                >
+                    Retour
+                </button>
+
+            </div>
+
+        );
+
+    }
+
 
     const playerSide =
         Number(match.creator_id) ===
