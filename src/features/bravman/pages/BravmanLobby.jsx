@@ -49,7 +49,10 @@ const getCurrentUserId = () => {
 };
 
 
-const BravmanLobby = () => {
+const BravmanLobby = ({
+    setPage,
+    setGameConfig,
+}) => {
 
     const [
         matches,
@@ -146,28 +149,47 @@ const BravmanLobby = () => {
         loadMatches
     ]);
 
+    const launchGame = (match) => {
+
+        const config = {
+
+            matchId: match.id,
+
+            game: "bravman",
+
+        };
+
+        setGameConfig(config);
+
+        localStorage.setItem(
+            "gameConfig",
+            JSON.stringify(config)
+        );
+
+        setPage("game");
+
+    };
+
 
     // ==================================================
     // JOINED
     // ==================================================
 
-    const handleJoined =
-        (match) => {
+    const handleJoined = (match) => {
 
-            setJoinedMatch(
-                match
-            );
+        setJoinedMatch(match);
 
-            setMatches(
-                previous =>
-                    previous.filter(
-                        item =>
-                            Number(item.id) !==
-                            Number(match.id)
-                    )
-            );
+        setMatches(previous =>
+            previous.filter(
+                item =>
+                    Number(item.id) !==
+                    Number(match.id)
+            )
+        );
 
-        };
+        launchGame(match);
+
+    };
 
 
     // ==================================================

@@ -1,63 +1,83 @@
-import React from "react";
+// src/features/bravman/components/arena/BravmanFighter.jsx
+
+import BravmanArm from "./BravmanArm";
+
 
 const BravmanFighter = ({
-    side = "left",
-    name = "Joueur",
-    taps = 0,
-    image,
-    isWinner = false,
-    isLoser = false,
+    side,
+    taps,
+    isCurrentPlayer,
+    advantagePercent,
 }) => {
 
-    const className = [
-        "bravman-fighter",
-        `bravman-fighter--${side}`,
-        isWinner ? "bravman-fighter--winner" : "",
-        isLoser ? "bravman-fighter--loser" : "",
-    ]
-        .filter(Boolean)
-        .join(" ");
+    const isCreator =
+        side === "creator";
+
 
     return (
 
-        <div className={className}>
+        <div
+            className={[
+                "bravman-fighter",
+                isCreator
+                    ? "bravman-fighter--creator"
+                    : "bravman-fighter--opponent",
+                isCurrentPlayer
+                    ? "bravman-fighter--me"
+                    : "",
+            ].join(" ")}
+        >
 
-            {/* IDENTITÉ */}
+            <div className="bravman-fighter__body">
 
-            <div className="bravman-fighter__identity">
+                <div className="bravman-fighter__head" />
 
-                <span className="bravman-fighter__role">
-                    {side === "left"
-                        ? "CHALLENGER"
-                        : "ADVERSAIRE"}
-                </span>
+                <div className="bravman-fighter__torso">
 
-                <strong>
-                    {name}
-                </strong>
+                    <span className="bravman-fighter__singlet">
+                        BRAVMAN
+                    </span>
 
-                <span className="bravman-fighter__score">
-                    {taps}
-                </span>
+                </div>
 
             </div>
 
 
-            {/* COMBATTANT */}
+            <div className="bravman-fighter__identity">
 
-            <div className="bravman-fighter__visual">
+                <strong>
+                    {isCreator
+                        ? "CHALLENGER"
+                        : "ADVERSAIRE"
+                    }
+                </strong>
 
-                <img
-                    src={image}
-                    alt={name}
-                    draggable="false"
-                />
+                {isCurrentPlayer && (
+                    <span>
+                        VOUS
+                    </span>
+                )}
 
+            </div>
+
+
+            <BravmanArm
+                side={side}
+                advantagePercent={
+                    advantagePercent
+                }
+            />
+
+
+            <div className="bravman-fighter__taps">
+                {taps}
             </div>
 
         </div>
 
     );
+
 };
+
 
 export default BravmanFighter;

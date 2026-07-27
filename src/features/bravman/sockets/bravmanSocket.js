@@ -32,19 +32,33 @@ export const connectBravmanSocket = () => {
 
     if (!socket) {
 
-        socket = io(
-            SOCKET_URL,
-            {
-                transports: [
-                    "websocket",
-                    "polling",
-                ],
+        const token =
+    localStorage.getItem("token");
 
-                withCredentials: true,
+socket = io(
+    SOCKET_URL,
+    {
 
-                autoConnect: true,
-            }
-        );
+        transports: [
+            "websocket",
+        ],
+
+        auth: {
+            token,
+        },
+
+        withCredentials: true,
+
+        autoConnect: true,
+
+        reconnection: true,
+
+        reconnectionAttempts: 10,
+
+        reconnectionDelay: 1000,
+
+    }
+);
 
     }
     else {
@@ -96,7 +110,6 @@ export const disconnectBravmanSocket = () => {
 
 export const joinBravmanRoom = (
     matchId,
-    userId
 ) => {
 
     const currentSocket =
@@ -123,7 +136,10 @@ export const sendBravmanTap = () => {
         getBravmanSocket();
 
     currentSocket.emit(
-        "bravman:tap"
+        "bravman:tap",
+        {
+            matchId,
+        }
     );
 
 };
@@ -141,9 +157,29 @@ export const finishBravmanGame = () => {
     currentSocket.emit(
         "bravman:finish"
     );
+    
 
 };
 
+// ======================================================
+// REQUEST STATE
+// ======================================================
+
+export const requestBravmanState = (
+    matchId
+) => {
+
+    const currentSocket =
+        getBravmanSocket();
+
+    currentSocket.emit(
+        "bravman:state",
+        {
+            matchId,
+        }
+    );
+
+};
 
 // ======================================================
 // EVENT LISTENER HELPER
@@ -325,6 +361,9 @@ const bravmanSocket = {
 
     finish:
         finishBravmanGame,
+        
+    requestState:
+        requestBravmanState,
 
     onConnect:
         onBravmanConnect,

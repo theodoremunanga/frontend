@@ -9,7 +9,11 @@ import Infos from "./pages/Infos";
 import Menu from "./pages/Menu";
 import Dames from "./pages/Dames";
 
+import BravmanHome
+from "./features/bravman/pages/BravmanHome";
 
+import BravmanGame
+from "./features/bravman/pages/BravmanGame";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -407,6 +411,14 @@ export default function App() {
               resetGame={resetGame}
             />
 
+          ) : safeGame === "bravman" ? (
+
+            <BravmanGame
+              gameConfig={gameConfig}
+              setPage={setPage}
+              resetGame={resetGame}
+            />
+
           ) : (
             <div
               style={{
@@ -452,6 +464,29 @@ export default function App() {
 
       )
       }
+      
+{
+page === "bravman" && (
+
+<BravmanHome
+
+setPage={setPage}
+
+setGameConfig={(config)=>{
+
+setGameConfig(config);
+
+localStorage.setItem(
+"gameConfig",
+JSON.stringify(config)
+);
+
+}}
+
+ />
+
+)
+}
 
       {/* =========================
           👤 PROFILE

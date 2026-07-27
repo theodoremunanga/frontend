@@ -24,6 +24,17 @@ import {
 // ================= GAMES =================
 const games = [
   {
+    name: "BraVMan",
+    icon: "💪",
+    id: "bravman",
+    available: true,
+    description:
+      "Affrontez un adversaire dans un bras de fer compétitif en temps réel.",
+    players: "2 Joueurs",
+    difficulty: "PRO",
+  },
+  
+  {
     name: "Dames",
     icon: "♟️",
     id: "dames",
@@ -467,6 +478,11 @@ export default function Accueil({
  // ================= CREATE =================
 const handleCreateChallenge =
   async (gameId) => {
+    if (gameId === "bravman") {
+      setPage("bravman");
+      return;
+    }
+
     if(gameId === "football")
     {
 

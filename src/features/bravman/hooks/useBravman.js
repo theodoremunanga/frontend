@@ -796,6 +796,34 @@ const useBravman = ({
     // RETURN
     // ==================================================
 
+    const {
+
+        socketConnected,
+
+        joined,
+
+        status,
+
+        countdown,
+
+        duration,
+
+        remaining,
+
+        creatorTaps,
+
+        winnerId,
+
+        draw,
+
+        result,
+
+        lastTapAccepted,
+
+        error,
+
+    } = state;
+
     return {
 
         // Match
@@ -814,10 +842,11 @@ const useBravman = ({
         remaining,
 
         // Scores
-        creatorTaps,
-        opponentTaps,
+       
+        creatorTaps: state.creatorTaps,
+        opponentTaps: state.opponentTaps,
         myTaps,
-        opponentTaps,
+        myOpponentTaps: opponentTaps,
 
         // Advantage
         advantage,

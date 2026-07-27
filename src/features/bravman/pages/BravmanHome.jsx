@@ -6,7 +6,10 @@ import BravmanCreateForm from "../components/BravmanCreateForm";
 import BravmanLobby from "./BravmanLobby";
 
 
-const BravmanHome = () => {
+const BravmanHome = ({
+    setPage,
+    setGameConfig,
+}) => {
 
     const [view, setView] =
         useState("home");
@@ -103,7 +106,10 @@ const BravmanHome = () => {
                         ← Retour
                     </button>
 
-                    <BravmanCreateForm />
+                    <BravmanCreateForm
+                        setPage={setPage}
+                        setGameConfig={setGameConfig}
+                    />
 
                 </section>
 
@@ -123,7 +129,10 @@ const BravmanHome = () => {
                         ← Retour
                     </button>
 
-                    <BravmanLobby />
+                    <BravmanLobby
+                        setPage={setPage}
+                        setGameConfig={setGameConfig}
+                    />
 
                 </section>
 
