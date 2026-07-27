@@ -1,0 +1,1526 @@
+/* =========================================================
+   BRAVMAN ARENA
+   ========================================================= */
+
+.bravman-arena {
+    --bravman-bg: #090909;
+    --bravman-panel: #111111;
+    --bravman-panel-2: #171717;
+    --bravman-text: #ffffff;
+    --bravman-muted: #969696;
+    --bravman-accent: #ffb300;
+    --bravman-danger: #ef3030;
+
+    position: relative;
+
+    width: 100%;
+    min-height: 100vh;
+
+    overflow: hidden;
+
+    background:
+        radial-gradient(
+            circle at 50% 20%,
+            #303030 0%,
+            #121212 35%,
+            #050505 75%
+        );
+
+    color: var(--bravman-text);
+
+    font-family:
+        Inter,
+        Arial,
+        Helvetica,
+        sans-serif;
+}
+
+
+/* =========================================================
+   LIGHTING
+   ========================================================= */
+
+.bravman-arena::before {
+    content: "";
+
+    position: absolute;
+
+    top: -30%;
+    left: 50%;
+
+    width: 900px;
+    height: 900px;
+
+    transform:
+        translateX(-50%)
+        rotate(8deg);
+
+    background:
+        radial-gradient(
+            ellipse,
+            rgba(255,255,255,.13) 0%,
+            rgba(255,255,255,.04) 35%,
+            transparent 70%
+        );
+
+    pointer-events: none;
+}
+
+
+.bravman-arena::after {
+    content: "";
+
+    position: absolute;
+
+    inset: 0;
+
+    background:
+        linear-gradient(
+            to bottom,
+            transparent 50%,
+            rgba(0,0,0,.65) 100%
+        );
+
+    pointer-events: none;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.bravman-header {
+    position: relative;
+    z-index: 20;
+
+    display: grid;
+
+    grid-template-columns:
+        1fr
+        auto
+        1fr;
+
+    align-items: center;
+
+    gap: 30px;
+
+    padding:
+        22px
+        42px;
+
+    background:
+        linear-gradient(
+            to bottom,
+            rgba(0,0,0,.9),
+            rgba(0,0,0,.35)
+        );
+
+    border-bottom:
+        1px solid
+        rgba(255,255,255,.08);
+}
+
+
+.bravman-header__brand {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 3px;
+}
+
+
+.bravman-header__brand span {
+    font-size: 28px;
+
+    font-weight: 950;
+
+    letter-spacing: 4px;
+}
+
+
+.bravman-header__brand small {
+    color:
+        var(--bravman-muted);
+
+    font-size: 9px;
+
+    letter-spacing: 3px;
+}
+
+
+.bravman-header__timer {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    gap: 2px;
+}
+
+
+.bravman-header__timer small {
+    color:
+        var(--bravman-muted);
+
+    font-size: 9px;
+
+    letter-spacing: 3px;
+}
+
+
+.bravman-header__timer strong {
+    font-size: 34px;
+
+    line-height: 1;
+
+    font-variant-numeric:
+        tabular-nums;
+
+    letter-spacing: 2px;
+}
+
+
+.bravman-header__score {
+    display: flex;
+
+    justify-content: flex-end;
+
+    align-items: center;
+
+    gap: 15px;
+}
+
+
+.bravman-header__score div {
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    min-width: 55px;
+}
+
+
+.bravman-header__score span {
+    font-size: 25px;
+
+    font-weight: 900;
+}
+
+
+.bravman-header__score small {
+    color:
+        var(--bravman-muted);
+
+    font-size: 8px;
+
+    letter-spacing: 2px;
+}
+
+
+.bravman-header__score b {
+    color:
+        var(--bravman-accent);
+
+    font-size: 11px;
+}
+
+
+/* =========================================================
+   ARENA FIGHTERS
+   ========================================================= */
+
+.bravman-arena__fighters {
+    position: relative;
+    z-index: 8;
+
+    display: grid;
+
+    grid-template-columns:
+        minmax(250px, 1fr)
+        minmax(280px, 420px)
+        minmax(250px, 1fr);
+
+    align-items: end;
+
+    width: min(
+        1400px,
+        100%
+    );
+
+    min-height: 570px;
+
+    margin:
+        0 auto;
+
+    padding:
+        20px 40px 0;
+}
+
+
+/* =========================================================
+   FIGHTER
+   ========================================================= */
+
+.bravman-fighter {
+    position: relative;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    height: 500px;
+
+    user-select: none;
+}
+
+
+.bravman-fighter__body {
+    position: relative;
+
+    width: 230px;
+
+    height: 330px;
+
+    margin-top: auto;
+}
+
+
+.bravman-fighter__head {
+    position: absolute;
+
+    top: 0;
+    left: 50%;
+
+    width: 86px;
+    height: 100px;
+
+    transform:
+        translateX(-50%);
+
+    border-radius:
+        46% 46% 44% 44%;
+
+    background:
+        linear-gradient(
+            135deg,
+            #d49a6a,
+            #8e5234
+        );
+
+    box-shadow:
+        0 12px 30px
+        rgba(0,0,0,.55);
+}
+
+
+.bravman-fighter__torso {
+    position: absolute;
+
+    bottom: 0;
+    left: 50%;
+
+    width: 205px;
+    height: 250px;
+
+    transform:
+        translateX(-50%);
+
+    border-radius:
+        45% 45% 15% 15%;
+
+    background:
+        linear-gradient(
+            90deg,
+            #252525,
+            #555,
+            #242424
+        );
+
+    box-shadow:
+        inset 0 0 35px
+        rgba(0,0,0,.55);
+}
+
+
+.bravman-fighter__singlet {
+    position: absolute;
+
+    top: 100px;
+    left: 50%;
+
+    transform:
+        translateX(-50%);
+
+    font-size: 13px;
+
+    font-weight: 900;
+
+    letter-spacing: 3px;
+
+    color:
+        rgba(255,255,255,.8);
+}
+
+
+/* =========================================================
+   FIGHTER IDENTITY
+   ========================================================= */
+
+.bravman-fighter__identity {
+    position: absolute;
+
+    top: 10px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    gap: 5px;
+}
+
+
+.bravman-fighter__identity strong {
+    font-size: 12px;
+
+    letter-spacing: 3px;
+}
+
+
+.bravman-fighter__identity span {
+    padding:
+        4px 10px;
+
+    border-radius: 999px;
+
+    background:
+        var(--bravman-accent);
+
+    color: #000;
+
+    font-size: 9px;
+
+    font-weight: 900;
+}
+
+
+.bravman-fighter__taps {
+    position: absolute;
+
+    bottom: 15px;
+
+    font-size: 25px;
+
+    font-weight: 950;
+
+    font-variant-numeric:
+        tabular-nums;
+}
+
+
+/* =========================================================
+   ARM
+   ========================================================= */
+
+.bravman-arm {
+    position: absolute;
+
+    z-index: 10;
+
+    top: 265px;
+
+    width: 260px;
+
+    height: 90px;
+
+    transform-origin:
+        center right;
+
+    transform:
+        rotate(
+            var(--arm-rotation)
+        );
+
+    transition:
+        transform
+        70ms
+        linear;
+
+    filter:
+        drop-shadow(
+            0 10px 12px
+            rgba(0,0,0,.45)
+        );
+}
+
+
+.bravman-arm--creator {
+    right: -100px;
+}
+
+
+.bravman-arm--opponent {
+    left: -100px;
+
+    transform-origin:
+        center left;
+
+    transform:
+        scaleX(-1)
+        rotate(
+            calc(
+                var(--arm-rotation) * -1
+            )
+        );
+}
+
+
+.bravman-arm__upper {
+    position: absolute;
+
+    left: 0;
+    top: 20px;
+
+    width: 135px;
+    height: 55px;
+
+    border-radius:
+        50px;
+
+    background:
+        linear-gradient(
+            to bottom,
+            #b97950,
+            #713c27
+        );
+}
+
+
+.bravman-arm__forearm {
+    position: absolute;
+
+    right: 0;
+    top: 25px;
+
+    width: 135px;
+    height: 45px;
+
+    border-radius:
+        50px;
+
+    background:
+        linear-gradient(
+            to bottom,
+            #c9875d,
+            #713c27
+        );
+}
+
+
+.bravman-arm__elbow {
+    position: absolute;
+
+    left: 112px;
+    top: 18px;
+
+    width: 70px;
+    height: 70px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            #d5966d,
+            #82452d
+        );
+}
+
+
+.bravman-arm__hand {
+    position: absolute;
+
+    right: -10px;
+    top: 20px;
+
+    width: 55px;
+    height: 55px;
+
+    border-radius:
+        45%;
+
+    background:
+        linear-gradient(
+            135deg,
+            #c9885e,
+            #703b28
+        );
+}
+
+
+/* =========================================================
+   TABLE
+   ========================================================= */
+
+.bravman-table {
+    position: relative;
+
+    z-index: 12;
+
+    width: 100%;
+
+    height: 270px;
+
+    margin-bottom: 10px;
+}
+
+
+.bravman-table__surface {
+    position: absolute;
+
+    top: 40px;
+
+    left: 50%;
+
+    width: 100%;
+
+    height: 70px;
+
+    transform:
+        translateX(-50%);
+
+    border-radius:
+        15px;
+
+    background:
+        linear-gradient(
+            to bottom,
+            #383838,
+            #161616
+        );
+
+    border:
+        2px solid
+        rgba(255,255,255,.1);
+
+    box-shadow:
+        0 20px 40px
+        rgba(0,0,0,.55);
+}
+
+
+.bravman-table__pad {
+    position: absolute;
+
+    top: 8px;
+    left: 50%;
+
+    width: 125px;
+    height: 45px;
+
+    transform:
+        translateX(-50%);
+
+    border-radius: 10px;
+
+    background:
+        #090909;
+
+    box-shadow:
+        inset 0 0 12px
+        rgba(255,255,255,.08);
+}
+
+
+.bravman-table__center {
+    position: absolute;
+
+    left: 50%;
+    top: 0;
+
+    width: 4px;
+    height: 100%;
+
+    transform:
+        translateX(-50%);
+
+    background:
+        var(--bravman-accent);
+
+    box-shadow:
+        0 0 15px
+        rgba(255,179,0,.6);
+}
+
+
+.bravman-table__leg {
+    position: absolute;
+
+    top: 105px;
+
+    width: 25px;
+
+    height: 165px;
+
+    background:
+        linear-gradient(
+            90deg,
+            #101010,
+            #3c3c3c,
+            #101010
+        );
+}
+
+
+.bravman-table__leg:first-of-type {
+    left: 15%;
+}
+
+
+.bravman-table__leg:last-of-type {
+    right: 15%;
+}
+
+
+/* =========================================================
+   AUDIENCE
+   ========================================================= */
+
+.bravman-audience {
+    position: absolute;
+
+    z-index: 2;
+
+    bottom: 0;
+    left: 0;
+
+    display: flex;
+
+    align-items: flex-end;
+    justify-content: center;
+
+    gap: 18px;
+
+    width: 100%;
+
+    height: 270px;
+
+    overflow: hidden;
+
+    padding:
+        0 30px;
+
+    opacity: .55;
+}
+
+
+.bravman-audience__person {
+    position: relative;
+
+    flex:
+        0 0 45px;
+
+    height: 150px;
+}
+
+
+.bravman-audience__head {
+    position: absolute;
+
+    top: 0;
+    left: 50%;
+
+    width: 30px;
+    height: 30px;
+
+    transform:
+        translateX(-50%);
+
+    border-radius: 50%;
+
+    background:
+        #252525;
+}
+
+
+.bravman-audience__body {
+    position: absolute;
+
+    top: 27px;
+    left: 50%;
+
+    width: 55px;
+    height: 130px;
+
+    transform:
+        translateX(-50%);
+
+    border-radius:
+        25px 25px 0 0;
+
+    background:
+        #181818;
+}
+
+
+/* =========================================================
+   TAP BUTTON
+   ========================================================= */
+
+.bravman-tap-button {
+    position: absolute;
+
+    z-index: 30;
+
+    bottom: 30px;
+    left: 50%;
+
+    width: 190px;
+    height: 190px;
+
+    transform:
+        translateX(-50%);
+
+    border: 7px solid
+        rgba(255,255,255,.15);
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle at 35% 25%,
+            #ffdd63,
+            #ff9d00 45%,
+            #d35b00 100%
+        );
+
+    color: #090909;
+
+    cursor: pointer;
+
+    box-shadow:
+        0 20px 50px
+        rgba(0,0,0,.7),
+
+        0 0 35px
+        rgba(255,179,0,.35);
+
+    transition:
+        transform 80ms ease,
+        filter 80ms ease;
+}
+
+
+.bravman-tap-button:hover {
+    filter:
+        brightness(1.12);
+
+    transform:
+        translateX(-50%)
+        scale(1.04);
+}
+
+
+.bravman-tap-button:active {
+    transform:
+        translateX(-50%)
+        scale(.91);
+}
+
+
+.bravman-tap-button strong {
+    display: block;
+
+    font-size: 47px;
+
+    font-weight: 1000;
+
+    letter-spacing: 3px;
+}
+
+
+.bravman-tap-button small {
+    display: block;
+
+    margin-top: 3px;
+
+    font-size: 8px;
+
+    font-weight: 900;
+
+    letter-spacing: 3px;
+}
+
+
+/* =========================================================
+   COUNTDOWN
+   ========================================================= */
+
+.bravman-countdown {
+    position: fixed;
+
+    z-index: 100;
+
+    inset: 0;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    background:
+        rgba(0,0,0,.72);
+
+    backdrop-filter:
+        blur(6px);
+}
+
+
+.bravman-countdown span {
+    font-size: 12px;
+
+    font-weight: 900;
+
+    letter-spacing: 5px;
+}
+
+
+.bravman-countdown strong {
+    font-size: 150px;
+
+    line-height: .9;
+
+    color:
+        var(--bravman-accent);
+
+    text-shadow:
+        0 0 40px
+        rgba(255,179,0,.55);
+
+    animation:
+        bravmanCountdown
+        900ms
+        ease-out;
+}
+
+
+@keyframes bravmanCountdown {
+
+    0% {
+        transform: scale(1.6);
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+
+}
+
+
+/* =========================================================
+   RESULT
+   ========================================================= */
+
+.bravman-result {
+    position: fixed;
+
+    z-index: 110;
+
+    inset: 0;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    background:
+        rgba(0,0,0,.82);
+
+    backdrop-filter:
+        blur(10px);
+}
+
+
+.bravman-result__panel {
+    width: min(
+        450px,
+        calc(100% - 30px)
+    );
+
+    padding: 45px 35px;
+
+    text-align: center;
+
+    border:
+        1px solid
+        rgba(255,255,255,.1);
+
+    border-radius: 20px;
+
+    background:
+        linear-gradient(
+            145deg,
+            #191919,
+            #0c0c0c
+        );
+
+    box-shadow:
+        0 30px 80px
+        rgba(0,0,0,.8);
+}
+
+
+.bravman-result__panel > span {
+    color:
+        var(--bravman-accent);
+
+    font-size: 11px;
+
+    font-weight: 900;
+
+    letter-spacing: 5px;
+}
+
+
+.bravman-result h2 {
+    margin:
+        15px 0 8px;
+
+    font-size: 48px;
+
+    font-weight: 1000;
+}
+
+
+.bravman-result p {
+    margin:
+        0 0 25px;
+
+    color:
+        var(--bravman-muted);
+}
+
+
+.bravman-result button {
+    padding:
+        14px 24px;
+
+    border: 0;
+
+    border-radius: 8px;
+
+    background:
+        var(--bravman-accent);
+
+    color: #000;
+
+    font-weight: 900;
+
+    cursor: pointer;
+}
+
+
+/* =========================================================
+   TAP FEEDBACK
+   ========================================================= */
+
+.bravman-arena--tap
+.bravman-tap-button {
+    animation:
+        bravmanTapPulse
+        120ms
+        ease-out;
+}
+
+
+@keyframes bravmanTapPulse {
+
+    0% {
+        transform:
+            translateX(-50%)
+            scale(1);
+    }
+
+    50% {
+        transform:
+            translateX(-50%)
+            scale(.88);
+    }
+
+    100% {
+        transform:
+            translateX(-50%)
+            scale(1);
+    }
+
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 850px) {
+
+    .bravman-header {
+        grid-template-columns:
+            1fr
+            auto;
+
+        padding:
+            15px 18px;
+    }
+
+
+    .bravman-header__brand {
+        display: none;
+    }
+
+
+    .bravman-header__score {
+        justify-content: flex-start;
+    }
+
+
+    .bravman-header__timer strong {
+        font-size: 28px;
+    }
+
+
+    .bravman-arena__fighters {
+
+        grid-template-columns:
+            1fr
+            1fr;
+
+        min-height: 560px;
+
+        padding:
+            10px 10px 0;
+    }
+
+
+    .bravman-table {
+        position: absolute;
+
+        left: 50%;
+        bottom: 80px;
+
+        width: 80%;
+
+        transform:
+            translateX(-50%);
+    }
+
+
+    .bravman-fighter {
+        height: 430px;
+    }
+
+
+    .bravman-fighter__body {
+        transform:
+            scale(.75);
+
+        transform-origin:
+            bottom center;
+    }
+
+
+    .bravman-arm {
+        top: 235px;
+
+        width: 180px;
+    }
+
+
+    .bravman-arm--creator {
+        right: -50px;
+    }
+
+
+    .bravman-arm--opponent {
+        left: -50px;
+    }
+
+
+    .bravman-tap-button {
+        bottom: 18px;
+
+        width: 135px;
+        height: 135px;
+    }
+
+
+    .bravman-tap-button strong {
+        font-size: 34px;
+    }
+
+
+    .bravman-tap-button small {
+        font-size: 7px;
+    }
+
+}
+
+
+@media (max-width: 500px) {
+
+    .bravman-arena {
+        min-height: 100svh;
+    }
+
+
+    .bravman-arena__fighters {
+        min-height: 500px;
+    }
+
+
+    .bravman-fighter {
+        height: 380px;
+    }
+
+
+    .bravman-fighter__body {
+        transform:
+            scale(.58);
+    }
+
+
+    .bravman-arm {
+        top: 215px;
+
+        width: 140px;
+    }
+
+
+    .bravman-arm--creator {
+        right: -35px;
+    }
+
+
+    .bravman-arm--opponent {
+        left: -35px;
+    }
+
+
+    .bravman-tap-button {
+        width: 120px;
+        height: 120px;
+    }
+
+
+    .bravman-tap-button strong {
+        font-size: 30px;
+    }
+
+
+    .bravman-countdown strong {
+        font-size: 110px;
+    }
+
+}/* =========================================================
+   BRAVMAN TABLE
+   ========================================================= */
+
+.bravman-table {
+
+    position: relative;
+
+    z-index: 12;
+
+    width: 100%;
+
+    height: 270px;
+
+    margin-bottom: 10px;
+
+    pointer-events: none;
+
+}
+
+
+/* =========================================================
+   TABLE SURFACE
+   ========================================================= */
+
+.bravman-table__surface {
+
+    position: absolute;
+
+    top: 40px;
+
+    left: 50%;
+
+    width: 100%;
+
+    height: 72px;
+
+    transform:
+        translateX(-50%);
+
+    border-radius:
+        14px;
+
+    background:
+        linear-gradient(
+            to bottom,
+            #444,
+            #242424 45%,
+            #111 100%
+        );
+
+    border:
+        2px solid
+        rgba(255,255,255,.12);
+
+    box-shadow:
+
+        0 20px 35px
+        rgba(0,0,0,.65),
+
+        inset 0 2px 2px
+        rgba(255,255,255,.12),
+
+        inset 0 -10px 20px
+        rgba(0,0,0,.45);
+
+}
+
+
+/* =========================================================
+   PADS
+   ========================================================= */
+
+.bravman-table__pad {
+
+    position: absolute;
+
+    top: 10px;
+
+    width: 105px;
+
+    height: 48px;
+
+    border-radius:
+        10px;
+
+    background:
+        linear-gradient(
+            to bottom,
+            #303030,
+            #111
+        );
+
+    border:
+        2px solid
+        rgba(255,255,255,.08);
+
+    box-shadow:
+
+        inset 0 4px 8px
+        rgba(255,255,255,.08),
+
+        0 5px 10px
+        rgba(0,0,0,.5);
+
+}
+
+
+/* PAD GAUCHE */
+
+.bravman-table__pad--left {
+
+    left: 18%;
+
+}
+
+
+/* PAD CENTRAL */
+
+.bravman-table__pad--center {
+
+    left: 50%;
+
+    transform:
+        translateX(-50%);
+
+    width: 120px;
+
+    background:
+        linear-gradient(
+            to bottom,
+            #181818,
+            #080808
+        );
+
+}
+
+
+/* PAD DROIT */
+
+.bravman-table__pad--right {
+
+    right: 18%;
+
+}
+
+
+/* =========================================================
+   CENTRE DE LA TABLE
+   ========================================================= */
+
+.bravman-table__center {
+
+    position: absolute;
+
+    z-index: 5;
+
+    top: 0;
+
+    left: 50%;
+
+    width: 4px;
+
+    height: 100%;
+
+    transform:
+        translateX(-50%);
+
+    background:
+        #ffb300;
+
+    border-radius:
+        10px;
+
+    box-shadow:
+
+        0 0 8px
+        rgba(255,179,0,.8),
+
+        0 0 22px
+        rgba(255,179,0,.4);
+
+}
+
+
+/* =========================================================
+   PIEDS DE TABLE
+   ========================================================= */
+
+.bravman-table__leg {
+
+    position: absolute;
+
+    top: 110px;
+
+    width: 30px;
+
+    height: 160px;
+
+    border-radius:
+        5px;
+
+    background:
+        linear-gradient(
+            to right,
+            #0a0a0a,
+            #454545,
+            #171717
+        );
+
+    border:
+        1px solid
+        rgba(255,255,255,.08);
+
+    box-shadow:
+        8px 15px 20px
+        rgba(0,0,0,.5);
+
+}
+
+
+/* PIED GAUCHE */
+
+.bravman-table__leg--left {
+
+    left: 15%;
+
+}
+
+
+/* PIED DROIT */
+
+.bravman-table__leg--right {
+
+    right: 15%;
+
+}
+
+
+/* =========================================================
+   SUPPORTS LATERAUX
+   ========================================================= */
+
+.bravman-table__support {
+
+    position: absolute;
+
+    top: 108px;
+
+    width: 85px;
+
+    height: 18px;
+
+    border-radius:
+        4px;
+
+    background:
+        linear-gradient(
+            to bottom,
+            #3b3b3b,
+            #111
+        );
+
+    box-shadow:
+        0 8px 12px
+        rgba(0,0,0,.5);
+
+}
+
+
+.bravman-table__support--left {
+
+    left: 10%;
+
+    transform:
+        rotate(-8deg);
+
+}
+
+
+.bravman-table__support--right {
+
+    right: 10%;
+
+    transform:
+        rotate(8deg);
+
+}
