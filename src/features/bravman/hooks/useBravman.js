@@ -236,6 +236,42 @@ const useBravman = ({
                 }
             );
 
+            // ----------------------------------------------
+            // MATCH READY
+            // ----------------------------------------------
+
+            const removeMatchReady =
+                bravmanSocket.onMatchReady(
+            ({
+                matchId: readyMatchId
+            }) => {
+
+            if (
+                Number(readyMatchId) !==
+                Number(matchId)
+            ) {
+                return;
+            }
+
+            setState(
+                previous => ({
+
+                    ...previous,
+
+                    status: "matched",
+
+                    joined: true,
+
+                    error: null,
+
+                })
+            );
+
+            bravmanSocket.requestState();
+
+        }
+    );
+
 
         // ----------------------------------------------
         // COUNTDOWN
@@ -508,6 +544,7 @@ const useBravman = ({
             removeConnect();
             removeDisconnect();
             removeJoined();
+            removeMatchReady();
             removeCountdown();
             removeGo();
             removeStart();

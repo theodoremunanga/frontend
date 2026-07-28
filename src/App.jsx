@@ -362,20 +362,29 @@ export default function App() {
       ========================= */}
 
       {page === "waiting" &&
-        gameConfig && (
-          <WaitingMatch
-            matchId={
-              gameConfig.matchId
-            }
-            game={
-              gameConfig.game
-            }
-            setPage={setPage}
-            setGameConfig={
-              setGameConfig
-            }
-          />
-        )}
+        gameConfig &&
+        gameConfig.game === "bravman" && (
+
+      <BravmanWaitingRoom
+
+          gameConfig={gameConfig}
+
+          setPage={setPage}
+
+          setGameConfig={(config) => {
+
+            setGameConfig(config);
+
+            localStorage.setItem(
+                "gameConfig",
+                JSON.stringify(config)
+            );
+
+        }}
+
+    />
+
+)}
 
       {/* =========================
           🎮 GAME

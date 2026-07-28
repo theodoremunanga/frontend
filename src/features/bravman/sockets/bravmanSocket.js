@@ -215,13 +215,21 @@ export const onBravmanConnect = (
     callback
 ) => {
 
-    return listen(
+    const remove = listen(
         "connect",
         callback
     );
 
-};
+    const currentSocket =
+        getBravmanSocket();
 
+    if (currentSocket.connected) {
+        callback();
+    }
+
+    return remove;
+
+};
 
 export const onBravmanDisconnect = (
     callback
@@ -245,6 +253,21 @@ export const onBravmanJoined = (
 
     return listen(
         "bravman:joined",
+        callback
+    );
+
+};
+
+// ======================================================
+// MATCH READY
+// ======================================================
+
+export const onBravmanMatchReady = (
+    callback
+) => {
+
+    return listen(
+        "bravman:matchReady",
         callback
     );
 
@@ -370,6 +393,9 @@ const bravmanSocket = {
 
     onJoined:
         onBravmanJoined,
+
+    onMatchReady:
+        onBravmanMatchReady,
 
     onCountdown:
         onBravmanCountdown,

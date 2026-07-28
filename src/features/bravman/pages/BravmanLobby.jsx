@@ -9,6 +9,9 @@ import {
 import BravmanMatchCard
     from "../components/BravmanMatchCard";
 
+import bravmanSocket
+    from "../../../sockets/bravmanSocket";
+
 import api
     from "../../../services/api";
 
@@ -18,36 +21,17 @@ import api
 // ------------------------------------------------------
 // Remplace cette récupération par ton vrai AuthContext.
 // ------------------------------------------------------
-
 const getCurrentUserId = () => {
 
-    const storedUser =
-        localStorage.getItem(
-            "user"
-        );
+    const token =
+        localStorage.getItem("token");
 
-    if (!storedUser) {
+    if (!token) {
         return null;
     }
 
-    try {
-
-        const user =
-            JSON.parse(
-                storedUser
-            );
-
-        return user?.id ?? null;
-
-    }
-    catch {
-
-        return null;
-
-    }
-
+    return null;
 };
-
 
 const BravmanLobby = ({
     setPage,
@@ -143,11 +127,31 @@ const BravmanLobby = ({
 
     useEffect(() => {
 
-        loadMatches();
+        bravmanSocket.connect();
 
-    }, [
-        loadMatches
-    ]);
+        const remove =
+            bravmanSocket.onMatchReady(
+                ({ matchId }) => {
+
+                    const match =
+                        matches.find(
+                            m =>
+                                Number(m.id) ===
+                                Number(matchId)
+                        );
+
+                    if (!match) {
+                        return;
+                    }
+
+                    launchGame(match);
+
+                }
+            );
+
+        return remove;
+
+    }, [matches]);
 
     const launchGame = (match) => {
 

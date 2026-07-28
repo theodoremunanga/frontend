@@ -5,6 +5,9 @@ import { useState } from "react";
 import BravmanCreateForm from "../components/BravmanCreateForm";
 import BravmanLobby from "./BravmanLobby";
 
+import BravmanWaitingRoom
+    from "./BravmanWaitingRoom";
+
 
 const BravmanHome = ({
     setPage,
@@ -109,6 +112,26 @@ const BravmanHome = ({
                     <BravmanCreateForm
                         setPage={setPage}
                         setGameConfig={setGameConfig}
+                    />
+
+                </section>
+
+            )}
+
+            {view === "waiting" && (
+
+                <section className="bravman-home__panel">
+
+                    <BravmanWaitingRoom
+
+                        gameConfig={JSON.parse(
+                            localStorage.getItem("gameConfig")
+                        )}
+
+                        setPage={setPage}
+
+                        setGameConfig={setGameConfig}
+
                     />
 
                 </section>

@@ -9,7 +9,10 @@ import {
 import api from "../../../services/api";
 
 
-const BravmanCreateForm = () => {
+const BravmanCreateForm = ({
+    setPage,
+    setGameConfig,
+}) => {
 
     const [stake, setStake] =
         useState("");
@@ -84,6 +87,33 @@ const BravmanCreateForm = () => {
 
 
             setStake("");
+
+            const config = {
+
+                matchId: data.match.id,
+
+                game: "bravman",
+
+            };
+
+            localStorage.setItem(
+                "gameConfig",
+                JSON.stringify(config)
+            );
+
+            setGameConfig(config);
+
+            const config = {
+
+                matchId: data.match.id,
+
+                game: "bravman",
+
+            };
+
+            setGameConfig(config);
+
+            setPage("waiting");
 
         }
         catch (err) {
