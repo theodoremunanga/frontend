@@ -15,6 +15,9 @@ from "./features/bravman/pages/BravmanHome";
 import BravmanGame
 from "./features/bravman/pages/BravmanGame";
 
+import BravmanWaitingRoom
+from "./features/bravman/pages/BravmanWaitingRoom";
+
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
