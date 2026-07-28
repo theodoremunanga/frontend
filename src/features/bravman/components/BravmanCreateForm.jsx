@@ -88,6 +88,12 @@ const BravmanCreateForm = ({
 
             setStake("");
 
+           setCreatedMatch(
+                data.match
+            );
+
+            setStake("");
+
             const config = {
 
                 matchId: data.match.id,
@@ -101,9 +107,6 @@ const BravmanCreateForm = ({
                 JSON.stringify(config)
             );
 
-            setGameConfig(config);
-
-           
             setGameConfig(config);
 
             setPage("waiting");
