@@ -1,4 +1,4 @@
-// src/context/BravmanContext.jsx
+// src/features/bravman/context/BravmanContext.jsx
 
 import {
     createContext,
@@ -6,7 +6,8 @@ import {
     useMemo,
 } from "react";
 
-import useBravman from "../hooks/useBravman";
+import useBravman
+    from "../hooks/useBravman";
 
 
 // ======================================================
@@ -22,7 +23,12 @@ const BravmanContext =
 // ======================================================
 
 export const BravmanProvider = ({
+
     children,
+
+    match = null,
+
+    user = null,
 
     matchId = null,
 
@@ -31,6 +37,7 @@ export const BravmanProvider = ({
     playerSide = null,
 
     autoJoin = true,
+
 }) => {
 
 
@@ -50,8 +57,28 @@ export const BravmanProvider = ({
 
     const value =
         useMemo(
-            () => bravman,
-            [bravman]
+            () => ({
+
+                // -----------------------------------------
+                // données du match
+                // -----------------------------------------
+
+                match,
+
+                user,
+
+                // -----------------------------------------
+                // état du jeu (hook)
+                // -----------------------------------------
+
+                ...bravman,
+
+            }),
+            [
+                match,
+                user,
+                bravman,
+            ]
         );
 
 
@@ -71,25 +98,26 @@ export const BravmanProvider = ({
 
 
 // ======================================================
-// CONSUMER HOOK
+// HOOK
 // ======================================================
 
-export const useBravmanContext = () => {
+export const useBravmanContext =
+() => {
 
     const context =
         useContext(
             BravmanContext
         );
 
-
     if (!context) {
 
         throw new Error(
+
             "useBravmanContext doit être utilisé à l'intérieur de BravmanProvider."
+
         );
 
     }
-
 
     return context;
 

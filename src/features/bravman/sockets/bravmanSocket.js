@@ -40,9 +40,13 @@ socket = io(
     {
 
         transports: [
-            "websocket",
-        ],
 
+            "websocket",
+
+            "polling",
+
+        ],
+        
         auth: {
             token,
         },
@@ -110,6 +114,7 @@ export const disconnectBravmanSocket = () => {
 
 export const joinBravmanRoom = (
     matchId,
+    userId
 ) => {
 
     const currentSocket =
@@ -119,7 +124,7 @@ export const joinBravmanRoom = (
         "bravman:join",
         {
             matchId,
-            userId,
+            userId
         }
     );
 
@@ -136,10 +141,7 @@ export const sendBravmanTap = () => {
         getBravmanSocket();
 
     currentSocket.emit(
-        "bravman:tap",
-        {
-            matchId,
-        }
+        "bravman:tap"
     );
 
 };
@@ -165,18 +167,13 @@ export const finishBravmanGame = () => {
 // REQUEST STATE
 // ======================================================
 
-export const requestBravmanState = (
-    matchId
-) => {
+export const requestBravmanState = () => {
 
     const currentSocket =
         getBravmanSocket();
 
     currentSocket.emit(
-        "bravman:state",
-        {
-            matchId,
-        }
+        "bravman:state"
     );
 
 };

@@ -1,3 +1,5 @@
+// src/features/bravman/pages/BravmanGame.jsx
+
 import {
     useEffect,
     useState,
@@ -5,96 +7,176 @@ import {
 
 import api from "../../../services/api";
 
-import BravmanProvider from "../context/BravmanContext";
-import BravmanArena from "../components/arena/BravmanArena";
+import {
+    BravmanProvider,
+} from "../context/BravmanContext";
 
+import BravmanArena
+    from "../components/arena/BravmanArena";
+
+
+// ======================================================
+// PAGE
+// ======================================================
 
 const BravmanGame = ({
     gameConfig,
-    setPage,
     resetGame,
 }) => {
 
-    const [match, setMatch] =
-        useState(null);
+    const [
+        match,
+        setMatch,
+    ] = useState(null);
 
-    const [loading, setLoading] =
-        useState(true);
+    const [
+        user,
+        setUser,
+    ] = useState(null);
 
-    const [error, setError] =
-        useState(null);
+    const [
+        loading,
+        setLoading,
+    ] = useState(true);
 
+    const [
+        error,
+        setError,
+    ] = useState(null);
+
+
+    // ==================================================
+    // LOAD MATCH
+    // ==================================================
 
     useEffect(() => {
 
-        const loadMatch =
-            async () => {
+        const loadMatch = async () => {
 
-                try {
+            try {
 
-                    if (!gameConfig?.matchId) {
+                setLoading(true);
 
-                        throw new Error(
-                            "Match introuvable."
-                        );
+                setError(null);
 
-                    }
+                // ------------------------------------------
+                // MATCH ID
+                // ------------------------------------------
 
-                    const response =
-                        await api.get(
-                            `/bravman/matches/${gameConfig.matchId}`
-                        );
+                if (!gameConfig?.matchId) {
 
-                    const data =
-                        response.data;
-
-                    if (!data.success) {
-
-                        throw new Error(
-                            data.message ||
-                            "Impossible de charger le match."
-                        );
-
-                    }
-
-                    if (!data.match) {
-
-                        throw new Error(
-                            "Les données du match sont introuvables."
-                        );
-
-                    }
-
-                    setMatch(
-                        data.match
+                    throw new Error(
+                        "Match introuvable."
                     );
 
                 }
-                catch (err) {
 
-                    console.error(
-                        "❌ BRAVMAN LOAD MATCH ERROR:",
-                        err
+                // ------------------------------------------
+                // USER
+                // ------------------------------------------
+
+                // ------------------------------------------
+                // AUTH
+                // ------------------------------------------
+
+                const token = localStorage.getItem("token");
+
+                    if (!token) {
+                        throw new Error("Utilisateur non connecté.");
+                    }
+
+                // ------------------------------------------
+                // MATCH
+                // ------------------------------------------
+
+                const response =
+                    await api.get(
+                        `/bravman/matches/${gameConfig.matchId}`
                     );
 
-                    setError(
-                        err.response?.data?.message ||
-                        err.message
+                if (
+                    !response.data?.success
+                ) {
+
+                    throw new Error(
+                        response.data?.message ||
+                        "Impossible de charger le match."
                     );
 
                 }
-                finally {
 
-                    setLoading(false);
+                if (
+                    !response.data.match
+                ) {
+
+                    throw new Error(
+                        "Le match est introuvable."
+                    );
 
                 }
 
-            };
+                setMatch(
+                    response.data.match
+                );
+
+                // ------------------------------------------
+                // USER FROM MATCH
+                // ------------------------------------------
+
+                const currentUser =
+                    response.data.currentUser ||
+                    response.data.user;
+
+                if (currentUser?.id) {
+
+                    setUser(currentUser);
+
+                } else {
+
+                const currentUser =
+                    response.data.currentUser;
+
+                if (!currentUser?.id) {
+
+                throw new Error(
+                    "Utilisateur non authentifié."
+                );
+
+            }
+
+            setUser(currentUser);
+
+        }
+
+            }
+            catch (err) {
+
+                console.error(
+                    "BRAVMAN GAME ERROR:",
+                    err
+                );
+
+                setError(
+                    err.response?.data?.message ||
+                    err.message
+                );
+
+            }
+            finally {
+
+                setLoading(false);
+
+            }
+
+        };
 
         loadMatch();
 
     }, [gameConfig]);
 
+        // ==================================================
+    // LOADING
+    // ==================================================
 
     if (loading) {
 
@@ -111,6 +193,10 @@ const BravmanGame = ({
     }
 
 
+    // ==================================================
+    // ERROR
+    // ==================================================
+
     if (error) {
 
         return (
@@ -122,6 +208,7 @@ const BravmanGame = ({
                 </h2>
 
                 <button
+                    type="button"
                     onClick={resetGame}
                 >
                     Retour
@@ -134,17 +221,24 @@ const BravmanGame = ({
     }
 
 
-    if (!match) {
+    // ==================================================
+    // SECURITY
+    // ==================================================
+
+    if (!match || !user) {
 
         return (
 
             <div className="bravman-game-loading">
 
                 <h2>
-                    Match introuvable.
+
+                    Impossible de charger la partie.
+
                 </h2>
 
                 <button
+                    type="button"
                     onClick={resetGame}
                 >
                     Retour
@@ -157,107 +251,40 @@ const BravmanGame = ({
     }
 
 
-    const storedUser =
-        localStorage.getItem("user");
-
-    if (!storedUser) {
-
-        return (
-
-            <div className="bravman-game-loading">
-
-                <h2>
-                    Utilisateur non connecté.
-                </h2>
-
-                <button
-                    onClick={resetGame}
-                >
-                    Retour
-                </button>
-
-            </div>
-
-        );
-
-    }
-
-
-    let user;
-
-    try {
-
-        user =
-            JSON.parse(
-                storedUser
-            );
-
-    }
-    catch (err) {
-
-        console.error(
-            "❌ USER JSON ERROR:",
-            err
-        );
-
-        return (
-
-            <div className="bravman-game-loading">
-
-                <h2>
-                    Session utilisateur invalide.
-                </h2>
-
-                <button
-                    onClick={resetGame}
-                >
-                    Retour
-                </button>
-
-            </div>
-
-        );
-
-    }
-
-
-    if (!user?.id) {
-
-        return (
-
-            <div className="bravman-game-loading">
-
-                <h2>
-                    Utilisateur introuvable.
-                </h2>
-
-                <button
-                    onClick={resetGame}
-                >
-                    Retour
-                </button>
-
-            </div>
-
-        );
-
-    }
-
+    // ==================================================
+    // PLAYER SIDE
+    // ==================================================
 
     const playerSide =
+
         Number(match.creator_id) ===
         Number(user.id)
+
             ? "creator"
+
             : "opponent";
 
+
+    // ==================================================
+    // RENDER
+    // ==================================================
 
     return (
 
         <BravmanProvider
+
+            match={match}
+
+            user={user}
+
             matchId={match.id}
+
             userId={user.id}
+
             playerSide={playerSide}
+
             autoJoin={true}
+
         >
 
             <BravmanArena />
@@ -268,5 +295,9 @@ const BravmanGame = ({
 
 };
 
+
+// ======================================================
+// EXPORT
+// ======================================================
 
 export default BravmanGame;

@@ -1,47 +1,87 @@
-import React, { useMemo } from "react";
+// src/features/bravman/components/arena/BravmanArena.jsx
+
+import {
+    useMemo,
+} from "react";
+
+import {
+    useBravmanContext,
+} from "../../context/BravmanContext";
 
 import BravmanFighter
-    from "../../components/arena/BravmanFighter";
+    from "./BravmanFighter";
 
 import BravmanArm
-    from "../../components/arena/BravmanArm";
+    from "./BravmanArm";
 
 import BravmanTable
-    from "../../components/arena/BravmanTable";
+    from "./BravmanTable";
 
 import BravmanAudience
-    from "../../components/arena/BravmanAudience";
+    from "./BravmanAudience";
 
 import BravmanTapButton
-    from "../../components/arena/BravmanTapButton";
+    from "./BravmanTapButton";
 
 import "../../../../styles/bravman/BravmanArena.css";
 import "../../../../styles/bravman/BravmanFighter.css";
 
 
-const BravmanArena = ({
-    match,
-    player,
-    opponent,
-    creatorTaps = 0,
-    opponentTaps = 0,
-    remaining = 0,
-    status,
-    countdown,
-    onTap,
-}) => {
+// ======================================================
+// COMPONENT
+// ======================================================
+
+const BravmanArena = () => {
+
+    // ==================================================
+    // CONTEXT
+    // ==================================================
+
+    const {
+
+        match,
+
+        user,
+
+        playerSide,
+
+        status,
+
+        countdown,
+
+        remaining,
+
+        creatorTaps,
+
+        opponentTaps,
+
+        tap,
+
+    } = useBravmanContext();
 
 
-    /*
-     * ================================
-     * IDENTIFICATION DU CÔTÉ
-     * ================================
-     */
+    // ==================================================
+    // SECURITY
+    // ==================================================
+
+    if (!match || !user) {
+
+        return null;
+
+    }
+
+
+    // ==================================================
+    // PLAYER SIDE
+    // ==================================================
 
     const isCreator =
-        Number(player?.id) ===
-        Number(match?.creator_id);
+        playerSide === "creator";
 
+
+    // ==================================================
+    // MY SCORE
+    // ==================================================
 
     const myTaps =
         isCreator
@@ -55,20 +95,21 @@ const BravmanArena = ({
             : creatorTaps;
 
 
-    /*
-     * ================================
-     * AVANTAGE
-     * ================================
-     */
+    // ==================================================
+    // ARM ADVANTAGE
+    // ==================================================
 
     const advantage =
         useMemo(() => {
 
             const total =
-                myTaps + enemyTaps;
+                myTaps +
+                enemyTaps;
 
-            if (!total) {
+            if (total <= 0) {
+
                 return 50;
+
             }
 
             return (
@@ -77,38 +118,50 @@ const BravmanArena = ({
             ) * 100;
 
         }, [
+
             myTaps,
-            enemyTaps
+
+            enemyTaps,
+
         ]);
 
 
-    /*
-     * ================================
-     * ROTATION DU BRAS
-     * ================================
-     */
+    // ==================================================
+    // ARM ROTATION
+    // ==================================================
 
     const armRotation =
         useMemo(() => {
 
             const normalized =
                 Math.max(
+
                     -1,
+
                     Math.min(
+
                         1,
+
                         (advantage - 50) / 50
+
                     )
+
                 );
 
             return normalized * 42;
 
-        }, [advantage]);
+        }, [
 
+            advantage,
+
+        ]);
+            // ==================================================
+    // RENDER
+    // ==================================================
 
     return (
 
         <main className="bravman-arena">
-
 
             {/* ================= HEADER ================= */}
 
@@ -126,7 +179,6 @@ const BravmanArena = ({
 
                 </div>
 
-
                 <div className="bravman-header__timer">
 
                     <small>
@@ -134,6 +186,7 @@ const BravmanArena = ({
                     </small>
 
                     <strong>
+
                         00:
                         {String(
                             remaining
@@ -141,10 +194,10 @@ const BravmanArena = ({
                             2,
                             "0"
                         )}
+
                     </strong>
 
                 </div>
-
 
                 <div className="bravman-header__score">
 
@@ -155,18 +208,18 @@ const BravmanArena = ({
                         </span>
 
                         <small>
-                            {match?.creator_id === player?.id
+
+                            {isCreator
                                 ? "VOUS"
                                 : "ADVERSAIRE"}
+
                         </small>
 
                     </div>
 
-
                     <b>
                         VS
                     </b>
-
 
                     <div>
 
@@ -175,9 +228,11 @@ const BravmanArena = ({
                         </span>
 
                         <small>
-                            {match?.opponent_id === player?.id
-                                ? "VOUS"
-                                : "ADVERSAIRE"}
+
+                            {isCreator
+                                ? "ADVERSAIRE"
+                                : "VOUS"}
+
                         </small>
 
                     </div>
@@ -191,32 +246,23 @@ const BravmanArena = ({
 
             <section className="bravman-arena__fighters">
 
-
                 <BravmanFighter
 
                     side="left"
 
                     name={
                         isCreator
-                            ? player?.username
-                            : opponent?.username
+                            ? `Joueur #${match.creator_id}`
+                            : `Joueur #${match.opponent_id}`
                     }
 
                     taps={
                         creatorTaps
                     }
 
-                    image={
-                        isCreator
-                            ? player?.avatar
-                            : opponent?.avatar
-                    }
-
                 />
 
-
                 <BravmanTable />
-
 
                 <BravmanFighter
 
@@ -224,28 +270,20 @@ const BravmanArena = ({
 
                     name={
                         isCreator
-                            ? opponent?.username
-                            : player?.username
+                            ? `Joueur #${match.opponent_id}`
+                            : `Joueur #${match.creator_id}`
                     }
 
                     taps={
                         opponentTaps
                     }
 
-                    image={
-                        isCreator
-                            ? opponent?.avatar
-                            : player?.avatar
-                    }
-
                 />
-
 
                 <BravmanArm
                     rotation={
                         armRotation
                     }
-
                 />
 
             </section>
@@ -256,7 +294,7 @@ const BravmanArena = ({
             <BravmanAudience />
 
 
-            {/* ================= TAP ================= */}
+            {/* ================= ACTION ================= */}
 
             <BravmanTapButton
 
@@ -265,7 +303,7 @@ const BravmanArena = ({
                 }
 
                 onTap={
-                    onTap
+                    tap
                 }
 
             />
@@ -278,11 +316,15 @@ const BravmanArena = ({
                 <div className="bravman-countdown">
 
                     <span>
+
                         PRÉPAREZ-VOUS
+
                     </span>
 
                     <strong>
+
                         {countdown}
+
                     </strong>
 
                 </div>
@@ -294,6 +336,5 @@ const BravmanArena = ({
     );
 
 };
-
 
 export default BravmanArena;
