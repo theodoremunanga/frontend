@@ -4,7 +4,7 @@ import {
 } from "react";
 
 import bravmanSocket
-    from "../../../sockets/bravmanSocket";
+    from "../sockets/bravmanSocket";
 
 const BravmanWaitingRoom = ({
     gameConfig,

@@ -103,14 +103,7 @@ const BravmanCreateForm = ({
 
             setGameConfig(config);
 
-            const config = {
-
-                matchId: data.match.id,
-
-                game: "bravman",
-
-            };
-
+           
             setGameConfig(config);
 
             setPage("waiting");

@@ -10,7 +10,7 @@ import BravmanMatchCard
     from "../components/BravmanMatchCard";
 
 import bravmanSocket
-    from "../../../sockets/bravmanSocket";
+    from "../sockets/bravmanSocket";
 
 import api
     from "../../../services/api";
