@@ -95,7 +95,15 @@ const BravmanWaitingRoom = ({
                         Number(match.id) !==
                         Number(gameConfig.matchId)
                     ) {
-                        return;
+                        return; () => {
+
+                            removeReady?.();
+
+                            removeState?.();
+
+                            removeJoined?.();
+
+                        };
                     }
 
                     setStatus(
@@ -114,48 +122,73 @@ const BravmanWaitingRoom = ({
                         config
                     );
 
-                    setTimeout(() => {
-
-                        setPage(
-                            "game"
-                        );
-
-                    }, 400);
+                    setPage("game");
 
                 }
             );
 
             const removeState =
-                bravmanSocket.onGameState(
-                    state => {
+                bravmanSocket.onUpdate(
+            (state) => {
 
-                if (
-                    Number(state.matchId) !==
-                    Number(gameConfig.matchId)
-                ) {
-                    return;
-                }
+            if (
+                Number(state.matchId) !==
+                Number(gameConfig.matchId)
+            ) {
+                return;
+            }
 
-                if (
-                    state.status === "ready" ||
-                    state.status === "countdown" ||
-                    state.status === "playing"
-                ) {
+            switch (state.status) {
+
+                case "matched":
 
                     setStatus(
-                        "Adversaire trouvé !"
+                        "Adversaire connecté..."
                     );
 
-                    setTimeout(() => {
+                    break;
 
-                        setPage("game");
+                case "countdown":
 
-                    },300);
+                    setStatus(
+                        "Préparation du combat..."
+                    );
 
-                }
+                    setGameConfig({
+                        matchId: gameConfig.matchId,
+                        game: "bravman",
+                    });
+
+                    setPage("game");
+
+                    break;
+
+                case "playing":
+
+                    setGameConfig({
+                        matchId: gameConfig.matchId,
+                        game: "bravman",
+                    });
+
+                    setPage("game");
+
+                    break;
+
+                case "finished":
+
+                    setStatus(
+                        "Combat terminé."
+                    );
+
+                    break;
+
+                default:
+                    break;
 
             }
-        );
+
+        }
+    );
 
         const removeJoined =
             bravmanSocket.onJoined(() => {
@@ -171,7 +204,7 @@ const BravmanWaitingRoom = ({
         return () => {
 
             removeReady?.();
-
+            removeJoined?.();
             removeJoined?.();
 
         };
