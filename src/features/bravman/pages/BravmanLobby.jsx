@@ -127,31 +127,27 @@ const BravmanLobby = ({
 
     useEffect(() => {
 
+        loadMatches();
+
         bravmanSocket.connect();
 
-        const remove =
-            bravmanSocket.onMatchReady(
-                ({ matchId }) => {
+        const remove = bravmanSocket.onMatchReady(({ match }) => {
 
-                    const match =
-                        matches.find(
-                            m =>
-                                Number(m.id) ===
-                                Number(matchId)
-                        );
+            if (!match) {
+                return;
+            }
 
-                    if (!match) {
-                        return;
-                    }
+            launchGame(match);
 
-                    launchGame(match);
+        });
 
-                }
-            );
+        return () => {
 
-        return remove;
+            remove?.();
 
-    }, [matches]);
+        };
+
+    }, [loadMatches]);
 
     const launchGame = (match) => {
 
@@ -183,16 +179,19 @@ const BravmanLobby = ({
 
         setJoinedMatch(match);
 
-        setMatches(previous =>
-            previous.filter(
-                item =>
-                    Number(item.id) !==
-                    Number(match.id)
-            )
+        const config = {
+            matchId: match.id,
+            game: "bravman"
+        };
+
+        localStorage.setItem(
+            "gameConfig",
+            JSON.stringify(config)
         );
 
-        launchGame(match);
+        setGameConfig(config);
 
+        setPage("waiting");
     };
 
 

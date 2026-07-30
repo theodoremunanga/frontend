@@ -123,32 +123,24 @@ const BravmanGame = ({
                 // USER FROM MATCH
                 // ------------------------------------------
 
-                const currentUser =
-                    response.data.currentUser ||
-                    response.data.user;
+                const storedUser =
+                    JSON.parse(
+                        localStorage.getItem("user")
+                    );
 
-                if (currentUser?.id) {
+                if (!storedUser?.id) {
 
-                    setUser(currentUser);
+                    throw new Error(
+                        "Utilisateur non connecté."
+                    );
 
-                } else {
+                }
 
-                const currentUser =
-                    response.data.currentUser;
-
-                if (!currentUser?.id) {
-
-                throw new Error(
-                    "Utilisateur non authentifié."
-                );
+                setUser(storedUser);
 
             }
 
-            setUser(currentUser);
-
-        }
-
-            }
+            
             catch (err) {
 
                 console.error(

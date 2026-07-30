@@ -64,13 +64,11 @@ const BravmanWaitingRoom = ({
                 user.id
             );
 
-            bravmanSocket.requestState();
+        setStatus(
+            "Connexion à l'arène..."
+        );
 
-            setStatus(
-                "En attente d'un adversaire..."
-            );
-
-        };
+    };
 
         if (socket.connected) {
 
@@ -127,6 +125,45 @@ const BravmanWaitingRoom = ({
                 }
             );
 
+            const removeState =
+                bravmanSocket.onGameState(
+                    state => {
+
+                if (
+                    Number(state.matchId) !==
+                    Number(gameConfig.matchId)
+                ) {
+                    return;
+                }
+
+                if (
+                    state.status === "ready" ||
+                    state.status === "countdown" ||
+                    state.status === "playing"
+                ) {
+
+                    setStatus(
+                        "Adversaire trouvé !"
+                    );
+
+                    setTimeout(() => {
+
+                        setPage("game");
+
+                    },300);
+
+                }
+
+            }
+        );
+
+        const removeJoined =
+            bravmanSocket.onJoined(() => {
+
+            bravmanSocket.requestState();
+
+        });
+
         // ==========================
         // CLEANUP
         // ==========================
@@ -134,6 +171,8 @@ const BravmanWaitingRoom = ({
         return () => {
 
             removeReady?.();
+
+            removeJoined?.();
 
         };
 
