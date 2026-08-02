@@ -9,14 +9,8 @@ import Infos from "./pages/Infos";
 import Menu from "./pages/Menu";
 import Dames from "./pages/Dames";
 
-import BravmanHome
-from "./features/bravman/pages/BravmanHome";
-
-import BravmanGame
-from "./features/bravman/pages/BravmanGame";
-
-import BravmanWaitingRoom
-from "./features/bravman/pages/BravmanWaitingRoom";
+import BravmanPage 
+from "./sac/games/bravman/pages/BravmanPage";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -360,35 +354,7 @@ export default function App() {
         <AdsPage />
       )}
 
-      {/* =========================
-          ⏳ WAITING MATCH
-      ========================= */}
-
-      {page === "waiting" &&
-        gameConfig &&
-        gameConfig.game === "bravman" && (
-
-      <BravmanWaitingRoom
-
-          gameConfig={gameConfig}
-
-          setPage={setPage}
-
-          setGameConfig={(config) => {
-
-            setGameConfig(config);
-
-            localStorage.setItem(
-                "gameConfig",
-                JSON.stringify(config)
-            );
-
-        }}
-
-    />
-
-)}
-
+            
       {/* =========================
           🎮 GAME
       ========================= */}
@@ -415,21 +381,6 @@ export default function App() {
               resetGame={resetGame}
            />
 
-          ) : safeGame === "football" ? (
-
-            <FootballMatch
-              gameConfig={gameConfig}
-              setPage={setPage}
-              resetGame={resetGame}
-            />
-
-          ) : safeGame === "bravman" ? (
-
-            <BravmanGame
-              gameConfig={gameConfig}
-              setPage={setPage}
-              resetGame={resetGame}
-            />
 
           ) : (
             <div
@@ -477,28 +428,13 @@ export default function App() {
       )
       }
       
-{
-page === "bravman" && (
+    {
+    page === "bravman" && (
 
-<BravmanHome
+    <BravmanPage />
 
-setPage={setPage}
-
-setGameConfig={(config)=>{
-
-setGameConfig(config);
-
-localStorage.setItem(
-"gameConfig",
-JSON.stringify(config)
-);
-
-}}
-
- />
-
-)
-}
+    )
+    }
 
       {/* =========================
           👤 PROFILE
