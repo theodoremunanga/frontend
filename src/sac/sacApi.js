@@ -16,7 +16,7 @@ export const createSacMatch = async ({
 
     const response =
         await api.post(
-            "/sac/matches/create",
+            "/sac/matches",
             {
                 game,
                 stake

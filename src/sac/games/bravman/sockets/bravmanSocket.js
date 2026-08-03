@@ -21,13 +21,11 @@ export const connectBravmanSocket = () => {
     }
 
 
-    socket =
-        io(
-            import.meta.env.VITE_API_URL,
-            {
-                withCredentials:true
-            }
-        );
+    socket = io(import.meta.env.VITE_API_URL, {
+        withCredentials: true,
+        transports: ["websocket", "polling"],
+        autoConnect: true
+    });
 
 
     return socket;
@@ -148,23 +146,6 @@ export const onBravmanJoined = (
 
 };
 
-
-
-export const onBravmanReady = (
-    callback
-)=>{
-
-
-    socket?.on(
-        "bravman:matchReady",
-        callback
-    );
-
-
-};
-
-
-
 export const onBravmanUpdate = (
     callback
 )=>{
@@ -179,18 +160,11 @@ export const onBravmanUpdate = (
 };
 
 
-
-export const onBravmanStart = (
-    callback
-)=>{
-
-
+export const onBravmanRunning = (callback)=>{
     socket?.on(
-        "bravman:start",
+        "bravman:running",
         callback
     );
-
-
 };
 
 
