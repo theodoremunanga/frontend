@@ -24,9 +24,8 @@ import {
     requestBravmanState,
     sendBravmanTap,
     onBravmanJoined,
-    onBravmanReady,
     onBravmanUpdate,
-    onBravmanStart,
+    onBravmanRunning,
     onBravmanFinished,
     onBravmanError,
     removeBravmanListeners
@@ -105,11 +104,6 @@ const useBravman = (userId)=>{
 
     },[]);
 
-
-
-
-
-
     // ======================================
     // CREATE MATCH
     // ======================================
@@ -157,12 +151,6 @@ const useBravman = (userId)=>{
 
 
     };
-
-
-
-
-
-
 
     // ======================================
     // JOIN MATCH
@@ -213,13 +201,6 @@ const useBravman = (userId)=>{
 
     };
 
-
-
-
-
-
-
-
     // ======================================
     // LOAD MATCH DETAIL
     // ======================================
@@ -256,12 +237,6 @@ const useBravman = (userId)=>{
 
 
     };
-
-
-
-
-
-
 
     // ======================================
     // SOCKET INIT
@@ -315,14 +290,6 @@ const useBravman = (userId)=>{
 
     };
 
-
-
-
-
-
-
-
-
     // ======================================
     // SOCKET EVENTS
     // ======================================
@@ -342,19 +309,6 @@ const useBravman = (userId)=>{
                 );
             }
         );
-
-
-
-        onBravmanReady(
-            (data)=>{
-
-                setMatch(
-                    data.match
-                );
-
-            }
-        );
-
 
 
 
@@ -501,7 +455,5 @@ const useBravman = (userId)=>{
 
 
 };
-
-
 
 export default useBravman;
