@@ -80,7 +80,11 @@ const useBravman = (userId)=>{
 
             const response =
                 await getOpenBravmanMatches();
-
+                
+                console.log(
+                    "JOIN RESPONSE",
+                    response
+                );
 
             setMatches(
                 response.matches || []

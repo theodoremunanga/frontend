@@ -2,6 +2,7 @@
 
 
 import { io } from "socket.io-client";
+import { SOCKET_URL } from "../../../../services/api";
 
 
 
@@ -21,7 +22,7 @@ export const connectBravmanSocket = () => {
     }
 
 
-    socket = io(import.meta.env.VITE_API_URL, {
+    socket = socket = io(SOCKET_URL,{
         withCredentials: true,
         transports: ["websocket", "polling"],
         autoConnect: true
