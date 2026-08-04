@@ -128,6 +128,9 @@ const useBravman = (userId)=>{
                 response.match
             );
 
+            connectGame(
+                response.match.id
+            );
 
             return response.match;
 
@@ -175,6 +178,10 @@ const useBravman = (userId)=>{
 
             setMatch(
                 response.match
+            );
+
+            connectGame(
+                response.match.id
             );
 
 
@@ -245,23 +252,18 @@ const useBravman = (userId)=>{
     const connectGame =
     useCallback(
     (matchId)=>{
+         console.log("CONNECT GAME", matchId);
 
 
         connectBravmanSocket();
 
 
 
-        joinBravmanRoom({
+        onBravmanJoined(()=>{
+            console.log("ROOM OK");
 
-            matchId,
-
-            userId
-
+            requestBravmanState();
         });
-
-
-
-        requestBravmanState();
 
 
 
@@ -336,6 +338,7 @@ const useBravman = (userId)=>{
         onBravmanRunning(
             (data)=>{
 
+                console.log("UPDATE", data);
 
                 setGame(
                     prev=>({
@@ -361,6 +364,7 @@ const useBravman = (userId)=>{
         onBravmanFinished(
             (data)=>{
 
+                console.log("FINISHED", data);
 
                 setGame(
                     prev=>({

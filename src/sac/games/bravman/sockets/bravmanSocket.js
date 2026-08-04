@@ -27,6 +27,18 @@ export const connectBravmanSocket = () => {
         autoConnect: true
     });
 
+    socket.on("connect", () => {
+        console.log("🟢 BRAVMAN SOCKET", socket.id);
+    });
+
+    socket.on("disconnect", (reason) => {
+        console.log("🔴 BRAVMAN SOCKET", reason);
+    });
+
+    socket.on("connect_error", (err) => {
+        console.error("❌ BRAVMAN CONNECT ERROR", err);
+    });
+
 
     return socket;
 
@@ -69,13 +81,22 @@ export const joinBravmanRoom = ({
         connectBravmanSocket();
     }
 
-
+    console.log(
+        "JOIN ROOM",
+        matchId,
+        userId
+    );
+    
     socket.emit(
         "bravman:join",
         {
             matchId,
             userId
         }
+    );
+
+    console.log(
+        "EMIT bravman:join"
     );
 
 
@@ -153,7 +174,13 @@ export const onBravmanUpdate = (
 
     socket?.on(
         "bravman:update",
-        callback
+        (game)=>{
+            console.log(
+                "UPDATE",
+                game
+            );
+            callback
+        }
     );
 
 
@@ -163,7 +190,14 @@ export const onBravmanUpdate = (
 export const onBravmanRunning = (callback)=>{
     socket?.on(
         "bravman:running",
-        callback
+        (game)=>{
+            console.log(
+                "RUNNING",
+                game
+            );
+            callback
+        }
+
     );
 };
 
@@ -176,7 +210,13 @@ export const onBravmanFinished = (
 
     socket?.on(
         "bravman:finished",
-        callback
+        (game)=>{
+            console.log(
+                "FINISHED",
+                game
+            );
+            callback
+        }
     );
 
 
@@ -216,19 +256,12 @@ export const removeBravmanListeners = ()=>{
         "bravman:joined"
     );
 
-
     socket.off(
-        "bravman:matchReady"
+        "bravman:running"
     );
-
 
     socket.off(
         "bravman:update"
-    );
-
-
-    socket.off(
-        "bravman:start"
     );
 
 
