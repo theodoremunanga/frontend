@@ -1,2167 +1,1284 @@
 /* =====================================================
-                    BRAVMAN
+   BRAVMAN — STYLE COMPLET
+   Compatible avec src/sac/games/bravman/Bravman.jsx
 ===================================================== */
 
-:root{
-
-    --bg:#07111f;
-
-    --bg2:#0d1d34;
-
-    --panel:rgba(20,28,48,.82);
-
-    --panel-border:rgba(255,255,255,.08);
-
-    --text:#ffffff;
-
-    --muted:#9eb2c8;
-
-    --blue:#1da1ff;
-
-    --blueGlow:#4fc3ff;
-
-    --red:#ff4040;
-
-    --redGlow:#ff7878;
-
-    --green:#18d26b;
-
-    --yellow:#ffc542;
-
-    --danger:#ff4343;
-
-    --shadow:
-
-        0 20px 60px rgba(0,0,0,.45);
-
-    --radius:22px;
-
-    --transition:.25s;
-
+:root {
+    --bg: #07111f;
+    --bg2: #0d1d34;
+    --panel: rgba(20, 28, 48, .88);
+    --panel-strong: rgba(12, 22, 40, .96);
+    --panel-border: rgba(255, 255, 255, .10);
+    --text: #ffffff;
+    --muted: #9eb2c8;
+    --blue: #1da1ff;
+    --blueGlow: #4fc3ff;
+    --red: #ff4040;
+    --redGlow: #ff7878;
+    --green: #18d26b;
+    --yellow: #ffc542;
+    --danger: #ff4343;
+    --shadow: 0 20px 60px rgba(0, 0, 0, .45);
+    --radius: 22px;
+    --transition: .25s ease;
 }
-
-
 
 /* =====================================================
-                    PAGE
+   PAGE / COUCHES DE FOND
 ===================================================== */
 
-.bravman-page{
-
-    min-height:100vh;
-
-    color:var(--text);
-
-    overflow:hidden;
-
-    position:relative;
-
+.bravman-page {
+    min-height: 100vh;
+    width: 100%;
+    box-sizing: border-box;
+    position: relative;
+    isolation: isolate;
+    color: var(--text);
+    overflow-x: hidden;
+    overflow-y: auto;
     background:
-
-        radial-gradient(
-
-            circle at top,
-
-            #14386d,
-
-            var(--bg)
-
-            60%
-
-        );
-
+        radial-gradient(circle at top, #14386d 0%, var(--bg) 60%);
 }
 
-
-
-/* =====================================================
-                BACKGROUND
-===================================================== */
-
-.bravman-page::before{
-
-    content:"";
-
-    position:absolute;
-
-    inset:-25%;
-
-    background:
-
-        radial-gradient(
-
-            circle,
-
-            rgba(0,174,255,.15),
-
-            transparent 60%
-
-        );
-
-    animation:
-
-        backgroundPulse
-
-        6s ease-in-out infinite;
-
+.bravman-page::before,
+.bravman-page::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    z-index: -1;
 }
 
+.bravman-page::before {
+    inset: -25%;
+    background: radial-gradient(
+        circle,
+        rgba(0, 174, 255, .15),
+        transparent 60%
+    );
+    animation: backgroundPulse 6s ease-in-out infinite;
+}
 
-
-.bravman-page::after{
-
-    content:"";
-
-    position:absolute;
-
-    inset:0;
-
+.bravman-page::after {
+    inset: 0;
     background-image:
-
-        linear-gradient(
-
-            rgba(255,255,255,.02) 1px,
-
-            transparent 1px
-
-        ),
-
-        linear-gradient(
-
-            90deg,
-
-            rgba(255,255,255,.02) 1px,
-
-            transparent 1px
-
-        );
-
-    background-size:
-
-        60px 60px;
-
-    opacity:.4;
-
+        linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
+    background-size: 60px 60px;
+    opacity: .4;
 }
 
+.bravman-page > * {
+    position: relative;
+    z-index: 1;
+}
 
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
 
 /* =====================================================
-                    HEADER
+   HEADER
 ===================================================== */
 
-.bravman-header{
-
-    position:relative;
-
-    z-index:5;
-
-    display:flex;
-
-    justify-content:space-between;
-
-    align-items:center;
-
-    padding:35px 50px;
-
+.bravman-header {
+    position: relative;
+    z-index: 5;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 25px;
+    padding: 35px 50px;
 }
 
-
-
-.bravman-header h1{
-
-    font-size:48px;
-
-    margin:0;
-
-    letter-spacing:2px;
-
-    text-shadow:
-
-        0 0 20px
-
-        rgba(0,180,255,.5);
-
+.bravman-header h1 {
+    margin: 0;
+    font-size: 48px;
+    line-height: 1.1;
+    letter-spacing: 2px;
+    text-shadow: 0 0 20px rgba(0, 180, 255, .5);
 }
 
-
-
-.bravman-header p{
-
-    margin-top:10px;
-
-    color:var(--muted);
-
+.bravman-header p {
+    margin: 10px 0 0;
+    color: var(--muted);
+    line-height: 1.5;
 }
 
+.connection {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border-radius: 50px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    backdrop-filter: blur(12px);
+    white-space: nowrap;
+}
 
+.connection > span:first-child {
+    width: 12px;
+    height: 12px;
+    flex: 0 0 12px;
+    border-radius: 50%;
+}
+
+.connection .online {
+    background: var(--green);
+    box-shadow: 0 0 12px var(--green);
+}
+
+.connection .offline {
+    background: var(--danger);
+    box-shadow: 0 0 12px var(--danger);
+}
+
+.connection small {
+    color: var(--muted);
+    margin-left: 4px;
+}
 
 /* =====================================================
-                CONNECTION
+   MENU PRINCIPAL
+   IMPORTANT : ces classes correspondent au JSX actuel
 ===================================================== */
 
-.connection{
-
-    display:flex;
-
-    align-items:center;
-
-    gap:12px;
-
-    padding:12px 22px;
-
-    border-radius:50px;
-
-    background:var(--panel);
-
-    border:1px solid
-
-        var(--panel-border);
-
-    backdrop-filter:blur(12px);
-
+.bravman-menu {
+    width: min(1100px, calc(100% - 40px));
+    margin: 20px auto 50px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 25px;
 }
 
-
-
-.connection span{
-
-    width:12px;
-
-    height:12px;
-
-    border-radius:50%;
-
+.bravman-create,
+.bravman-matches,
+.create-card,
+.matches-card {
+    position: relative;
+    width: 100%;
+    padding: 32px;
+    border-radius: var(--radius);
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
 }
 
-
-
-.connection .online{
-
-    background:var(--green);
-
-    box-shadow:
-
-        0 0 12px
-
-        var(--green);
-
+.section-title h2 {
+    margin: 0 0 10px;
+    font-size: 30px;
+    line-height: 1.2;
 }
 
-
-
-.connection .offline{
-
-    background:var(--danger);
-
-    box-shadow:
-
-        0 0 12px
-
-        var(--danger);
-
+.section-title p {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.6;
 }
-
-
 
 /* =====================================================
-                    CARDS
+   FORMULAIRE DE CRÉATION
+   C'était le principal manque du CSS fourni.
+===================================================== */
+
+.bravman-create form {
+    width: 100%;
+    margin-top: 25px;
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(160px, 260px);
+    grid-template-areas:
+        "label label"
+        "input button";
+    gap: 12px 16px;
+    align-items: center;
+}
+
+.bravman-create form label {
+    grid-area: label;
+    display: block;
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .3px;
+}
+
+.bravman-create form input#bravman-stake {
+    grid-area: input;
+    width: 100%;
+    min-width: 0;
+    height: 58px;
+    padding: 0 18px;
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 15px;
+    outline: none;
+    background: rgba(5, 14, 28, .90);
+    color: #fff;
+    font: inherit;
+    font-size: 20px;
+    font-weight: 800;
+    appearance: textfield;
+    -moz-appearance: textfield;
+    transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+}
+
+.bravman-create form input#bravman-stake::-webkit-outer-spin-button,
+.bravman-create form input#bravman-stake::-webkit-inner-spin-button {
+    margin: 0;
+    -webkit-appearance: none;
+}
+
+.bravman-create form input#bravman-stake:hover {
+    border-color: rgba(79, 195, 255, .45);
+    background: rgba(7, 18, 34, .98);
+}
+
+.bravman-create form input#bravman-stake:focus {
+    border-color: var(--blueGlow);
+    box-shadow: 0 0 0 4px rgba(79, 195, 255, .13), 0 0 25px rgba(29, 161, 255, .18);
+}
+
+.bravman-create form input#bravman-stake:disabled {
+    opacity: .65;
+    cursor: not-allowed;
+}
+
+.bravman-create form button[type="submit"] {
+    grid-area: button;
+    width: 100%;
+    min-height: 58px;
+    padding: 0 22px;
+    border: 0;
+    border-radius: 15px;
+    background: linear-gradient(135deg, var(--blue), #006fe6);
+    color: #fff;
+    font-size: 17px;
+    font-weight: 900;
+    cursor: pointer;
+    box-shadow: 0 0 25px rgba(0, 140, 255, .30);
+    transition: transform var(--transition), box-shadow var(--transition), opacity var(--transition);
+}
+
+.bravman-create form button[type="submit"]:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 0 38px rgba(0, 170, 255, .52);
+}
+
+.bravman-create form button[type="submit"]:active:not(:disabled) {
+    transform: scale(.97);
+}
+
+.bravman-create form button[type="submit"]:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* =====================================================
+   BOUTONS GÉNÉRIQUES
+===================================================== */
+
+button {
+    font-family: inherit;
+    border: 0;
+    cursor: pointer;
+}
+
+button:focus-visible,
+input:focus-visible {
+    outline: 3px solid rgba(79, 195, 255, .55);
+    outline-offset: 3px;
+}
+
+button:disabled {
+    cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+    transform: translateY(-2px);
+}
+
+button:active:not(:disabled) {
+    transform: scale(.97);
+}
+
+/* =====================================================
+   DÉFIS DISPONIBLES
+===================================================== */
+
+.bravman-matches {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.matches-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.match-card {
+    width: 100%;
+    min-height: 82px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 17px;
+    background: rgba(255,255,255,.045);
+    transition: background var(--transition), transform var(--transition), border-color var(--transition);
+}
+
+.match-card:hover {
+    background: rgba(255,255,255,.075);
+    border-color: rgba(79,195,255,.18);
+    transform: translateY(-2px);
+}
+
+.match-card > div:first-child {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.match-card strong {
+    font-size: 18px;
+}
+
+.match-card span {
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.match-card > button {
+    flex: 0 0 auto;
+    min-width: 145px;
+    min-height: 48px;
+    padding: 10px 20px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, var(--green), #10a954);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 800;
+    box-shadow: 0 0 20px rgba(24,210,107,.20);
+}
+
+.match-card > button:hover:not(:disabled) {
+    box-shadow: 0 0 30px rgba(24,210,107,.45);
+}
+
+.match-card > button:disabled {
+    opacity: .45;
+}
+
+.empty-state {
+    padding: 45px 25px;
+    text-align: center;
+    color: var(--muted);
+    border-radius: 18px;
+    border: 2px dashed rgba(255,255,255,.12);
+}
+
+.empty-state span {
+    display: block;
+    margin-bottom: 12px;
+    font-size: 50px;
+}
+
+.empty-state p {
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* =====================================================
+   ERREUR
+===================================================== */
+
+.bravman-error {
+    width: min(900px, calc(100% - 40px));
+    margin: 0 auto 20px;
+    padding: 18px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    border: 1px solid rgba(255,67,67,.35);
+    border-radius: 18px;
+    background: rgba(124,31,31,.92);
+    color: #fff;
+    box-shadow: 0 15px 40px rgba(0,0,0,.25);
+}
+
+.bravman-error p {
+    margin: 6px 0 0;
+}
+
+.bravman-error button {
+    flex: 0 0 auto;
+    padding: 10px 20px;
+    border-radius: 12px;
+    background: rgba(255,255,255,.12);
+    color: #fff;
+    font-weight: 700;
+}
+
+/* =====================================================
+   WAITING ROOM
+===================================================== */
+
+.bravman-waiting {
+    width: min(1000px, calc(100% - 40px));
+    margin: 40px auto 60px;
+    display: flex;
+    justify-content: center;
+}
+
+.waiting-card {
+    width: 100%;
+    padding: 35px;
+    text-align: center;
+    border-radius: var(--radius);
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(16px);
+}
+
+.waiting-icon {
+    font-size: 80px;
+    margin-bottom: 15px;
+}
+
+.waiting-card h2 {
+    margin: 0;
+    font-size: 30px;
+}
+
+.match-information {
+    margin: 25px auto 0;
+    max-width: 500px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.match-information > div {
+    padding: 16px;
+    border-radius: 15px;
+    background: rgba(255,255,255,.045);
+}
+
+.match-information span {
+    display: block;
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 6px;
+}
+
+.match-information strong {
+    font-size: 20px;
+}
+
+.players-preview {
+    margin-top: 35px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 45px;
+}
+
+.player-side {
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+.player-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.07);
+    font-size: 34px;
+}
+
+.player-side strong {
+    font-size: 18px;
+}
+
+.player-side small {
+    color: var(--muted);
+}
+
+.versus {
+    font-size: 38px;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 0 18px rgba(255,255,255,.6);
+}
+
+.waiting-status {
+    margin-top: 30px;
+    color: var(--blueGlow);
+}
+
+.waiting-status span {
+    font-size: 30px;
+}
+
+.waiting-status p {
+    margin: 8px 0 5px;
+    font-size: 19px;
+    font-weight: 700;
+}
+
+.waiting-status small {
+    color: var(--muted);
+}
+
+.secondary-button {
+    margin-top: 25px;
+    min-height: 48px;
+    padding: 0 22px;
+    border-radius: 14px;
+    background: #21314d;
+    color: #fff;
+    font-weight: 700;
+}
+
+.secondary-button:hover {
+    background: #2c4367;
+}
+
+/* =====================================================
+   COUNTDOWN
+===================================================== */
+
+.bravman-countdown {
+    min-height: 60vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.countdown-card {
+    width: min(700px, calc(100% - 40px));
+    padding: 45px;
+    text-align: center;
+    border-radius: 25px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    box-shadow: var(--shadow);
+}
+
+.countdown-card > span {
+    display: block;
+    font-size: 60px;
+    margin-bottom: 15px;
+}
+
+.countdown-card p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 22px;
+}
+
+.countdown-card strong {
+    display: block;
+    margin: 10px 0;
+    font-size: 150px;
+    line-height: 1;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 0 40px var(--blueGlow);
+    animation: pulse 1s infinite;
+}
+
+.countdown-card small {
+    color: var(--muted);
+    font-size: 18px;
+}
+
+/* =====================================================
+   ARÈNE — classes du JSX actuel
+===================================================== */
+
+.bravman-arena {
+    position: relative;
+    width: min(1400px, calc(100% - 40px));
+    margin: 25px auto 60px;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.arena-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    padding: 20px 25px;
+    border-radius: 20px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    backdrop-filter: blur(14px);
+}
+
+.arena-header > div:first-child {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.arena-header strong {
+    font-size: 24px;
+}
+
+.arena-header span {
+    color: var(--muted);
+}
+
+.arena-timer {
+    text-align: center;
+}
+
+.arena-timer span {
+    display: block;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.arena-timer strong {
+    font-size: 38px;
+}
+
+.arena-players {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 25px;
+    align-items: center;
+}
+
+.arena-player {
+    padding: 25px;
+    text-align: center;
+    border-radius: 22px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    transition: transform .12s ease, box-shadow .12s ease;
+}
+
+.arena-player:first-child {
+    box-shadow: 0 0 35px rgba(0,160,255,.18);
+}
+
+.arena-player:last-child {
+    box-shadow: 0 0 35px rgba(255,70,70,.18);
+}
+
+.arena-player.punch {
+    animation: fighterPunch .12s ease;
+}
+
+.player-avatar {
+    width: 90px;
+    height: 90px;
+    margin: 0 auto 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255,255,255,.07);
+    font-size: 45px;
+}
+
+.arena-player h2 {
+    margin: 0 0 7px;
+}
+
+.arena-player > span {
+    color: var(--muted);
+}
+
+.arena-vs {
+    font-size: 38px;
+    font-weight: 900;
+    text-shadow: 0 0 18px #fff;
+}
+
+.power-section {
+    padding: 5px 0;
+}
+
+.power-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    color: var(--muted);
+    font-weight: 700;
+}
+
+.power-bar {
+    position: relative;
+    width: 100%;
+    height: 20px;
+    overflow: hidden;
+    border-radius: 30px;
+    background: #111;
+    border: 1px solid rgba(255,255,255,.08);
+}
+
+.power-fill {
+    height: 100%;
+    min-width: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--blue), #fff, var(--red));
+    transition: width .08s linear;
+    box-shadow: 0 0 20px rgba(255,255,255,.25);
+}
+
+.arm-section {
+    min-height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+}
+
+.arm-section .arm {
+    position: relative;
+    width: 180px;
+    height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 75px;
+    transform-origin: center bottom;
+    transition: transform .08s linear;
+    filter: drop-shadow(0 12px 15px rgba(0,0,0,.35));
+}
+
+.tap-section {
+    display: flex;
+    justify-content: center;
+}
+
+.tap-button {
+    width: min(560px, 100%);
+    min-height: 130px;
+    padding: 20px;
+    border-radius: 25px;
+    color: #fff;
+    background: linear-gradient(135deg, var(--blue), #0069d6);
+    box-shadow: 0 0 40px rgba(0,180,255,.40);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: transform .08s ease, box-shadow .08s ease, filter .08s ease;
+}
+
+.tap-button strong {
+    font-size: 42px;
+    letter-spacing: 3px;
+}
+
+.tap-button small {
+    font-size: 13px;
+    opacity: .82;
+}
+
+.tap-button:hover:not(:disabled) {
+    box-shadow: 0 0 55px rgba(0,180,255,.58);
+}
+
+.tap-button.active {
+    transform: scale(.94);
+    filter: brightness(1.25);
+    box-shadow: 0 0 65px rgba(79,195,255,.75);
+}
+
+.tap-button:disabled {
+    opacity: .42;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.arena-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.arena-stats > div {
+    padding: 18px;
+    text-align: center;
+    border-radius: 17px;
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+}
+
+.arena-stats span {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--muted);
+}
+
+.arena-stats strong {
+    font-size: 28px;
+}
+
+/* =====================================================
+   ÉCRAN RESULTAT
+===================================================== */
+
+.bravman-result {
+    min-height: 65vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 30px 20px 60px;
+}
+
+.result-card {
+    width: min(700px, 100%);
+    padding: 40px;
+    text-align: center;
+    border-radius: var(--radius);
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    box-shadow: var(--shadow);
+    animation: resultAppear .5s ease;
+}
+
+.result-icon {
+    font-size: 90px;
+    margin-bottom: 20px;
+}
+
+.result-card h2 {
+    margin: 0 0 12px;
+    font-size: 34px;
+}
+
+.result-card > p {
+    color: var(--muted);
+    line-height: 1.6;
+}
+
+.final-score {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 20px;
+    align-items: center;
+    margin: 35px 0;
+}
+
+.final-score > div:not(.score-separator) {
+    padding: 20px;
+    border-radius: 17px;
+    background: rgba(255,255,255,.05);
+}
+
+.final-score span {
+    display: block;
+    color: var(--muted);
+    margin-bottom: 8px;
+}
+
+.final-score strong {
+    font-size: 40px;
+}
+
+.score-separator {
+    font-size: 30px;
+    font-weight: 900;
+}
+
+.result-match {
+    margin-bottom: 25px !important;
+}
+
+.result-card > button {
+    min-width: 250px;
+    min-height: 58px;
+    padding: 0 25px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--blue), #0058d4);
+    color: #fff;
+    font-size: 17px;
+    font-weight: 800;
+    box-shadow: 0 0 25px rgba(0,160,255,.35);
+}
+
+/* =====================================================
+   LOADING
+===================================================== */
+
+.bravman-loading {
+    position: fixed;
+    left: 50%;
+    bottom: 30px;
+    transform: translateX(-50%);
+    z-index: 1000;
+    min-width: 220px;
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    border-radius: 50px;
+    background: rgba(10,20,35,.94);
+    border: 1px solid rgba(255,255,255,.10);
+    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow);
+}
+
+.bravman-loading span {
+    animation: spin 1s linear infinite;
+}
+
+.bravman-loading p {
+    margin: 0;
+    color: #fff;
+}
+
+/* =====================================================
+   COMPATIBILITÉ AVEC ANCIENNES CLASSES
 ===================================================== */
 
 .create-card,
-
-.matches-card,
-
-.waiting-card,
-
-.result-card{
-
-    position:relative;
-
-    z-index:2;
-
-    width:min(1050px,92%);
-
-    margin:auto;
-
-    margin-bottom:35px;
-
-    padding:35px;
-
-    border-radius:var(--radius);
-
-    background:var(--panel);
-
-    backdrop-filter:blur(16px);
-
-    border:1px solid
-
-        var(--panel-border);
-
-    box-shadow:
-
-        var(--shadow);
-
+.matches-card {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
 }
 
+.stakes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 18px;
+}
 
+.stake-button {
+    height: 70px;
+    border-radius: 18px;
+    background: linear-gradient(135deg, var(--blue), #006fe6);
+    color: #fff;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+.join-button {
+    min-width: 160px;
+    padding: 14px 30px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--green), #10a954);
+    color: #fff;
+    font-weight: bold;
+}
+
+.waiting-room,
+.countdown-screen,
+.result-screen {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.arena {
+    position: relative;
+    z-index: 2;
+    width: min(1400px, 96%);
+    margin: 40px auto;
+    display: flex;
+    flex-direction: column;
+    gap: 35px;
+}
+
+.loader {
+    width: 70px;
+    height: 70px;
+    margin: 40px auto 0;
+    border-radius: 50%;
+    border: 6px solid rgba(255,255,255,.12);
+    border-top-color: var(--blue);
+    animation: spin 1s linear infinite;
+}
 
 /* =====================================================
-                TITLES
+   RESPONSIVE
 ===================================================== */
 
-.create-card h2,
-
-.matches-card h2,
-
-.waiting-card h2,
-
-.result-card h2{
-
-    margin-top:0;
-
-    margin-bottom:18px;
-
-    font-size:30px;
-
-}
-
-
-
-/* =====================================================
-                    BUTTONS
-===================================================== */
-
-button{
-
-    cursor:pointer;
-
-    border:none;
-
-    transition:
-
-        .25s;
-
-    font-family:inherit;
-
-}
-
-
-
-button:hover{
-
-    transform:
-
-        translateY(-2px);
-
-}
-
-
-
-button:active{
-
-    transform:
-
-        scale(.96);
-
-}
-
-
-
-/* =====================================================
-                    ANIMATIONS
-===================================================== */
-
-@keyframes backgroundPulse{
-
-    0%{
-
-        transform:scale(1);
-
-        opacity:.5;
-
+@media (max-width: 992px) {
+    .bravman-header {
+        padding: 25px;
+        flex-direction: column;
+        text-align: center;
     }
 
-    50%{
-
-        transform:scale(1.15);
-
-        opacity:.9;
-
+    .bravman-menu {
+        width: min(700px, calc(100% - 30px));
     }
 
-    100%{
-
-        transform:scale(1);
-
-        opacity:.5;
-
+    .bravman-create,
+    .bravman-matches,
+    .waiting-card {
+        padding: 25px;
     }
 
+    .arena-players {
+        grid-template-columns: 1fr;
+    }
+
+    .arena-vs {
+        order: 2;
+    }
+
+    .arena-player {
+        width: 100%;
+    }
+}
+
+@media (max-width: 768px) {
+    .bravman-header h1 {
+        font-size: 38px;
+    }
+
+    .bravman-create form {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            "label"
+            "input"
+            "button";
+    }
+
+    .match-card {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .match-card > button {
+        width: 100%;
+    }
+
+    .players-preview {
+        gap: 20px;
+    }
+
+    .player-side {
+        min-width: 130px;
+    }
+
+    .versus {
+        font-size: 30px;
+    }
+
+    .countdown-card {
+        padding: 35px 20px;
+    }
+
+    .countdown-card strong {
+        font-size: 100px;
+    }
+
+    .arena-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .final-score {
+        grid-template-columns: 1fr;
+    }
+
+    .score-separator {
+        display: none;
+    }
+
+    .tap-button strong {
+        font-size: 34px;
+    }
+}
+
+@media (max-width: 560px) {
+    .bravman-header {
+        padding: 20px 15px;
+    }
+
+    .bravman-header h1 {
+        font-size: 32px;
+    }
+
+    .bravman-header p {
+        font-size: 14px;
+    }
+
+    .connection {
+        font-size: 13px;
+    }
+
+    .bravman-menu,
+    .bravman-waiting,
+    .bravman-arena {
+        width: calc(100% - 20px);
+    }
+
+    .bravman-create,
+    .bravman-matches,
+    .waiting-card {
+        padding: 20px;
+        border-radius: 18px;
+    }
+
+    .section-title h2,
+    .waiting-card h2 {
+        font-size: 24px;
+    }
+
+    .players-preview {
+        gap: 8px;
+    }
+
+    .player-side {
+        min-width: 105px;
+    }
+
+    .player-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 28px;
+    }
+
+    .player-side strong {
+        font-size: 15px;
+    }
+
+    .player-side small {
+        font-size: 11px;
+    }
+
+    .versus {
+        font-size: 24px;
+    }
+
+    .arena-header {
+        padding: 16px;
+    }
+
+    .arena-header strong {
+        font-size: 19px;
+    }
+
+    .arena-timer strong {
+        font-size: 30px;
+    }
+
+    .tap-button {
+        min-height: 110px;
+    }
+
+    .tap-button strong {
+        font-size: 30px;
+    }
+
+    .result-card {
+        padding: 28px 20px;
+    }
+
+    .result-icon {
+        font-size: 70px;
+    }
 }
 
 /* =====================================================
-                    CREATE MATCH
+   ANIMATIONS
 ===================================================== */
 
-.create-card{
-
-    display:flex;
-
-    flex-direction:column;
-
-    gap:25px;
-
-}
-
-
-
-.create-card p{
-
-    color:var(--muted);
-
-    line-height:1.6;
-
-}
-
-
-
-/* =====================================================
-                    STAKES
-===================================================== */
-
-.stakes{
-
-    display:grid;
-
-    grid-template-columns:
-
-        repeat(auto-fit,minmax(120px,1fr));
-
-    gap:18px;
-
-}
-
-
-
-.stake-button{
-
-    height:70px;
-
-    border-radius:18px;
-
-    background:
-
-        linear-gradient(
-
-            135deg,
-
-            var(--blue),
-
-            #006fe6
-
-        );
-
-    color:white;
-
-    font-size:22px;
-
-    font-weight:bold;
-
-    box-shadow:
-
-        0 0 25px
-
-        rgba(0,140,255,.35);
-
-}
-
-
-
-.stake-button:hover{
-
-    box-shadow:
-
-        0 0 40px
-
-        rgba(0,170,255,.6);
-
-}
-
-
-
-.stake-button:disabled{
-
-    opacity:.45;
-
-    cursor:not-allowed;
-
-}
-
-
-
-/* =====================================================
-                MATCH LIST
-===================================================== */
-
-.matches-card{
-
-    display:flex;
-
-    flex-direction:column;
-
-    gap:25px;
-
-}
-
-
-
-.matches-title{
-
-    display:flex;
-
-    justify-content:space-between;
-
-    align-items:center;
-
-}
-
-
-
-/* =====================================================
-                REFRESH BUTTON
-===================================================== */
-
-.refresh-button{
-
-    padding:12px 24px;
-
-    border-radius:12px;
-
-    background:#21314d;
-
-    color:white;
-
-}
-
-
-
-.refresh-button:hover{
-
-    background:#2c4367;
-
-}
-
-
-
-/* =====================================================
-                    EMPTY
-===================================================== */
-
-.empty{
-
-    padding:45px;
-
-    text-align:center;
-
-    color:var(--muted);
-
-    border-radius:18px;
-
-    border:2px dashed
-
-        rgba(255,255,255,.12);
-
-}
-
-
-
-/* =====================================================
-                MATCH ITEMS
-===================================================== */
-
-.match-list{
-
-    display:flex;
-
-    flex-direction:column;
-
-    gap:18px;
-
-}
-
-
-
-.match-item{
-
-    display:flex;
-
-    justify-content:space-between;
-
-    align-items:center;
-
-    padding:22px;
-
-    border-radius:18px;
-
-    background:
-
-        rgba(255,255,255,.04);
-
-    transition:.25s;
-
-}
-
-
-
-.match-item:hover{
-
-    transform:translateY(-2px);
-
-    background:
-
-        rgba(255,255,255,.07);
-
-}
-
-
-
-.match-item strong{
-
-    font-size:20px;
-
-}
-
-
-
-.match-item p{
-
-    margin-top:8px;
-
-    color:var(--muted);
-
-}
-
-
-
-/* =====================================================
-                    JOIN BUTTON
-===================================================== */
-
-.join-button{
-
-    padding:14px 30px;
-
-    border-radius:16px;
-
-    background:
-
-        linear-gradient(
-
-            135deg,
-
-            var(--green),
-
-            #10a954
-
-        );
-
-    color:white;
-
-    font-size:17px;
-
-    font-weight:bold;
-
-    min-width:160px;
-
-}
-
-
-
-.join-button:hover{
-
-    box-shadow:
-
-        0 0 25px
-
-        rgba(24,210,107,.5);
-
-}
-
-
-
-/* =====================================================
-                WAITING ROOM
-===================================================== */
-
-.waiting-room{
-
-    display:flex;
-
-    justify-content:center;
-
-    align-items:center;
-
-    margin-top:60px;
-
-}
-
-
-
-.waiting-card{
-
-    text-align:center;
-
-}
-
-
-
-.waiting-icon{
-
-    font-size:90px;
-
-    margin-bottom:20px;
-
-}
-
-
-
-.waiting-status{
-
-    margin-top:25px;
-
-    font-size:22px;
-
-    color:var(--blueGlow);
-
-}
-
-
-
-/* =====================================================
-                PLAYERS PREVIEW
-===================================================== */
-
-.players-preview{
-
-    margin-top:45px;
-
-    display:flex;
-
-    justify-content:center;
-
-    align-items:center;
-
-    gap:55px;
-
-}
-
-
-
-.player{
-
-    display:flex;
-
-    flex-direction:column;
-
-    align-items:center;
-
-    gap:18px;
-
-}
-
-
-
-.avatar{
-
-    width:110px;
-
-    height:110px;
-
-    border-radius:50%;
-
-}
-
-
-
-.player.blue .avatar{
-
-    background:
-
-        linear-gradient(
-
-            var(--blue),
-
-            #0047a8
-
-        );
-
-    box-shadow:
-
-        0 0 30px
-
-        rgba(0,170,255,.55);
-
-}
-
-
-
-.player.red .avatar{
-
-    background:
-
-        linear-gradient(
-
-            var(--red),
-
-            #8f1111
-
-        );
-
-    box-shadow:
-
-        0 0 30px
-
-        rgba(255,70,70,.55);
-
-}
-
-
-
-.player span{
-
-    font-weight:bold;
-
-}
-
-
-
-/* =====================================================
-                        VS
-===================================================== */
-
-.vs{
-
-    font-size:42px;
-
-    font-weight:bold;
-
-    color:white;
-
-    text-shadow:
-
-        0 0 18px
-
-        white;
-
-}
-
-
-
-/* =====================================================
-                    LOADER
-===================================================== */
-
-.loader{
-
-    width:70px;
-
-    height:70px;
-
-    margin:40px auto 0;
-
-    border-radius:50%;
-
-    border:6px solid
-
-        rgba(255,255,255,.12);
-
-    border-top-color:
-
-        var(--blue);
-
-    animation:
-
-        spin 1s linear infinite;
-
-}
-
-
-
-@keyframes spin{
-
-    to{
-
-        transform:rotate(360deg);
-
+@keyframes backgroundPulse {
+    0% {
+        transform: scale(1);
+        opacity: .5;
     }
-
-}
-
-
-
-/* =====================================================
-                COUNTDOWN
-===================================================== */
-
-.countdown-screen{
-
-    display:flex;
-
-    justify-content:center;
-
-    align-items:center;
-
-    min-height:60vh;
-
-}
-
-
-
-.countdown-card{
-
-    text-align:center;
-
-}
-
-
-
-.countdown-title{
-
-    font-size:32px;
-
-    margin-bottom:25px;
-
-    color:var(--muted);
-
-}
-
-
-
-.countdown-number{
-
-    font-size:150px;
-
-    font-weight:900;
-
-    color:white;
-
-    text-shadow:
-
-        0 0 40px
-
-        var(--blueGlow);
-
-    animation:
-
-        pulse 1s infinite;
-
-}
-
-
-
-.countdown-subtitle{
-
-    margin-top:30px;
-
-    font-size:24px;
-
-    color:var(--muted);
-
-}
-
-
-
-@keyframes pulse{
-
-    0%{
-
-        transform:scale(.8);
-
-        opacity:.4;
-
+    50% {
+        transform: scale(1.15);
+        opacity: .9;
     }
-
-    50%{
-
-        transform:scale(1);
-
-        opacity:1;
-
+    100% {
+        transform: scale(1);
+        opacity: .5;
     }
+}
 
-    100%{
-
-        transform:scale(.8);
-
-        opacity:.4;
-
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
     }
+}
 
+@keyframes pulse {
+    0% {
+        transform: scale(.8);
+        opacity: .4;
+    }
+    50% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(.8);
+        opacity: .4;
+    }
+}
+
+@keyframes fighterPunch {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.035); }
+    100% { transform: scale(1); }
+}
+
+@keyframes resultAppear {
+    from {
+        opacity: 0;
+        transform: scale(.85);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 /* =====================================================
-                        ARENA
+   SCROLLBAR
 ===================================================== */
 
-.arena{
-
-    position:relative;
-
-    z-index:2;
-
-    width:min(1400px,96%);
-
-    margin:40px auto;
-
-    display:flex;
-
-    flex-direction:column;
-
-    gap:35px;
-
-}
-
-
-
-/* =====================================================
-                    SCOREBOARD
-===================================================== */
-
-.scoreboard{
-
-    display:grid;
-
-    grid-template-columns:
-
-        1fr auto 1fr;
-
-    gap:40px;
-
-    align-items:center;
-
-}
-
-
-
-.score{
-
-    background:var(--panel);
-
-    border:1px solid var(--panel-border);
-
-    border-radius:22px;
-
-    padding:25px;
-
-    text-align:center;
-
-    backdrop-filter:blur(14px);
-
-}
-
-
-
-.score.blue{
-
-    box-shadow:
-
-        0 0 35px
-
-        rgba(0,160,255,.25);
-
-}
-
-
-
-.score.red{
-
-    box-shadow:
-
-        0 0 35px
-
-        rgba(255,70,70,.25);
-
-}
-
-
-
-.score-label{
-
-    font-size:18px;
-
-    color:var(--muted);
-
-}
-
-
-
-.score-value{
-
-    margin:12px 0;
-
-    font-size:58px;
-
-    font-weight:900;
-
-}
-
-
-
-.score-text{
-
-    letter-spacing:3px;
-
-    font-size:14px;
-
-}
-
-
-
-/* =====================================================
-                    CENTER PANEL
-===================================================== */
-
-.center-panel{
-
-    display:flex;
-
-    flex-direction:column;
-
-    align-items:center;
-
-    gap:12px;
-
-}
-
-
-
-.timer{
-
-    width:120px;
-
-    height:120px;
-
-    border-radius:50%;
-
-    display:flex;
-
-    justify-content:center;
-
-    align-items:center;
-
-    font-size:42px;
-
-    font-weight:bold;
-
-    background:#111;
-
-    border:6px solid var(--blue);
-
-    box-shadow:
-
-        0 0 30px rgba(0,180,255,.5);
-
-}
-
-
-
-.timer.warning{
-
-    border-color:var(--yellow);
-
-}
-
-
-
-.timer.danger{
-
-    border-color:var(--danger);
-
-    animation:timerFlash .6s infinite;
-
-}
-
-
-
-.match-state{
-
-    letter-spacing:4px;
-
-    color:var(--muted);
-
-}
-
-
-
-@keyframes timerFlash{
-
-    50%{
-
-        transform:scale(1.05);
-
-    }
-
-}
-
-
-
-/* =====================================================
-                    BATTLE ZONE
-===================================================== */
-
-.battle-zone{
-
-    position:relative;
-
-    height:560px;
-
-    overflow:hidden;
-
-    border-radius:30px;
-
-    background:
-
-        radial-gradient(
-
-            circle,
-
-            #152b4d,
-
-            #07111f
-
-        );
-
-}
-
-
-
-/* =====================================================
-                    TABLE
-===================================================== */
-
-.table{
-
-    position:absolute;
-
-    left:50%;
-
-    bottom:90px;
-
-    transform:translateX(-50%);
-
-    width:420px;
-
-    height:90px;
-
-    border-radius:20px;
-
-    background:
-
-        linear-gradient(
-
-            #6d4728,
-
-            #3f2513
-
-        );
-
-    box-shadow:
-
-        0 15px 30px
-
-        rgba(0,0,0,.45);
-
-}
-
-
-
-/* =====================================================
-                    FIGHTERS
-===================================================== */
-
-.fighter{
-
-    position:absolute;
-
-    bottom:100px;
-
-    width:180px;
-
-    height:360px;
-
-}
-
-
-
-.fighter.blue{
-
-    left:18%;
-
-}
-
-
-
-.fighter.red{
-
-    right:18%;
-
-}
-
-
-
-/* =====================================================
-                    HEAD
-===================================================== */
-
-.head{
-
-    position:absolute;
-
-    left:50%;
-
-    transform:translateX(-50%);
-
-    width:64px;
-
-    height:64px;
-
-    border-radius:50%;
-
-    background:#f0d0b4;
-
-}
-
-
-
-/* =====================================================
-                    BODY
-===================================================== */
-
-.body{
-
-    position:absolute;
-
-    top:60px;
-
-    left:50%;
-
-    transform:translateX(-50%);
-
-    width:95px;
-
-    height:145px;
-
-    border-radius:22px;
-
-}
-
-
-
-.blue .body{
-
-    background:var(--blue);
-
-}
-
-
-
-.red .body{
-
-    background:var(--red);
-
-}
-
-
-
-/* =====================================================
-                    ARM
-===================================================== */
-
-.arm{
-
-    position:absolute;
-
-    top:82px;
-
-    width:90px;
-
-    height:18px;
-
-    border-radius:20px;
-
-    background:#f0d0b4;
-
-    transform-origin:left center;
-
-    transition:
-
-        transform .08s linear;
-
-}
-
-
-
-.blue .arm{
-
-    right:-15px;
-
-}
-
-
-
-.red .arm{
-
-    left:-15px;
-
-    transform-origin:right center;
-
-}
-
-
-
-.arm.attack{
-
-    filter:
-
-        brightness(1.3);
-
-}
-
-
-
-/* =====================================================
-                    LEFT ARM
-===================================================== */
-
-.left-arm{
-
-    position:absolute;
-
-    top:112px;
-
-    width:70px;
-
-    height:16px;
-
-    border-radius:20px;
-
-    background:#f0d0b4;
-
-}
-
-
-
-.blue .left-arm{
-
-    left:-10px;
-
-}
-
-
-
-.red .left-arm{
-
-    right:-10px;
-
-}
-
-
-
-/* =====================================================
-                    LEGS
-===================================================== */
-
-.legs{
-
-    position:absolute;
-
-    bottom:0;
-
-    left:50%;
-
-    transform:translateX(-50%);
-
-    width:22px;
-
-    height:135px;
-
-    background:#1d1d1d;
-
-    box-shadow:
-
-        42px 0 #1d1d1d,
-
-        -42px 0 #1d1d1d;
-
-}
-
-
-
-/* =====================================================
-                    PROGRESS BAR
-===================================================== */
-
-.progress-wrapper{
-
-    position:absolute;
-
-    left:50%;
-
-    bottom:35px;
-
-    transform:translateX(-50%);
-
-    width:620px;
-
-}
-
-
-
-.progress-track{
-
-    position:relative;
-
-    height:20px;
-
-    border-radius:30px;
-
-    background:#111;
-
-    overflow:hidden;
-
-}
-
-
-
-.progress-track::before{
-
-    content:"";
-
-    position:absolute;
-
-    inset:0;
-
-    background:
-
-        linear-gradient(
-
-            90deg,
-
-            var(--blue),
-
-            white,
-
-            var(--red)
-
-        );
-
-    opacity:.25;
-
-}
-
-
-
-.progress-value{
-
-    position:absolute;
-
-    top:-6px;
-
-    width:32px;
-
-    height:32px;
-
-    border-radius:50%;
-
-    background:white;
-
-    transform:translateX(-50%);
-
-    box-shadow:
-
-        0 0 20px white;
-
-}
-
-
-
-/* =====================================================
-                    TAP PANEL
-===================================================== */
-
-.tap-panel{
-
-    display:grid;
-
-    grid-template-columns:
-
-        1fr 1fr;
-
-    gap:35px;
-
-}
-
-
-
-.tap-button{
-
-    height:120px;
-
-    border-radius:25px;
-
-    font-size:42px;
-
-    font-weight:900;
-
-    color:white;
-
-    letter-spacing:3px;
-
-}
-
-
-
-.tap-button.blue{
-
-    background:
-
-        linear-gradient(
-
-            var(--blue),
-
-            #0069d6
-
-        );
-
-    box-shadow:
-
-        0 0 40px
-
-        rgba(0,180,255,.45);
-
-}
-
-.tap-button.red{
-
-    background:
-
-        linear-gradient(
-
-            var(--red),
-
-            #981414
-
-        );
-
-    opacity:.45;
-
-}
-
-.tap-button.blue:active{
-
-    transform:
-
-        scale(.92);
-
-}
-
-/* =====================================================
-                    RESULT SCREEN
-===================================================== */
-
-.result-screen{
-
-    display:flex;
-
-    justify-content:center;
-
-    align-items:center;
-
-    min-height:65vh;
-
-}
-
-
-
-.result-card{
-
-    max-width:700px;
-
-    text-align:center;
-
-    animation:
-
-        resultAppear .5s ease;
-
-}
-
-
-
-.result-card.victory{
-
-    border:2px solid rgba(24,210,107,.45);
-
-    box-shadow:
-
-        0 0 40px rgba(24,210,107,.25);
-
-}
-
-
-
-.result-card.defeat{
-
-    border:2px solid rgba(255,64,64,.45);
-
-    box-shadow:
-
-        0 0 40px rgba(255,64,64,.25);
-
-}
-
-
-
-.result-card.draw{
-
-    border:2px solid rgba(255,197,66,.45);
-
-    box-shadow:
-
-        0 0 40px rgba(255,197,66,.25);
-
-}
-
-
-
-.result-icon{
-
-    font-size:90px;
-
-    margin-bottom:20px;
-
-}
-
-
-
-.result-stats{
-
-    display:grid;
-
-    grid-template-columns:1fr 1fr;
-
-    gap:25px;
-
-    margin:35px 0;
-
-}
-
-
-
-.stat{
-
-    padding:22px;
-
-    border-radius:18px;
-
-    background:rgba(255,255,255,.05);
-
-}
-
-
-
-.stat span{
-
-    display:block;
-
-    color:var(--muted);
-
-    margin-bottom:10px;
-
-}
-
-
-
-.stat strong{
-
-    font-size:38px;
-
-}
-
-
-
-/* =====================================================
-                    RESULT BUTTON
-===================================================== */
-
-.result-buttons{
-
-    display:flex;
-
-    justify-content:center;
-
-}
-
-
-
-.play-again{
-
-    min-width:260px;
-
-    height:64px;
-
-    border-radius:18px;
-
-    font-size:20px;
-
-    font-weight:bold;
-
-    color:white;
-
-    background:
-
-        linear-gradient(
-
-            135deg,
-
-            var(--blue),
-
-            #0058d4
-
-        );
-
-    box-shadow:
-
-        0 0 25px rgba(0,160,255,.35);
-
-}
-
-
-
-.play-again:hover{
-
-    box-shadow:
-
-        0 0 40px rgba(0,180,255,.55);
-
-}
-
-
-
-/* =====================================================
-                LOADING PANEL
-===================================================== */
-
-.loading-panel{
-
-    position:fixed;
-
-    left:50%;
-
-    bottom:30px;
-
-    transform:translateX(-50%);
-
-    padding:18px 32px;
-
-    border-radius:50px;
-
-    background:rgba(10,20,35,.92);
-
-    border:1px solid rgba(255,255,255,.08);
-
-    backdrop-filter:blur(12px);
-
-    z-index:999;
-
-}
-
-
-
-/* =====================================================
-                ERROR PANEL
-===================================================== */
-
-.error-panel{
-
-    position:fixed;
-
-    left:50%;
-
-    top:25px;
-
-    transform:translateX(-50%);
-
-    padding:18px 32px;
-
-    border-radius:18px;
-
-    background:#7c1f1f;
-
-    color:white;
-
-    z-index:999;
-
-    animation:
-
-        shake .45s;
-
-}
-
-
-
-/* =====================================================
-                SCROLLBAR
-===================================================== */
-
-::-webkit-scrollbar{
-
-    width:10px;
-
-}
-
-
-
-::-webkit-scrollbar-track{
-
-    background:#091322;
-
-}
-
-
-
-::-webkit-scrollbar-thumb{
-
-    background:#244d88;
-
-    border-radius:30px;
-
-}
-
-
-
-::-webkit-scrollbar-thumb:hover{
-
-    background:#2f6dc2;
-
-}
-
-
-
-/* =====================================================
-                    RESPONSIVE
-===================================================== */
-
-@media (max-width:1200px){
-
-    .fighter.blue{
-
-        left:10%;
-
-    }
-
-    .fighter.red{
-
-        right:10%;
-
-    }
-
-}
-
-
-
-@media (max-width:992px){
-
-    .bravman-header{
-
-        padding:25px;
-
-        flex-direction:column;
-
-        gap:25px;
-
-        text-align:center;
-
-    }
-
-    .scoreboard{
-
-        grid-template-columns:1fr;
-
-    }
-
-    .center-panel{
-
-        order:-1;
-
-    }
-
-    .progress-wrapper{
-
-        width:90%;
-
-    }
-
-}
-
-
-
-@media (max-width:768px){
-
-    .battle-zone{
-
-        height:430px;
-
-    }
-
-    .fighter{
-
-        transform:scale(.82);
-
-    }
-
-    .tap-panel{
-
-        grid-template-columns:1fr;
-
-    }
-
-    .tap-button{
-
-        height:95px;
-
-        font-size:34px;
-
-    }
-
-    .countdown-number{
-
-        font-size:100px;
-
-    }
-
-    .result-stats{
-
-        grid-template-columns:1fr;
-
-    }
-
+.bravman-page::-webkit-scrollbar {
+    width: 10px;
 }
-
-
-
-@media (max-width:560px){
-
-    .bravman-header h1{
-
-        font-size:34px;
-
-    }
-
-    .players-preview{
-
-        gap:25px;
-
-    }
 
-    .avatar{
-
-        width:80px;
-
-        height:80px;
-
-    }
-
-    .fighter{
-
-        transform:scale(.68);
-
-    }
-
-    .progress-track{
-
-        height:14px;
-
-    }
-
-    .progress-value{
-
-        width:24px;
-
-        height:24px;
-
-    }
-
+.bravman-page::-webkit-scrollbar-track {
+    background: #091322;
 }
-
-
 
-/* =====================================================
-                    ANIMATIONS
-===================================================== */
-
-@keyframes resultAppear{
-
-    from{
-
-        opacity:0;
-
-        transform:scale(.85);
-
-    }
-
-    to{
-
-        opacity:1;
-
-        transform:scale(1);
-
-    }
-
+.bravman-page::-webkit-scrollbar-thumb {
+    background: #244d88;
+    border-radius: 30px;
 }
-
-
-
-@keyframes shake{
-
-    20%{
-
-        transform:
-
-            translateX(-52%);
-
-    }
-
-    40%{
-
-        transform:
-
-            translateX(-48%);
-
-    }
-
-    60%{
-
-        transform:
-
-            translateX(-52%);
-
-    }
-
-    80%{
-
-        transform:
-
-            translateX(-48%);
-
-    }
-
-    100%{
-
-        transform:
-
-            translateX(-50%);
-
-    }
 
+.bravman-page::-webkit-scrollbar-thumb:hover {
+    background: #2f6dc2;
 }

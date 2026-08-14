@@ -9,8 +9,8 @@ import {
     useState,
     useEffect,
     useRef,
-    useMemo,
-    useCallback
+    useCallback,
+    useMemo
 } from "react";
 
 import { io } from "socket.io-client";
@@ -27,74 +27,65 @@ import {
 // CONFIGURATION
 // ==========================================================
 
-const API =
-    import.meta.env.VITE_API_URL;
+const GAME_ID = "bravman";
+
+const API_URL =
+    import.meta.env.VITE_API_URL || "";
 
 const SOCKET_URL =
     import.meta.env.VITE_SOCKET_URL ||
-    API?.replace(/\/api$/, "");
+    API_URL.replace(/\/api\/?$/, "");
 
-const GAME_ID =
-    "bravman";
+const GAME_DURATION = 45;
+const COUNTDOWN_DURATION = 3;
 
-const GAME_DURATION =
-    45;
+const MATCH_REFRESH = 3000;
+const SOCKET_TIMEOUT = 15000;
 
-const COUNTDOWN_DURATION =
-    3;
+const MAX_ARM_ROTATION = 45;
+const MAX_PROGRESS = 200;
 
-const MATCH_REFRESH =
-    3000;
-
-const SOCKET_TIMEOUT =
-    15000;
-
-const MAX_ARM_ROTATION =
-    45;
-
-const MAX_PROGRESS =
-    100;
-
-const TAP_ANIMATION =
-    120;
+const TAP_ANIMATION = 120;
 
 
 // ==========================================================
-// CYCLE DE VIE DU MATCH
+// STATUTS UI
 // ==========================================================
 
 const STATUS = {
 
-    MENU:
-        "menu",
+    MENU: "menu",
 
-    CREATING:
-        "creating",
+    CREATING: "creating",
 
-    WAITING:
-        "waiting",
+    WAITING: "waiting",
 
-    READY:
-        "ready",
+    READY: "ready",
 
-    COUNTDOWN:
-        "countdown",
+    COUNTDOWN: "countdown",
 
-    PLAYING:
-        "playing",
+    PLAYING: "playing",
 
-    FINISHED:
-        "finished",
+    FINISHED: "finished",
 
-    ERROR:
-        "error"
+    ERROR: "error"
 
 };
 
 
 // ==========================================================
-// AUTHENTIFICATION
+// UTILITAIRE AUTHENTIFICATION
 // ==========================================================
+
+const normalizeId = (value) => {
+
+    const id = Number(value);
+
+    return Number.isFinite(id) && id > 0
+        ? id
+        : null;
+};
+
 
 const getCurrentUserId = () => {
 
@@ -114,17 +105,27 @@ const getCurrentUserId = () => {
             return null;
         }
 
+        // JWT utilise du base64url, pas toujours du base64 classique.
+        const base64Payload =
+            parts[1]
+                .replace(/-/g, "+")
+                .replace(/_/g, "/")
+                .padEnd(
+                    Math.ceil(parts[1].length / 4) * 4,
+                    "="
+                );
+
         const payload =
             JSON.parse(
-                atob(parts[1])
+                atob(base64Payload)
             );
 
-        const userId =
-            Number(payload?.id);
-
-        return Number.isFinite(userId)
-            ? userId
-            : null;
+        return normalizeId(
+            payload?.id ??
+            payload?.userId ??
+            payload?.user_id ??
+            payload?.sub
+        );
 
     } catch (error) {
 
@@ -139,7 +140,7 @@ const getCurrentUserId = () => {
 
 
 // ==========================================================
-// COMPOSANT PRINCIPAL
+// COMPOSANT
 // ==========================================================
 
 export default function Bravman() {
@@ -152,6 +153,12 @@ export default function Bravman() {
     const socketRef =
         useRef(null);
 
+    const currentMatchIdRef =
+        useRef(null);
+
+    const currentUserIdRef =
+        useRef(null);
+
 
     // ======================================================
     // TIMERS
@@ -162,6 +169,12 @@ export default function Bravman() {
 
     const tapAnimationTimerRef =
         useRef(null);
+
+    const opponentTapAnimationTimerRef =
+        useRef(null);
+
+    const lastOpponentTapsRef =
+        useRef(0);
 
 
     // ======================================================
@@ -190,7 +203,7 @@ export default function Bravman() {
 
 
     // ======================================================
-    // ÉTAT DU MOTEUR
+    // MOTEUR
     // ======================================================
 
     const [gameState, setGameState] =
@@ -209,7 +222,7 @@ export default function Bravman() {
 
 
     // ======================================================
-    // CONNEXION SOCKET
+    // SOCKET
     // ======================================================
 
     const [connected, setConnected] =
@@ -220,7 +233,7 @@ export default function Bravman() {
 
 
     // ======================================================
-    // MATCH / TEMPS
+    // TEMPS
     // ======================================================
 
     const [timer, setTimer] =
@@ -231,7 +244,7 @@ export default function Bravman() {
 
 
     // ======================================================
-    // RÉSULTAT
+    // RESULTAT
     // ======================================================
 
     const [winner, setWinner] =
@@ -245,12 +258,12 @@ export default function Bravman() {
     const [myTaps, setMyTaps] =
         useState(0);
 
-    const [opponentTaps] =
+    const [opponentTaps, setOpponentTaps] =
         useState(0);
 
 
     // ======================================================
-    // BRAS DE FER
+    // BRAS
     // ======================================================
 
     const [armRotation, setArmRotation] =
@@ -272,7 +285,15 @@ export default function Bravman() {
 
 
     // ======================================================
-    // VALEURS DÉRIVÉES
+    // MISE
+    // ======================================================
+
+    const [stake, setStake] =
+        useState(200);
+
+
+    // ======================================================
+    // MATCH ID
     // ======================================================
 
     const matchId =
@@ -281,33 +302,49 @@ export default function Bravman() {
         null;
 
 
-    const hasMatch =
-        Boolean(matchId);
+    // ======================================================
+    // SYNCHRONISATION REFS
+    // ======================================================
 
+    useEffect(() => {
+
+        currentMatchIdRef.current =
+            matchId
+                ? Number(matchId)
+                : null;
+
+    }, [matchId]);
+
+
+    useEffect(() => {
+
+        currentUserIdRef.current =
+            normalizeId(me?.id);
+
+    }, [me?.id]);
+
+
+    // ======================================================
+    // STATUTS DERIVES
+    // ======================================================
 
     const isMenu =
         status === STATUS.MENU;
 
-
     const isCreating =
         status === STATUS.CREATING;
-
 
     const isWaiting =
         status === STATUS.WAITING;
 
-
     const isReady =
         status === STATUS.READY;
-
 
     const isCountdown =
         status === STATUS.COUNTDOWN;
 
-
     const isPlaying =
         status === STATUS.PLAYING;
-
 
     const isFinished =
         status === STATUS.FINISHED;
@@ -315,11 +352,45 @@ export default function Bravman() {
 
     const canTap =
         connected &&
-        isPlaying;
+        isPlaying &&
+        Boolean(matchId) &&
+        Boolean(me?.id);
 
 
     // ======================================================
-    // DIFFÉRENCE DE TAPS
+    // INFORMATIONS MATCH
+    // ======================================================
+
+    const currentCreatorId =
+        Number(
+            currentMatch?.players?.creator ??
+            currentMatch?.creatorId ??
+            currentMatch?.creator_id
+        );
+
+    const currentOpponentId =
+        Number(
+            currentMatch?.players?.opponent ??
+            currentMatch?.opponentId ??
+            currentMatch?.opponent_id
+        );
+
+    const hasOpponent =
+        Number.isFinite(
+            currentOpponentId
+        );
+
+
+    // ======================================================
+    // UTILISATEUR
+    // ======================================================
+
+    const currentUserId =
+        normalizeId(me?.id);
+
+
+    // ======================================================
+    // DIFFERENCE
     // ======================================================
 
     const tapDifference =
@@ -357,8 +428,39 @@ export default function Bravman() {
 
 
     // ======================================================
-    // RESET DE L'ARÈNE
-    // Ne détruit PAS le match
+    // GAGNANT
+    // ======================================================
+
+    const iWon =
+        Number.isFinite(winner) &&
+        Number.isFinite(currentUserId) &&
+        Number(winner) === currentUserId;
+
+
+    const opponentWon =
+        Number.isFinite(winner) &&
+        Number.isFinite(currentUserId) &&
+        Number(winner) !== currentUserId;
+
+
+    const resultTitle =
+        iWon
+            ? "🏆 Victoire !"
+            : opponentWon
+                ? "Défaite"
+                : "Match terminé";
+
+
+    const resultMessage =
+        iWon
+            ? "Tu as remporté le bras de fer."
+            : opponentWon
+                ? "Ton adversaire a remporté le bras de fer."
+                : "Le match est terminé.";
+
+
+    // ======================================================
+    // RESET ARENA
     // ======================================================
 
     const resetArena =
@@ -386,11 +488,21 @@ export default function Bravman() {
 
             setOpponentPunch(false);
 
+            lastOpponentTapsRef.current = 0;
+
+            if (opponentTapAnimationTimerRef.current) {
+                clearTimeout(
+                    opponentTapAnimationTimerRef.current
+                );
+
+                opponentTapAnimationTimerRef.current = null;
+            }
+
         }, []);
 
 
-      // ======================================================
-    // LOAD MATCHES
+    // ======================================================
+    // CHARGER LES MATCHS
     // ======================================================
 
     const loadMatches =
@@ -404,6 +516,12 @@ export default function Bravman() {
                     );
 
                 if (!response?.success) {
+
+                    console.error(
+                        "BRAVMAN LOAD MATCHES RESPONSE:",
+                        response
+                    );
+
                     return;
                 }
 
@@ -414,7 +532,63 @@ export default function Bravman() {
                         ? response.matches
                         : [];
 
-                setMatches(list);
+                const currentUser =
+                    getCurrentUserId();
+
+                // Sans utilisateur identifié, ne jamais afficher
+                // des défis potentiellement rejouables par erreur.
+                if (!Number.isFinite(currentUser)) {
+                    setMatches([]);
+                    return;
+                }
+
+                const available =
+                    list.filter(
+                        match => {
+
+                            const matchId =
+                                normalizeId(
+                                    match?.id ??
+                                    match?.matchId
+                                );
+
+                            const creator =
+                                normalizeId(
+                                    match?.players?.creator ??
+                                    match?.creatorId ??
+                                    match?.creator_id
+                                );
+
+                            const opponent =
+                                normalizeId(
+                                    match?.players?.opponent ??
+                                    match?.opponentId ??
+                                    match?.opponent_id
+                                );
+
+                            const matchStatus =
+                                String(
+                                    match?.status ?? ""
+                                ).toLowerCase();
+
+                            return (
+                                Number.isFinite(matchId) &&
+                                Number.isFinite(creator) &&
+                                creator !== currentUser &&
+                                !Number.isFinite(opponent) &&
+                                (
+                                    !matchStatus ||
+                                    matchStatus === "waiting" ||
+                                    matchStatus === "waiting_opponent" ||
+                                    matchStatus === "open"
+                                )
+                            );
+                        }
+                    );
+
+                setMatches(
+                    available
+                );
 
             } catch (error) {
 
@@ -429,7 +603,7 @@ export default function Bravman() {
 
 
     // ======================================================
-    // LOAD CURRENT MATCH
+    // CHARGER UN MATCH
     // ======================================================
 
     const loadCurrentMatch =
@@ -468,86 +642,78 @@ export default function Bravman() {
                 }
 
 
-                // ------------------------------------------
-                // Sauvegarde du match
-                // ------------------------------------------
-
-                setCurrentMatch(match);
-
-
-                // ------------------------------------------
-                // Le match HTTP ne doit pas écraser
-                // l'état temps réel du moteur.
-                // ------------------------------------------
-
-                const currentUserId =
-                    getCurrentUserId();
-
-
-                const creatorId =
-                    Number(
-                        match.players?.creator
-                    );
-
-
-                const opponentId =
-                    Number(
-                        match.players?.opponent
-                    );
-
-
-                console.log(
-                    "BRAVMAN MATCH PLAYERS:",
-                    {
-                        matchId: match.id,
-                        currentUserId,
-                        creatorId,
-                        opponentId,
-                        status: match.status
-                    }
+                setCurrentMatch(
+                    match
                 );
 
 
-                // ------------------------------------------
-                // Vérification des IDs
-                // ------------------------------------------
+                // ----------------------------------------------
+                // IDENTIFICATION
+                // ----------------------------------------------
 
-                if (
-                    !Number.isFinite(
-                        currentUserId
-                    )
-                ) {
+                const userId =
+                    getCurrentUserId();
 
-                    console.error(
-                        "BRAVMAN USER ID INVALID:",
-                        currentUserId
+                const creatorId =
+                    normalizeId(
+                        match?.players?.creator ??
+                        match?.creatorId ??
+                        match?.creator_id
                     );
 
-                    setMe(null);
-                    setOpponent(null);
+                const opponentId =
+                    normalizeId(
+                        match?.players?.opponent ??
+                        match?.opponentId ??
+                        match?.opponent_id
+                    );
 
-                    return match;
+                // Le REST peut être reçu avant le premier événement Socket.
+                // Il faut donc synchroniser l'écran immédiatement.
+                const matchStatus =
+                    String(
+                        match?.status ?? ""
+                    ).toLowerCase();
+
+                if (matchStatus === "countdown") {
+                    setStatus(STATUS.COUNTDOWN);
+                }
+                else if (
+                    matchStatus === "running" ||
+                    matchStatus === "playing"
+                ) {
+                    setStatus(STATUS.PLAYING);
+                }
+                else if (matchStatus === "finished") {
+                    setStatus(STATUS.FINISHED);
+                }
+                else if (
+                    matchStatus === "matched" ||
+                    matchStatus === "ready"
+                ) {
+                    setStatus(STATUS.READY);
+                }
+                else if (
+                    matchStatus === "waiting" ||
+                    matchStatus === "waiting_opponent" ||
+                    matchStatus === "open"
+                ) {
+                    setStatus(STATUS.WAITING);
                 }
 
 
-                // ------------------------------------------
-                // Créateur
-                // ------------------------------------------
-
                 if (
+                    Number.isFinite(userId) &&
                     Number.isFinite(creatorId) &&
-                    currentUserId === creatorId
+                    userId === creatorId
                 ) {
 
                     setMe({
                         id: creatorId
                     });
 
-
                     setOpponent(
-                        Number.isFinite(
-                            opponentId
-                        )
+                        Number.isFinite(opponentId)
                             ? {
                                 id: opponentId
                             }
@@ -556,25 +722,18 @@ export default function Bravman() {
 
                 }
 
-
-                // ------------------------------------------
-                // Adversaire
-                // ------------------------------------------
-
                 else if (
+                    Number.isFinite(userId) &&
                     Number.isFinite(opponentId) &&
-                    currentUserId === opponentId
+                    userId === opponentId
                 ) {
 
                     setMe({
                         id: opponentId
                     });
 
-
                     setOpponent(
-                        Number.isFinite(
-                            creatorId
-                        )
+                        Number.isFinite(creatorId)
                             ? {
                                 id: creatorId
                             }
@@ -582,29 +741,6 @@ export default function Bravman() {
                     );
 
                 }
-
-
-                // ------------------------------------------
-                // Utilisateur absent du match
-                // ------------------------------------------
-
-                else {
-
-                    console.error(
-                        "BRAVMAN USER NOT IN MATCH:",
-                        {
-                            currentUserId,
-                            creatorId,
-                            opponentId,
-                            match
-                        }
-                    );
-
-                    setMe(null);
-                    setOpponent(null);
-
-                }
-
 
                 return match;
 
@@ -622,13 +758,30 @@ export default function Bravman() {
 
 
     // ======================================================
-    // CREATE MATCH
+    // CREER UN MATCH
     // ======================================================
 
     const createMatch =
-        useCallback(async (stake) => {
+        useCallback(async (amount) => {
 
             if (loading) {
+                return;
+            }
+
+            const numericStake =
+                Number(amount);
+
+            if (
+                !Number.isFinite(
+                    numericStake
+                ) ||
+                numericStake < 200
+            ) {
+
+                setError(
+                    "La mise minimale est de 200."
+                );
+
                 return;
             }
 
@@ -639,19 +792,21 @@ export default function Bravman() {
 
                 setError("");
 
-
-                // ------------------------------------------
-                // État transitoire
-                // ------------------------------------------
+                resetArena();
 
                 setStatus(
                     STATUS.CREATING
                 );
 
 
-                // ------------------------------------------
-                // Création via SAC
-                // ------------------------------------------
+                console.log(
+                    "BRAVMAN CREATE:",
+                    {
+                        game: GAME_ID,
+                        stake: numericStake
+                    }
+                );
+
 
                 const response =
                     await createSacMatch({
@@ -659,9 +814,16 @@ export default function Bravman() {
                         game:
                             GAME_ID,
 
-                        stake
+                        stake:
+                            numericStake
 
                     });
+
+
+                console.log(
+                    "BRAVMAN CREATE RESPONSE:",
+                    response
+                );
 
 
                 if (!response?.success) {
@@ -670,50 +832,47 @@ export default function Bravman() {
                         response?.message ||
                         "Création du match impossible."
                     );
-
                 }
 
 
-                if (!response.match) {
+                const match =
+                    response.match;
+
+                if (!match) {
 
                     throw new Error(
                         "Le SAC n'a retourné aucun match."
                     );
-
                 }
 
 
-                // ------------------------------------------
-                // Nouveau match
-                // ------------------------------------------
-
                 setCurrentMatch(
-                    response.match
+                    match
                 );
 
 
-                // ------------------------------------------
-                // Déterminer immédiatement
-                // l'utilisateur courant
-                // ------------------------------------------
-
-                const currentUserId =
+                const userId =
                     getCurrentUserId();
 
-
                 const creatorId =
-                    Number(
-                        response.match
-                            ?.players
-                            ?.creator
+                    normalizeId(
+                        match?.players?.creator ??
+                        match?.creatorId ??
+                        match?.creator_id
                     );
 
 
                 if (
-                    Number.isFinite(
-                        currentUserId
-                    ) &&
-                    currentUserId === creatorId
+                    Number.isFinite(userId)
+                ) {
+
+                    setMe({
+                        id: userId
+                    });
+
+                }
+                else if (
+                    Number.isFinite(creatorId)
                 ) {
 
                     setMe({
@@ -725,20 +884,10 @@ export default function Bravman() {
 
                 setOpponent(null);
 
-
-                // ------------------------------------------
-                // Un match nouvellement créé
-                // attend l'adversaire.
-                // ------------------------------------------
-
                 setStatus(
                     STATUS.WAITING
                 );
 
-
-                // ------------------------------------------
-                // Actualiser la liste
-                // ------------------------------------------
 
                 await loadMatches();
 
@@ -750,17 +899,14 @@ export default function Bravman() {
                     error
                 );
 
-
                 setError(
                     error?.message ||
                     "Impossible de créer le match."
                 );
 
-
                 setStatus(
                     STATUS.ERROR
                 );
-
 
             } finally {
 
@@ -770,12 +916,13 @@ export default function Bravman() {
 
         }, [
             loading,
+            resetArena,
             loadMatches
         ]);
 
 
     // ======================================================
-    // JOIN MATCH
+    // REJOINDRE UN MATCH
     // ======================================================
 
     const joinMatch =
@@ -788,6 +935,22 @@ export default function Bravman() {
                 return;
             }
 
+            const numericMatchId =
+                Number(id);
+
+            if (
+                !Number.isFinite(
+                    numericMatchId
+                )
+            ) {
+
+                setError(
+                    "Identifiant de match invalide."
+                );
+
+                return;
+            }
+
 
             try {
 
@@ -795,10 +958,14 @@ export default function Bravman() {
 
                 setError("");
 
+                resetArena();
 
-                // ------------------------------------------
-                // Rejoindre via SAC
-                // ------------------------------------------
+
+                console.log(
+                    "BRAVMAN JOIN:",
+                    numericMatchId
+                );
+
 
                 const response =
                     await joinSacMatch({
@@ -807,9 +974,15 @@ export default function Bravman() {
                             GAME_ID,
 
                         matchId:
-                            id
+                            numericMatchId
 
                     });
+
+
+                console.log(
+                    "BRAVMAN JOIN RESPONSE:",
+                    response
+                );
 
 
                 if (!response?.success) {
@@ -818,7 +991,6 @@ export default function Bravman() {
                         response?.message ||
                         "Impossible de rejoindre le match."
                     );
-
                 }
 
 
@@ -827,42 +999,85 @@ export default function Bravman() {
                     throw new Error(
                         "Le SAC n'a retourné aucun match après join."
                     );
-
                 }
 
-
-                // ------------------------------------------
-                // Sauvegarde immédiate
-                // ------------------------------------------
 
                 setCurrentMatch(
                     response.match
                 );
 
 
-                // ------------------------------------------
-                // Le joueur vient de rejoindre.
-                // On passe temporairement à READY.
-                // Le moteur/socket déterminera ensuite
-                // COUNTDOWN ou PLAYING.
-                // ------------------------------------------
+                const userId =
+                    getCurrentUserId();
+
+                const creatorId =
+                    normalizeId(
+                        response.match?.players?.creator ??
+                        response.match?.creatorId ??
+                        response.match?.creator_id
+                    );
+
+                const opponentId =
+                    normalizeId(
+                        response.match?.players?.opponent ??
+                        response.match?.opponentId ??
+                        response.match?.opponent_id
+                    );
+
+
+                if (
+                    Number.isFinite(userId)
+                ) {
+
+                    setMe({
+                        id: userId
+                    });
+
+                    if (
+                        Number.isFinite(
+                            creatorId
+                        ) &&
+                        userId === creatorId
+                    ) {
+
+                        setOpponent(
+                            Number.isFinite(opponentId)
+                                ? {
+                                    id: opponentId
+                                }
+                                : null
+                        );
+
+                    }
+
+                    else if (
+                        Number.isFinite(
+                            opponentId
+                        ) &&
+                        userId === opponentId
+                    ) {
+
+                        setOpponent(
+                            Number.isFinite(creatorId)
+                                ? {
+                                    id: creatorId
+                                }
+                                : null
+                        );
+
+                    }
+
+                }
+
 
                 setStatus(
                     STATUS.READY
                 );
 
 
-                // ------------------------------------------
-                // Recharger depuis le SAC
-                // pour obtenir les deux joueurs.
-                // ------------------------------------------
-
-                await loadCurrentMatch(id);
-
-
-                // ------------------------------------------
-                // Actualiser les défis disponibles
-                // ------------------------------------------
+                await loadCurrentMatch(
+                    numericMatchId
+                );
 
                 await loadMatches();
 
@@ -874,17 +1089,14 @@ export default function Bravman() {
                     error
                 );
 
-
                 setError(
                     error?.message ||
                     "Impossible de rejoindre le match."
                 );
 
-
                 setStatus(
                     STATUS.ERROR
                 );
-
 
             } finally {
 
@@ -894,13 +1106,91 @@ export default function Bravman() {
 
         }, [
             loading,
+            resetArena,
             loadCurrentMatch,
             loadMatches
         ]);
 
 
     // ======================================================
-    // INITIAL LOAD
+    // RESET COMPLET
+    // ======================================================
+
+    const resetGame =
+        useCallback(() => {
+
+            console.log(
+                "BRAVMAN RESET GAME"
+            );
+
+
+            if (
+                tapAnimationTimerRef.current
+            ) {
+
+                clearTimeout(
+                    tapAnimationTimerRef.current
+                );
+
+                tapAnimationTimerRef.current =
+                    null;
+
+            }
+
+
+            setCurrentMatch(null);
+
+            setGameState(null);
+
+            setMe(null);
+
+            setOpponent(null);
+
+            setWinner(null);
+
+            setMyTaps(0);
+
+            setOpponentTaps(0);
+
+            setTimer(
+                GAME_DURATION
+            );
+
+            setCountdown(
+                COUNTDOWN_DURATION
+            );
+
+            setArmRotation(0);
+
+            setArmProgress(50);
+
+            setMyPunch(false);
+
+            setOpponentPunch(false);
+
+            lastOpponentTapsRef.current = 0;
+
+            if (opponentTapAnimationTimerRef.current) {
+                clearTimeout(
+                    opponentTapAnimationTimerRef.current
+                );
+
+                opponentTapAnimationTimerRef.current = null;
+            }
+
+            setPing("--");
+
+            setError("");
+
+            setStatus(
+                STATUS.MENU
+            );
+
+        }, []);
+
+
+    // ======================================================
+    // INITIALISATION
     // ======================================================
 
     useEffect(() => {
@@ -913,7 +1203,7 @@ export default function Bravman() {
 
 
     // ======================================================
-    // AUTO REFRESH DES DÉFIS
+    // REFRESH DES DEFIS
     // ======================================================
 
     useEffect(() => {
@@ -922,7 +1212,14 @@ export default function Bravman() {
             setInterval(
                 () => {
 
-                    loadMatches();
+                    if (
+                        status ===
+                        STATUS.MENU
+                    ) {
+
+                        loadMatches();
+
+                    }
 
                 },
                 MATCH_REFRESH
@@ -941,18 +1238,18 @@ export default function Bravman() {
 
                 refreshTimerRef.current =
                     null;
-
             }
 
         };
 
     }, [
+        status,
         loadMatches
     ]);
 
 
     // ======================================================
-    // RECHARGEMENT DU MATCH COURANT
+    // CHARGER MATCH COURANT
     // ======================================================
 
     useEffect(() => {
@@ -970,7 +1267,8 @@ export default function Bravman() {
         loadCurrentMatch
     ]);
 
-        // ======================================================
+
+    // ======================================================
     // SOCKET — CONNEXION
     // ======================================================
 
@@ -983,46 +1281,72 @@ export default function Bravman() {
             );
 
             setError(
-                "Configuration Socket BraVMan absente."
+                "VITE_SOCKET_URL est absent. Impossible de connecter BraVMan."
             );
 
             return;
         }
 
 
-        // --------------------------------------------------
-        // Création d'une seule connexion
-        // --------------------------------------------------
+        console.log(
+            "BRAVMAN SOCKET URL:",
+            SOCKET_URL
+        );
 
-        const socket =
-            io(SOCKET_URL, {
 
-                transports: [
-                    "websocket",
-                    "polling"
-                ],
+        const token =
+    localStorage.getItem("token");
 
-                autoConnect: true,
+if (!token) {
 
-                reconnection: true,
+    console.error(
+        "BRAVMAN SOCKET : TOKEN ABSENT"
+    );
 
-                reconnectionAttempts: 10,
+    setConnected(false);
 
-                reconnectionDelay: 1000,
+    setError(
+        "Session utilisateur absente. Reconnecte-toi."
+    );
 
-                timeout:
-                    SOCKET_TIMEOUT
+    return;
+}
 
-            });
+
+const socket =
+    io(
+        SOCKET_URL,
+        {
+            transports: [
+                "websocket",
+                "polling"
+            ],
+
+            auth: {
+                token
+            },
+
+            autoConnect: true,
+
+            reconnection: true,
+
+            reconnectionAttempts: Infinity,
+
+            reconnectionDelay: 1000,
+
+            timeout:
+                SOCKET_TIMEOUT
+        }
+    );
 
 
         socketRef.current =
             socket;
 
 
-        // --------------------------------------------------
+        // ----------------------------------------------
         // CONNECT
-        // --------------------------------------------------
+        // ----------------------------------------------
 
         const handleConnect =
             () => {
@@ -1034,65 +1358,39 @@ export default function Bravman() {
 
                 setConnected(true);
 
-                setError("");
             };
 
 
-        // --------------------------------------------------
+        // ----------------------------------------------
         // DISCONNECT
-        // --------------------------------------------------
+        // ----------------------------------------------
 
         const handleDisconnect =
             (reason) => {
 
-                console.log(
+                console.warn(
                     "BRAVMAN SOCKET DISCONNECTED:",
                     reason
                 );
 
                 setConnected(false);
+
             };
 
 
-        // --------------------------------------------------
-        // CONNECT ERROR
-        // --------------------------------------------------
+        // ----------------------------------------------
+        // ERROR
+        // ----------------------------------------------
 
         const handleConnectError =
-            (error) => {
+            (socketError) => {
 
                 console.error(
                     "BRAVMAN SOCKET CONNECT ERROR:",
-                    error
+                    socketError
                 );
 
                 setConnected(false);
-
-            };
-
-
-        // --------------------------------------------------
-        // PING
-        // --------------------------------------------------
-
-        const handlePing =
-            () => {
-
-                const started =
-                    Date.now();
-
-
-                socket.emit(
-                    "bravman:ping",
-                    () => {
-
-                        setPing(
-                            Date.now() -
-                            started
-                        );
-
-                    }
-                );
 
             };
 
@@ -1113,227 +1411,232 @@ export default function Bravman() {
         );
 
 
-        // --------------------------------------------------
-        // Nettoyage
-        // --------------------------------------------------
+        // ----------------------------------------------
+        // MATCH READY
+        // ----------------------------------------------
+        // Le backend SAC/Bravman utilise cet événement pour
+        // prévenir le challenger ET le créateur que le second
+        // joueur est arrivé. Sans ce listener, le créateur peut
+        // rester bloqué sur "En attente".
 
-        return () => {
-
-            socket.off(
-                "connect",
-                handleConnect
-            );
-
-            socket.off(
-                "disconnect",
-                handleDisconnect
-            );
-
-            socket.off(
-                "connect_error",
-                handleConnectError
-            );
-
-            socket.disconnect();
-
-            if (
-                socketRef.current === socket
-            ) {
-
-                socketRef.current =
-                    null;
-
-            }
-
-            setConnected(false);
-
-        };
-
-    }, []);
-
-
-    // ======================================================
-    // SOCKET — JOIN DU MATCH
-    // ======================================================
-
-    useEffect(() => {
-
-        if (!connected) {
-            return;
-        }
-
-        if (!matchId) {
-            return;
-        }
-
-        if (!socketRef.current) {
-            return;
-        }
-
-        if (!me?.id) {
-
-            console.warn(
-                "BRAVMAN SOCKET JOIN ATTEND USER:",
-                {
-                    matchId,
-                    me
-                }
-            );
-
-            return;
-        }
-
-
-        const socket =
-            socketRef.current;
-
-
-        const numericMatchId =
-            Number(matchId);
-
-        const numericUserId =
-            Number(me.id);
-
-
-        if (
-            !Number.isFinite(
-                numericMatchId
-            )
-        ) {
-
-            console.error(
-                "BRAVMAN INVALID MATCH ID:",
-                matchId
-            );
-
-            return;
-        }
-
-
-        if (
-            !Number.isFinite(
-                numericUserId
-            )
-        ) {
-
-            console.error(
-                "BRAVMAN INVALID USER ID:",
-                me.id
-            );
-
-            return;
-        }
-
-
-        console.log(
-            "BRAVMAN JOIN SOCKET:",
-            {
-                matchId:
-                    numericMatchId,
-
-                userId:
-                    numericUserId
-            }
-        );
-
-
-        // --------------------------------------------------
-        // ACK
-        // --------------------------------------------------
-
-        let acknowledged =
-            false;
-
-
-        const joinPayload = {
-
-            matchId:
-                numericMatchId,
-
-            userId:
-                numericUserId
-
-        };
-
-
-        socket.emit(
-            "bravman:join",
-            joinPayload,
-            (ack) => {
-
-                acknowledged =
-                    true;
-
+        const handleMatchReady =
+            (payload) => {
 
                 console.log(
-                    "BRAVMAN JOIN ACK:",
-                    ack
+                    "BRAVMAN MATCH READY:",
+                    payload
+                );
+
+                const receivedMatchId =
+                    normalizeId(
+                        payload?.matchId ??
+                        payload?.match_id
+                    );
+
+                const expectedMatchId =
+                    normalizeId(
+                        currentMatchIdRef.current
+                    );
+
+                if (
+                    Number.isFinite(receivedMatchId) &&
+                    Number.isFinite(expectedMatchId) &&
+                    receivedMatchId !== expectedMatchId
+                ) {
+                    return;
+                }
+
+                const opponentId =
+                    normalizeId(
+                        payload?.opponentId ??
+                        payload?.opponent_id
+                    );
+
+                if (Number.isFinite(opponentId)) {
+                    setOpponent({
+                        id: opponentId
+                    });
+                }
+
+                setStatus(STATUS.READY);
+
+                if (currentMatchIdRef.current) {
+                    loadCurrentMatch(
+                        currentMatchIdRef.current
+                    );
+                }
+            };
+
+
+        // ----------------------------------------------
+        // FINISHED
+        // ----------------------------------------------
+
+        const handleFinished =
+            (payload) => {
+
+                console.log(
+                    "BRAVMAN FINISHED:",
+                    payload
+                );
+
+
+                const receivedMatchId =
+                    Number(
+                        payload?.matchId
+                    );
+
+                const expectedMatchId =
+                    Number(
+                        currentMatchIdRef.current
+                    );
+
+
+                if (
+                    Number.isFinite(
+                        receivedMatchId
+                    ) &&
+                    Number.isFinite(
+                        expectedMatchId
+                    ) &&
+                    receivedMatchId !==
+                    expectedMatchId
+                ) {
+
+                    return;
+                }
+
+
+                const receivedWinner =
+                    Number(
+                        payload?.winnerId ??
+                        payload?.winner_id
+                    );
+
+
+                if (
+                    Number.isFinite(
+                        receivedWinner
+                    )
+                ) {
+
+                    setWinner(
+                        receivedWinner
+                    );
+
+                }
+
+
+                setStatus(
+                    STATUS.FINISHED
                 );
 
 
                 if (
-                    ack?.success === false
+                    currentMatchIdRef.current
                 ) {
 
-                    setError(
-                        ack.message ||
-                        "Impossible de rejoindre la partie BraVMan."
+                    loadCurrentMatch(
+                        currentMatchIdRef.current
                     );
 
                 }
 
-            }
-        );
+                loadMatches();
+
+            };
 
 
-        // --------------------------------------------------
-        // Sécurité : certains backends peuvent ne pas
-        // retourner d'ACK.
-        // --------------------------------------------------
+        // ----------------------------------------------
+        // JOINED
+        // ----------------------------------------------
 
-        const ackTimer =
-            setTimeout(() => {
+        const handleJoined =
+            (payload) => {
 
-                if (!acknowledged) {
+                console.log(
+                    "BRAVMAN JOINED:",
+                    payload
+                );
 
-                    console.warn(
-                        "BRAVMAN JOIN ACK NON REÇU"
+
+                const receivedMatchId =
+                    Number(
+                        payload?.matchId
+                    );
+
+                const expectedMatchId =
+                    Number(
+                        currentMatchIdRef.current
+                    );
+
+
+                if (
+                    Number.isFinite(
+                        receivedMatchId
+                    ) &&
+                    Number.isFinite(
+                        expectedMatchId
+                    ) &&
+                    receivedMatchId !==
+                    expectedMatchId
+                ) {
+
+                    return;
+                }
+
+
+                if (
+                    Number.isFinite(
+                        Number(
+                            payload?.opponentId
+                        )
+                    )
+                ) {
+
+                    setOpponent({
+                        id:
+                            Number(
+                                payload.opponentId
+                            )
+                    });
+
+                }
+
+
+                const joinedStatus =
+                    String(
+                        payload?.status ?? ""
+                    ).toLowerCase();
+
+                if (
+                    joinedStatus === "ready" ||
+                    joinedStatus === "matched"
+                ) {
+
+                    setStatus(
+                        STATUS.READY
                     );
 
                 }
 
-            }, SOCKET_TIMEOUT);
+
+                if (
+                    currentMatchIdRef.current
+                ) {
+
+                    loadCurrentMatch(
+                        currentMatchIdRef.current
+                    );
+
+                }
+
+            };
 
 
-        return () => {
-
-            clearTimeout(
-                ackTimer
-            );
-
-        };
-
-    }, [
-        connected,
-        matchId,
-        me?.id
-    ]);
-
-
-    // ======================================================
-    // SOCKET — UPDATE DU MOTEUR
-    // ======================================================
-
-    useEffect(() => {
-
-        if (!socketRef.current) {
-            return;
-        }
-
-
-        const socket =
-            socketRef.current;
-
+        // ----------------------------------------------
+        // UPDATE
+        // ----------------------------------------------
 
         const handleUpdate =
             (payload) => {
@@ -1344,202 +1647,167 @@ export default function Bravman() {
                 );
 
 
-                // ------------------------------------------------
-                // Certains backends peuvent envoyer directement
-                // l'état, d'autres sous { gameState }.
-                // ------------------------------------------------
-
                 const incoming =
-                    payload?.gameState ||
-                    payload?.state ||
+                    payload?.gameState ??
+                    payload?.state ??
                     payload;
 
 
                 if (!incoming) {
-
-                    console.warn(
-                        "BRAVMAN UPDATE VIDE:",
-                        payload
-                    );
-
                     return;
                 }
 
 
-                const incomingMatchId =
+                const receivedMatchId =
                     Number(
-                        incoming.matchId ??
+                        incoming?.matchId ??
                         payload?.matchId
                     );
 
+                const expectedMatchId =
+                    Number(
+                        currentMatchIdRef.current
+                    );
 
-                // ------------------------------------------------
-                // Ne jamais appliquer l'état d'un autre match.
-                // ------------------------------------------------
 
                 if (
                     Number.isFinite(
-                        incomingMatchId
+                        receivedMatchId
                     ) &&
                     Number.isFinite(
-                        Number(matchId)
+                        expectedMatchId
                     ) &&
-                    incomingMatchId !==
-                        Number(matchId)
+                    receivedMatchId !==
+                    expectedMatchId
                 ) {
-
-                    console.warn(
-                        "BRAVMAN UPDATE IGNORE — AUTRE MATCH:",
-                        {
-                            expected:
-                                Number(matchId),
-
-                            received:
-                                incomingMatchId
-                        }
-                    );
 
                     return;
                 }
 
 
-                // ------------------------------------------------
-                // IDs joueurs
-                // ------------------------------------------------
-
-                const incomingCreatorId =
-                    Number(
-                        incoming.creatorId
-                    );
-
-
-                const incomingOpponentId =
-                    Number(
-                        incoming.opponentId
-                    );
-
-
-                // ------------------------------------------------
-                // IMPORTANT :
-                // Ne pas remplacer un ID valide par NaN.
-                // ------------------------------------------------
-
-                if (
-                    Number.isFinite(
-                        incomingCreatorId
-                    ) &&
-                    Number.isFinite(
-                        incomingOpponentId
-                    )
-                ) {
-
-                    setOpponent(
-                        currentOpponent => {
-
-                            const currentUserId =
-                                Number(
-                                    me?.id
-                                );
-
-
-                            if (
-                                !Number.isFinite(
-                                    currentUserId
-                                )
-                            ) {
-
-                                return currentOpponent;
-                            }
-
-
-                            if (
-                                currentUserId ===
-                                incomingCreatorId
-                            ) {
-
-                                return {
-                                    id:
-                                        incomingOpponentId
-                                };
-
-                            }
-
-
-                            if (
-                                currentUserId ===
-                                incomingOpponentId
-                            ) {
-
-                                return {
-                                    id:
-                                        incomingCreatorId
-                                };
-
-                            }
-
-
-                            return currentOpponent;
-
-                        }
-                    );
-
-                }
-                else {
-
-                    console.warn(
-                        "BRAVMAN ENGINE IDS INVALIDES:",
-                        {
-                            creatorId:
-                                incoming.creatorId,
-
-                            opponentId:
-                                incoming.opponentId
-                        }
-                    );
-
-                }
-
-
-                // ------------------------------------------------
-                // État moteur
-                // ------------------------------------------------
+                // ------------------------------------------
+                // ETAT MOTEUR
+                // ------------------------------------------
 
                 setGameState(
                     incoming
                 );
 
 
-                // ------------------------------------------------
-                // TAPS
-                // ------------------------------------------------
+                // ------------------------------------------
+                // JOUEURS
+                // ------------------------------------------
 
-                const creatorTaps =
-                    Number(
-                        incoming.creatorTaps
-                    ) || 0;
+                const creatorId =
+                    normalizeId(
+                        incoming?.creatorId ??
+                        incoming?.creator_id
+                    );
+
+                const opponentId =
+                    normalizeId(
+                        incoming?.opponentId ??
+                        incoming?.opponent_id
+                    );
 
 
-                const opponentTaps =
-                    Number(
-                        incoming.opponentTaps
-                    ) || 0;
-
-
-                const currentUserId =
-                    Number(
-                        me?.id
+                const userId =
+                    normalizeId(
+                        currentUserIdRef.current
                     );
 
 
                 if (
                     Number.isFinite(
-                        currentUserId
+                        creatorId
+                    ) &&
+                    Number.isFinite(
+                        opponentId
+                    ) &&
+                    Number.isFinite(
+                        userId
                     )
                 ) {
 
                     if (
-                        currentUserId ===
-                        incomingCreatorId
+                        userId ===
+                        creatorId
+                    ) {
+
+                        setOpponent({
+                            id:
+                                opponentId
+                        });
+
+                    }
+
+                    else if (
+                        userId ===
+                        opponentId
+                    ) {
+
+                        setOpponent({
+                            id:
+                                creatorId
+                        });
+
+                    }
+
+                }
+
+
+                // ------------------------------------------
+                // TAPS
+                // ------------------------------------------
+
+                const creatorTaps =
+                    Number(
+                        incoming?.creatorTaps ??
+                        incoming?.creator_taps
+                    ) || 0;
+
+                const opponentTaps =
+                    Number(
+                        incoming?.opponentTaps ??
+                        incoming?.opponent_taps
+                    ) || 0;
+
+                // Le serveur envoie les taps cumulés. Si le compteur
+                // adverse augmente, on déclenche l'animation locale.
+                const previousOpponentTaps =
+                    lastOpponentTapsRef.current;
+
+                if (
+                    opponentTaps > previousOpponentTaps &&
+                    previousOpponentTaps >= 0
+                ) {
+                    setOpponentPunch(true);
+
+                    if (opponentTapAnimationTimerRef.current) {
+                        clearTimeout(
+                            opponentTapAnimationTimerRef.current
+                        );
+                    }
+
+                    opponentTapAnimationTimerRef.current =
+                        setTimeout(() => {
+                            setOpponentPunch(false);
+                        }, TAP_ANIMATION);
+                }
+
+                lastOpponentTapsRef.current =
+                    opponentTaps;
+
+
+                if (
+                    Number.isFinite(
+                        userId
+                    )
+                ) {
+
+                    if (
+                        userId ===
+                        creatorId
                     ) {
 
                         setMyTaps(
@@ -1551,9 +1819,10 @@ export default function Bravman() {
                         );
 
                     }
+
                     else if (
-                        currentUserId ===
-                        incomingOpponentId
+                        userId ===
+                        opponentId
                     ) {
 
                         setMyTaps(
@@ -1569,13 +1838,13 @@ export default function Bravman() {
                 }
 
 
-                // ------------------------------------------------
-                // TEMPS RESTANT
-                // ------------------------------------------------
+                // ------------------------------------------
+                // TEMPS
+                // ------------------------------------------
 
                 const remaining =
                     Number(
-                        incoming.remaining
+                        incoming?.remaining
                     );
 
 
@@ -1595,13 +1864,13 @@ export default function Bravman() {
                 }
 
 
-                // ------------------------------------------------
+                // ------------------------------------------
                 // COUNTDOWN
-                // ------------------------------------------------
+                // ------------------------------------------
 
                 const incomingCountdown =
                     Number(
-                        incoming.countdown
+                        incoming?.countdown
                     );
 
 
@@ -1621,36 +1890,41 @@ export default function Bravman() {
                 }
 
 
-                // ------------------------------------------------
-                // ARM POSITION
-                // ------------------------------------------------
+                // ------------------------------------------
+                // POSITION DU BRAS
+                // ------------------------------------------
 
-                const incomingArm =
+                const arm =
                     Number(
-                        incoming.armPosition
+                        incoming?.armPosition ??
+                        incoming?.arm_position
                     );
 
 
                 if (
                     Number.isFinite(
-                        incomingArm
+                        arm
                     )
                 ) {
 
-                    setArmRotation(
+                    const safeArm =
                         Math.max(
                             -MAX_ARM_ROTATION,
                             Math.min(
                                 MAX_ARM_ROTATION,
-                                incomingArm
+                                arm
                             )
-                        )
+                        );
+
+
+                    setArmRotation(
+                        safeArm
                     );
 
 
                     const normalized =
                         (
-                            incomingArm +
+                            safeArm +
                             MAX_ARM_ROTATION
                         ) /
                         (
@@ -1662,8 +1936,8 @@ export default function Bravman() {
                         Math.max(
                             0,
                             Math.min(
-                                100,
-                                normalized * 100
+                                200,
+                                normalized * 200
                             )
                         )
                     );
@@ -1671,13 +1945,37 @@ export default function Bravman() {
                 }
 
 
-                // ------------------------------------------------
-                // STATUS MOTEUR
-                // ------------------------------------------------
+                // ------------------------------------------
+                // GAGNANT
+                // ------------------------------------------
+
+                const winnerId =
+                    Number(
+                        incoming?.winnerId ??
+                        incoming?.winner_id
+                    );
+
+
+                if (
+                    Number.isFinite(
+                        winnerId
+                    )
+                ) {
+
+                    setWinner(
+                        winnerId
+                    );
+
+                }
+
+
+                // ------------------------------------------
+                // STATUS
+                // ------------------------------------------
 
                 const engineStatus =
                     String(
-                        incoming.status ||
+                        incoming?.status ??
                         ""
                     ).toLowerCase();
 
@@ -1692,6 +1990,7 @@ export default function Bravman() {
                     );
 
                 }
+
                 else if (
                     engineStatus ===
                     "running"
@@ -1702,6 +2001,7 @@ export default function Bravman() {
                     );
 
                 }
+
                 else if (
                     engineStatus ===
                     "finished"
@@ -1712,6 +2012,7 @@ export default function Bravman() {
                     );
 
                 }
+
                 else if (
                     engineStatus ===
                     "waiting"
@@ -1723,78 +2024,11 @@ export default function Bravman() {
 
                 }
 
-            };
-
-
-        socket.on(
-            "bravman:update",
-            handleUpdate
-        );
-
-
-        return () => {
-
-            socket.off(
-                "bravman:update",
-                handleUpdate
-            );
-
-        };
-
-    }, [
-        matchId,
-        me?.id
-    ]);
-
-
-    // ======================================================
-    // SOCKET — MATCH JOINED
-    // ======================================================
-
-    useEffect(() => {
-
-        if (!socketRef.current) {
-            return;
-        }
-
-
-        const socket =
-            socketRef.current;
-
-
-        const handleJoined =
-            (payload) => {
-
-                console.log(
-                    "BRAVMAN JOINED:",
-                    payload
-                );
-
-
-                if (
-                    payload?.matchId &&
-                    matchId &&
-                    Number(
-                        payload.matchId
-                    ) !==
-                    Number(matchId)
-                ) {
-
-                    return;
-                }
-
-
-                setError("");
-
-
-                // --------------------------------------------
-                // Si le backend confirme que le match est prêt,
-                // on laisse le moteur décider de la suite.
-                // --------------------------------------------
-
-                if (
-                    payload?.status ===
-                    "ready"
+                else if (
+                    engineStatus ===
+                    "ready" ||
+                    engineStatus ===
+                    "matched"
                 ) {
 
                     setStatus(
@@ -1806,42 +2040,11 @@ export default function Bravman() {
             };
 
 
-        socket.on(
-            "bravman:joined",
-            handleJoined
-        );
+        // ----------------------------------------------
+        // ERROR
+        // ----------------------------------------------
 
-
-        return () => {
-
-            socket.off(
-                "bravman:joined",
-                handleJoined
-            );
-
-        };
-
-    }, [
-        matchId
-    ]);
-
-
-    // ======================================================
-    // SOCKET — ERREUR
-    // ======================================================
-
-    useEffect(() => {
-
-        if (!socketRef.current) {
-            return;
-        }
-
-
-        const socket =
-            socketRef.current;
-
-
-        const handleError =
+        const handleGameError =
             (payload) => {
 
                 console.error(
@@ -1856,7 +2059,6 @@ export default function Bravman() {
                     "Erreur Socket BraVMan."
                 );
 
-
                 setStatus(
                     STATUS.ERROR
                 );
@@ -1865,25 +2067,231 @@ export default function Bravman() {
 
 
         socket.on(
-            "bravman:error",
-            handleError
+            "bravman:update",
+            handleUpdate
         );
 
+        socket.on(
+            "bravman:matchReady",
+            handleMatchReady
+        );
+
+        socket.on(
+            "bravman:joined",
+            handleJoined
+        );
+
+        socket.on(
+            "bravman:finished",
+            handleFinished
+        );
+
+        socket.on(
+            "bravman:error",
+            handleGameError
+        );
+
+
+        // ----------------------------------------------
+        // CLEANUP
+        // ----------------------------------------------
 
         return () => {
 
             socket.off(
+                "connect",
+                handleConnect
+            );
+
+            socket.off(
+                "disconnect",
+                handleDisconnect
+            );
+
+            socket.off(
+                "connect_error",
+                handleConnectError
+            );
+
+            socket.off(
+                "bravman:update",
+                handleUpdate
+            );
+
+            socket.off(
+                "bravman:matchReady",
+                handleMatchReady
+            );
+
+            socket.off(
+                "bravman:joined",
+                handleJoined
+            );
+
+            socket.off(
+                "bravman:finished",
+                handleFinished
+            );
+
+            socket.off(
                 "bravman:error",
-                handleError
+                handleGameError
+            );
+
+            socket.disconnect();
+
+
+            if (
+                socketRef.current ===
+                socket
+            ) {
+
+                socketRef.current =
+                    null;
+
+            }
+
+            setConnected(false);
+
+        };
+
+    }, [
+        loadCurrentMatch,
+        loadMatches
+    ]);
+
+
+    // ======================================================
+    // JOIN SOCKET ROOM
+    // ======================================================
+
+    useEffect(() => {
+
+        if (
+            !connected ||
+            !socketRef.current ||
+            !matchId ||
+            !me?.id
+        ) {
+
+            return;
+        }
+
+
+        const numericMatchId =
+            Number(matchId);
+
+        const numericUserId =
+            Number(me.id);
+
+
+        if (
+            !Number.isFinite(
+                numericMatchId
+            ) ||
+            !Number.isFinite(
+                numericUserId
+            )
+        ) {
+
+            return;
+        }
+
+
+        const socket =
+            socketRef.current;
+
+
+        console.log(
+            "BRAVMAN SOCKET JOIN:",
+            {
+                matchId:
+                    numericMatchId,
+
+                userId:
+                    numericUserId
+            }
+        );
+
+
+        let acknowledged =
+            false;
+
+
+        const payload = {
+
+            matchId:
+                numericMatchId,
+
+            userId:
+                numericUserId
+
+        };
+
+
+        socket.emit(
+            "bravman:join",
+            payload,
+            (ack) => {
+
+                acknowledged =
+                    true;
+
+
+                console.log(
+                    "BRAVMAN SOCKET JOIN ACK:",
+                    ack
+                );
+
+
+                if (
+                    ack?.success === false
+                ) {
+
+                    setError(
+                        ack?.message ||
+                        "Impossible de rejoindre la room BraVMan."
+                    );
+
+                }
+
+            }
+        );
+
+
+        const timeout =
+            setTimeout(() => {
+
+                if (
+                    !acknowledged
+                ) {
+
+                    console.warn(
+                        "BRAVMAN SOCKET JOIN ACK NON REÇU"
+                    );
+
+                }
+
+            }, SOCKET_TIMEOUT);
+
+
+        return () => {
+
+            clearTimeout(
+                timeout
             );
 
         };
 
-    }, []);
+    }, [
+        connected,
+        matchId,
+        me?.id
+    ]);
 
 
     // ======================================================
-    // PING RÉSEAU
+    // PING
     // ======================================================
 
     useEffect(() => {
@@ -1934,97 +2342,46 @@ export default function Bravman() {
         connected
     ]);
 
-        // ======================================================
-    // TAP — ACTION PRINCIPALE DU JOUEUR
+
+    // ======================================================
+    // TAP
     // ======================================================
 
     const tap =
         useCallback(() => {
 
-            // ------------------------------------------------
-            // Protection cycle de vie
-            // ------------------------------------------------
-
             if (!canTap) {
-
                 return;
             }
 
 
-            // ------------------------------------------------
-            // Vérifications Socket
-            // ------------------------------------------------
-
-            if (!socketRef.current) {
-
-                console.warn(
-                    "BRAVMAN TAP : SOCKET ABSENTE"
-                );
-
-                return;
-            }
-
-
-            if (!matchId) {
-
-                console.warn(
-                    "BRAVMAN TAP : MATCH ABSENT"
-                );
-
-                return;
-            }
-
-
-            if (!me?.id) {
-
-                console.warn(
-                    "BRAVMAN TAP : JOUEUR ABSENT"
-                );
-
-                return;
-            }
-
+            const socket =
+                socketRef.current;
 
             const numericMatchId =
                 Number(matchId);
 
             const numericUserId =
-                Number(me.id);
+                normalizeId(me?.id);
 
 
             if (
+                !socket ||
                 !Number.isFinite(
                     numericMatchId
-                )
-            ) {
-
-                console.error(
-                    "BRAVMAN TAP : MATCH ID INVALIDE",
-                    matchId
-                );
-
-                return;
-            }
-
-
-            if (
+                ) ||
                 !Number.isFinite(
                     numericUserId
                 )
             ) {
 
-                console.error(
-                    "BRAVMAN TAP : USER ID INVALIDE",
-                    me.id
-                );
-
                 return;
             }
 
 
-            // ------------------------------------------------
-            // Animation locale immédiate
-            // ------------------------------------------------
+            // ------------------------------------------
+            // ANIMATION
+            // ------------------------------------------
 
             setMyPunch(true);
 
@@ -2048,33 +2405,22 @@ export default function Bravman() {
                 }, TAP_ANIMATION);
 
 
-            // ------------------------------------------------
-            // Mise à jour locale du compteur
-            //
-            // Le serveur reste l'autorité du véritable état.
-            // ------------------------------------------------
+            // ------------------------------------------
+            // ENVOI SERVEUR
+            // ------------------------------------------
 
-            setMyTaps(
-                previous =>
-                    previous + 1
-            );
-
-
-            // ------------------------------------------------
-            // Envoi au moteur
-            // ------------------------------------------------
-
-            socketRef.current.emit(
+            socket.emit(
                 "bravman:tap",
                 {
+
                     matchId:
                         numericMatchId,
 
                     userId:
                         numericUserId
+
                 }
             );
-
 
         }, [
             canTap,
@@ -2084,7 +2430,7 @@ export default function Bravman() {
 
 
     // ======================================================
-    // FIN DE PARTIE — DÉTERMINATION DU GAGNANT
+    // FIN DE PARTIE
     // ======================================================
 
     useEffect(() => {
@@ -2095,11 +2441,12 @@ export default function Bravman() {
 
 
         const finished =
-            gameState.finished === true ||
+            gameState?.finished === true ||
             String(
-                gameState.status || ""
+                gameState?.status ??
+                ""
             ).toLowerCase() ===
-                "finished";
+            "finished";
 
 
         if (!finished) {
@@ -2107,107 +2454,72 @@ export default function Bravman() {
         }
 
 
-        // --------------------------------------------------
-        // Le serveur est l'autorité.
-        // On cherche d'abord un éventuel winnerId.
-        // --------------------------------------------------
-
-        const serverWinnerId =
+        const winnerId =
             Number(
-                gameState.winnerId
-            );
-
-
-        const currentUserId =
-            Number(
-                me?.id
+                gameState?.winnerId ??
+                gameState?.winner_id
             );
 
 
         if (
             Number.isFinite(
-                serverWinnerId
+                winnerId
             )
         ) {
 
             setWinner(
-                serverWinnerId
+                winnerId
             );
 
         }
-
-        else if (
-            Number.isFinite(
-                currentUserId
-            )
-        ) {
-
-            // ----------------------------------------------
-            // Fallback uniquement si le moteur ne fournit
-            // pas winnerId.
-            //
-            // On utilise les taps reçus du moteur.
-            // ----------------------------------------------
+        else {
 
             const creatorId =
                 Number(
-                    gameState.creatorId
+                    gameState?.creatorId
                 );
 
             const opponentId =
                 Number(
-                    gameState.opponentId
+                    gameState?.opponentId
                 );
 
             const creatorTaps =
                 Number(
-                    gameState.creatorTaps
+                    gameState?.creatorTaps
                 ) || 0;
 
             const opponentTaps =
                 Number(
-                    gameState.opponentTaps
+                    gameState?.opponentTaps
                 ) || 0;
 
 
             if (
+                creatorTaps >
+                opponentTaps &&
                 Number.isFinite(
                     creatorId
-                ) &&
+                )
+            ) {
+
+                setWinner(
+                    creatorId
+                );
+
+            }
+
+            else if (
+                opponentTaps >
+                creatorTaps &&
                 Number.isFinite(
                     opponentId
                 )
             ) {
 
-                if (
-                    creatorTaps >
-                    opponentTaps
-                ) {
-
-                    setWinner(
-                        creatorId
-                    );
-
-                }
-
-                else if (
-                    opponentTaps >
-                    creatorTaps
-                ) {
-
-                    setWinner(
-                        opponentId
-                    );
-
-                }
-
-                else {
-
-                    setWinner(
-                        null
-                    );
-
-                }
+                setWinner(
+                    opponentId
+                );
 
             }
 
@@ -2218,195 +2530,13 @@ export default function Bravman() {
             STATUS.FINISHED
         );
 
-
     }, [
-        gameState,
-        me?.id
+        gameState
     ]);
 
 
     // ======================================================
-    // SOCKET — ÉVÉNEMENT FIN DE PARTIE
-    // ======================================================
-
-    useEffect(() => {
-
-        if (!socketRef.current) {
-            return;
-        }
-
-
-        const socket =
-            socketRef.current;
-
-
-        const handleFinished =
-            (payload) => {
-
-                console.log(
-                    "BRAVMAN FINISHED:",
-                    payload
-                );
-
-
-                // --------------------------------------------
-                // Vérifier le match concerné
-                // --------------------------------------------
-
-                if (
-                    payload?.matchId &&
-                    matchId &&
-                    Number(
-                        payload.matchId
-                    ) !==
-                    Number(matchId)
-                ) {
-
-                    return;
-                }
-
-
-                // --------------------------------------------
-                // Mettre à jour le winnerId si fourni
-                // --------------------------------------------
-
-                const winnerId =
-                    Number(
-                        payload?.winnerId
-                    );
-
-
-                if (
-                    Number.isFinite(
-                        winnerId
-                    )
-                ) {
-
-                    setWinner(
-                        winnerId
-                    );
-
-                }
-
-
-                // --------------------------------------------
-                // Le résultat doit être affiché.
-                // --------------------------------------------
-
-                setStatus(
-                    STATUS.FINISHED
-                );
-
-
-                // --------------------------------------------
-                // Actualiser une dernière fois le match SAC.
-                // --------------------------------------------
-
-                if (matchId) {
-
-                    loadCurrentMatch(
-                        matchId
-                    );
-
-                }
-
-
-                loadMatches();
-
-            };
-
-
-        socket.on(
-            "bravman:finished",
-            handleFinished
-        );
-
-
-        return () => {
-
-            socket.off(
-                "bravman:finished",
-                handleFinished
-            );
-
-        };
-
-    }, [
-        matchId,
-        loadCurrentMatch,
-        loadMatches
-    ]);
-
-
-    // ======================================================
-    // RECONNEXION SOCKET
-    // ======================================================
-
-    useEffect(() => {
-
-        if (!socketRef.current) {
-            return;
-        }
-
-
-        const socket =
-            socketRef.current;
-
-
-        const handleReconnect =
-            () => {
-
-                console.log(
-                    "BRAVMAN SOCKET RECONNECTED:",
-                    socket.id
-                );
-
-
-                setConnected(true);
-
-
-                // --------------------------------------------
-                // Si un match est déjà en cours,
-                // recharger son état SAC avant de rejoindre
-                // à nouveau la room Socket.
-                // --------------------------------------------
-
-                if (
-                    matchId
-                ) {
-
-                    loadCurrentMatch(
-                        matchId
-                    );
-
-                }
-
-            };
-
-
-        socket.on(
-            "connect",
-            handleReconnect
-        );
-
-
-        return () => {
-
-            socket.off(
-                "connect",
-                handleReconnect
-            );
-
-        };
-
-    }, [
-        matchId,
-        loadCurrentMatch
-    ]);
-
-
-    // ======================================================
-    // NETTOYAGE DE L'ANIMATION
+    // NETTOYAGE TAP
     // ======================================================
 
     useEffect(() => {
@@ -2421,8 +2551,15 @@ export default function Bravman() {
                     tapAnimationTimerRef.current
                 );
 
-                tapAnimationTimerRef.current =
-                    null;
+            }
+
+            if (
+                opponentTapAnimationTimerRef.current
+            ) {
+
+                clearTimeout(
+                    opponentTapAnimationTimerRef.current
+                );
 
             }
 
@@ -2432,207 +2569,32 @@ export default function Bravman() {
 
 
     // ======================================================
-    // SYNCHRONISATION DE L'ÉTAT DE L'ARENE
+    // PROTECTION TIMER
     // ======================================================
 
     useEffect(() => {
 
-        if (!gameState) {
-            return;
-        }
-
-
-        // --------------------------------------------------
-        // Si le moteur passe en countdown
-        // --------------------------------------------------
-
         if (
-            String(
-                gameState.status || ""
-            ).toLowerCase() ===
-            "countdown"
+            status !==
+            STATUS.PLAYING
         ) {
-
-            const value =
-                Number(
-                    gameState.countdown
-                );
-
-
-            if (
-                Number.isFinite(
-                    value
-                )
-            ) {
-
-                setCountdown(
-                    Math.max(
-                        0,
-                        value
-                    )
-                );
-
-            }
-
-
-            setStatus(
-                STATUS.COUNTDOWN
-            );
 
             return;
         }
 
 
-        // --------------------------------------------------
-        // Si le moteur passe en running
-        // --------------------------------------------------
-
         if (
-            String(
-                gameState.status || ""
-            ).toLowerCase() ===
-            "running"
+            timer <= 0
         ) {
 
-            const value =
-                Number(
-                    gameState.remaining
-                );
-
-
-            if (
-                Number.isFinite(
-                    value
-                )
-            ) {
-
-                setTimer(
-                    Math.max(
-                        0,
-                        value
-                    )
-                );
-
-            }
-
-
-            setStatus(
-                STATUS.PLAYING
-            );
-
-            return;
-        }
-
-
-        // --------------------------------------------------
-        // Si le moteur passe en finished
-        // --------------------------------------------------
-
-        if (
-            String(
-                gameState.status || ""
-            ).toLowerCase() ===
-            "finished"
-        ) {
-
-            setStatus(
-                STATUS.FINISHED
-            );
+            setTimer(0);
 
         }
 
     }, [
-        gameState
+        status,
+        timer
     ]);
-
-        // ======================================================
-    // MISE
-    // ======================================================
-
-    const [stake, setStake] =
-        useState(100);
-
-
-    // ======================================================
-    // INFORMATIONS MATCH COURANT
-    // ======================================================
-
-    const currentCreatorId =
-        Number(
-            currentMatch?.players?.creator
-        );
-
-
-    const currentOpponentId =
-        Number(
-            currentMatch?.players?.opponent
-        );
-
-
-    const hasOpponent =
-        Number.isFinite(
-            currentOpponentId
-        );
-
-
-    // ======================================================
-    // UTILISATEUR COURANT
-    // ======================================================
-
-    const currentUserId =
-        Number(
-            me?.id
-        );
-
-
-    // ======================================================
-    // DÉTERMINATION DU GAGNANT
-    // ======================================================
-
-    const iWon =
-        Number.isFinite(
-            winner
-        ) &&
-        Number.isFinite(
-            currentUserId
-        ) &&
-        Number(winner) ===
-            currentUserId;
-
-
-    const opponentWon =
-        Number.isFinite(
-            winner
-        ) &&
-        Number.isFinite(
-            currentUserId
-        ) &&
-        Number(winner) !==
-            currentUserId;
-
-
-    // ======================================================
-    // TITRE DU RÉSULTAT
-    // ======================================================
-
-    const resultTitle =
-        iWon
-            ? "🏆 Victoire !"
-            : opponentWon
-                ? "Défaite"
-                : "Match terminé";
-
-
-    // ======================================================
-    // SOUS-TITRE DU RÉSULTAT
-    // ======================================================
-
-    const resultMessage =
-        iWon
-            ? "Tu as remporté le bras de fer."
-            : opponentWon
-                ? "Ton adversaire a remporté le bras de fer."
-                : "Le match est terminé.";
 
 
     // ======================================================
@@ -2675,19 +2637,17 @@ export default function Bravman() {
                     />
 
                     <span>
-
                         {connected
                             ? "Connecté"
                             : "Déconnecté"
                         }
-
                     </span>
 
 
                     {connected && (
 
                         <small>
-                            Ping : {ping} ms
+                         {ping} 
                         </small>
 
                     )}
@@ -2695,7 +2655,6 @@ export default function Bravman() {
                 </div>
 
             </header>
-
 
 
             {/* ==================================================
@@ -2739,21 +2698,8 @@ export default function Bravman() {
             )}
 
 
-
             {/* ==================================================
-                MENU PRINCIPAL
-            ==================================================
-            
-                IMPORTANT :
-                Le MENU contient uniquement :
-                - création
-                - matchs disponibles
-
-                Il ne contient PAS :
-                - waiting room
-                - countdown
-                - arena
-                - result
+                MENU
             ================================================== */}
 
             {isMenu && !error && (
@@ -2761,9 +2707,9 @@ export default function Bravman() {
                 <main className="bravman-menu">
 
 
-                    {/* ==========================================
-                        CRÉER UN MATCH
-                    ========================================== */}
+                    {/* ==================================================
+                        CREATION
+                    ================================================== */}
 
                     <section className="bravman-create">
 
@@ -2786,14 +2732,8 @@ export default function Bravman() {
 
                                 event.preventDefault();
 
-                                if (
-                                    loading
-                                ) {
-                                    return;
-                                }
-
                                 createMatch(
-                                    Number(stake)
+                                    stake
                                 );
 
                             }}
@@ -2809,8 +2749,8 @@ export default function Bravman() {
                             <input
                                 id="bravman-stake"
                                 type="number"
-                                min="100"
-                                step="100"
+                                min="200"
+                                step="200"
                                 value={stake}
                                 disabled={loading}
                                 onChange={(event) => {
@@ -2828,7 +2768,7 @@ export default function Bravman() {
                                 disabled={
                                     loading ||
                                     !stake ||
-                                    Number(stake) <= 0
+                                    Number(stake) < 200
                                 }
                             >
 
@@ -2844,10 +2784,9 @@ export default function Bravman() {
                     </section>
 
 
-
-                    {/* ==========================================
-                        MATCHS DISPONIBLES
-                    ========================================== */}
+                    {/* ==================================================
+                        DEFIS DISPONIBLES
+                    ================================================== */}
 
                     <section className="bravman-matches">
 
@@ -2894,6 +2833,8 @@ export default function Bravman() {
                                             match?.id ??
                                             match?.matchId;
 
+                                        const numericId =
+                                            normalizeId(id);
 
                                         const matchStake =
                                             match?.stake ??
@@ -2901,35 +2842,32 @@ export default function Bravman() {
                                             match?.betAmount ??
                                             0;
 
-
                                         const creator =
                                             match?.players?.creator ??
                                             match?.creatorId ??
                                             match?.creator_id ??
-                                            null;
+                                            "—";
 
 
                                         return (
 
                                             <article
                                                 className="match-card"
-                                                key={id}
+                                                key={numericId ?? id}
                                             >
 
                                                 <div>
 
                                                     <strong>
-                                                        💪 Match #{id}
+                                                        💪 Match #{numericId ?? id}
                                                     </strong>
-
 
                                                     <span>
                                                         Mise : {matchStake}
                                                     </span>
 
-
                                                     <span>
-                                                        Joueur : {creator ?? "—"}
+                                                        Joueur : {creator}
                                                     </span>
 
                                                 </div>
@@ -2939,7 +2877,7 @@ export default function Bravman() {
                                                     type="button"
                                                     disabled={
                                                         loading ||
-                                                        !id
+                                                        !numericId
                                                     }
                                                     onClick={() => {
 
@@ -2975,7 +2913,6 @@ export default function Bravman() {
             )}
 
 
-
             {/* ==================================================
                 WAITING ROOM
             ================================================== */}
@@ -2988,7 +2925,6 @@ export default function Bravman() {
                 <main className="bravman-waiting">
 
                     <section className="waiting-card">
-
 
                         <div className="waiting-icon">
                             💪
@@ -3031,10 +2967,12 @@ export default function Bravman() {
                                     </span>
 
                                     <strong>
-                                        {currentMatch.stake ??
-                                         currentMatch.bet_amount ??
-                                         currentMatch.betAmount ??
-                                         "—"}
+                                        {
+                                            currentMatch?.stake ??
+                                            currentMatch?.bet_amount ??
+                                            currentMatch?.betAmount ??
+                                            "—"
+                                        }
                                     </strong>
 
                                 </div>
@@ -3043,11 +2981,6 @@ export default function Bravman() {
 
                         )}
 
-
-
-                        {/* ======================================
-                            JOUEUR 1
-                        ====================================== */}
 
                         <div className="players-preview">
 
@@ -3062,14 +2995,13 @@ export default function Bravman() {
                                 </strong>
 
                                 <small>
-
-                                    {Number.isFinite(
-                                        currentUserId
-                                    )
-                                        ? `Joueur #${currentUserId}`
-                                        : "Identification..."
+                                    {
+                                        Number.isFinite(
+                                            currentUserId
+                                        )
+                                            ? `Joueur #${currentUserId}`
+                                            : "Identification..."
                                     }
-
                                 </small>
 
                             </div>
@@ -3080,17 +3012,15 @@ export default function Bravman() {
                             </div>
 
 
-                            {/* ==================================
-                                JOUEUR 2
-                            ================================== */}
-
                             <div className="player-side">
 
                                 <span className="player-icon">
+
                                     {hasOpponent
                                         ? "👤"
                                         : "❓"
                                     }
+
                                 </span>
 
 
@@ -3117,11 +3047,6 @@ export default function Bravman() {
 
                         </div>
 
-
-
-                        {/* ======================================
-                            ÉTAT
-                        ====================================== */}
 
                         <div className="waiting-status">
 
@@ -3167,8 +3092,8 @@ export default function Bravman() {
                                     </p>
 
                                     <small>
-                                        Le lancement sera contrôlé
-                                        par le moteur BraVMan.
+                                        Le moteur BraVMan va lancer
+                                        le compte à rebours.
                                     </small>
                                 </>
 
@@ -3177,25 +3102,16 @@ export default function Bravman() {
                         </div>
 
 
-
-                        {/* ======================================
-                            RETOUR MENU
-                        ====================================== */}
-
                         {isWaiting && (
 
                             <button
                                 type="button"
                                 className="secondary-button"
-                                onClick={() => {
-
-                                    resetGame();
-
-                                }}
+                                onClick={
+                                    resetGame
+                                }
                             >
-
                                 Retour aux défis
-
                             </button>
 
                         )}
@@ -3205,7 +3121,6 @@ export default function Bravman() {
                 </main>
 
             )}
-
 
 
             {/* ==================================================
@@ -3222,16 +3137,13 @@ export default function Bravman() {
                             💪
                         </span>
 
-
                         <p>
                             Le duel commence dans
                         </p>
 
-
                         <strong>
                             {countdown}
                         </strong>
-
 
                         <small>
                             Prépare-toi !
@@ -3244,19 +3156,14 @@ export default function Bravman() {
             )}
 
 
-
             {/* ==================================================
-                ARENA
+                ARENE
             ================================================== */}
 
             {isPlaying && !error && (
 
                 <main className="bravman-arena">
 
-
-                    {/* ==========================================
-                        INFORMATIONS MATCH
-                    ========================================== */}
 
                     <section className="arena-header">
 
@@ -3288,17 +3195,7 @@ export default function Bravman() {
                     </section>
 
 
-
-                    {/* ==========================================
-                        JOUEURS
-                    ========================================== */}
-
                     <section className="arena-players">
-
-
-                        {/* ======================================
-                            MOI
-                        ====================================== */}
 
                         <div
                             className={
@@ -3315,11 +3212,9 @@ export default function Bravman() {
                                 👤
                             </div>
 
-
                             <h2>
                                 Toi
                             </h2>
-
 
                             <span>
                                 {myTaps} taps
@@ -3327,11 +3222,6 @@ export default function Bravman() {
 
                         </div>
 
-
-
-                        {/* ======================================
-                            VS
-                        ====================================== */}
 
                         <div className="arena-vs">
 
@@ -3341,11 +3231,6 @@ export default function Bravman() {
 
                         </div>
 
-
-
-                        {/* ======================================
-                            ADVERSAIRE
-                        ====================================== */}
 
                         <div
                             className={
@@ -3362,11 +3247,9 @@ export default function Bravman() {
                                 👤
                             </div>
 
-
                             <h2>
                                 Adversaire
                             </h2>
-
 
                             <span>
                                 {opponentTaps} taps
@@ -3376,11 +3259,6 @@ export default function Bravman() {
 
                     </section>
 
-
-
-                    {/* ==========================================
-                        BARRE DE PUISSANCE
-                    ========================================== */}
 
                     <section className="power-section">
 
@@ -3403,7 +3281,13 @@ export default function Bravman() {
                                 className="power-fill"
                                 style={{
                                     width:
-                                        `${armProgress}%`
+                                        `${Math.max(
+                                            0,
+                                            Math.min(
+                                                200,
+                                                50 + advantage / 2
+                                            )
+                                        )}%`
                                 }}
                             />
 
@@ -3411,11 +3295,6 @@ export default function Bravman() {
 
                     </section>
 
-
-
-                    {/* ==========================================
-                        BRAS DE FER
-                    ========================================== */}
 
                     <section className="arm-section">
 
@@ -3432,11 +3311,6 @@ export default function Bravman() {
                     </section>
 
 
-
-                    {/* ==========================================
-                        BOUTON TAP
-                    ========================================== */}
-
                     <section className="tap-section">
 
                         <button
@@ -3449,8 +3323,12 @@ export default function Bravman() {
                                         : ""
                                 )
                             }
-                            disabled={!canTap}
-                            onClick={tap}
+                            disabled={
+                                !canTap
+                            }
+                            onClick={
+                                tap
+                            }
                             onTouchStart={(event) => {
 
                                 event.preventDefault();
@@ -3474,11 +3352,6 @@ export default function Bravman() {
 
                     </section>
 
-
-
-                    {/* ==========================================
-                        STATISTIQUES
-                    ========================================== */}
 
                     <section className="arena-stats">
 
@@ -3530,9 +3403,8 @@ export default function Bravman() {
             )}
 
 
-
             {/* ==================================================
-                FIN DE MATCH
+                RESULTAT
             ================================================== */}
 
             {isFinished && !error && (
@@ -3540,7 +3412,6 @@ export default function Bravman() {
                 <main className="bravman-result">
 
                     <section className="result-card">
-
 
                         <div className="result-icon">
 
@@ -3563,11 +3434,6 @@ export default function Bravman() {
                             {resultMessage}
                         </p>
 
-
-
-                        {/* ======================================
-                            SCORE FINAL
-                        ====================================== */}
 
                         <div className="final-score">
 
@@ -3604,22 +3470,10 @@ export default function Bravman() {
                         </div>
 
 
-
-                        {/* ======================================
-                            MATCH
-                        ====================================== */}
-
                         <p className="result-match">
-
                             Match #{matchId}
-
                         </p>
 
-
-
-                        {/* ======================================
-                            RETOUR
-                        ====================================== */}
 
                         <button
                             type="button"
@@ -3631,9 +3485,7 @@ export default function Bravman() {
 
                             }}
                         >
-
                             Retour à BraVMan
-
                         </button>
 
                     </section>
@@ -3643,9 +3495,8 @@ export default function Bravman() {
             )}
 
 
-
             {/* ==================================================
-                CHARGEMENT GLOBAL
+                LOADING
             ================================================== */}
 
             {loading && !isMenu && (
@@ -3663,421 +3514,6 @@ export default function Bravman() {
                 </div>
 
             )}
-
-        </div>
-
-    );
-
-    // ======================================================
-    // RESET COMPLET DU MATCH
-    // ======================================================
-
-    const resetGame =
-        useCallback(() => {
-
-            console.log(
-                "BRAVMAN RESET GAME"
-            );
-
-
-            // ------------------------------------------------
-            // Timers locaux
-            // ------------------------------------------------
-
-            if (
-                tapAnimationTimerRef.current
-            ) {
-
-                clearTimeout(
-                    tapAnimationTimerRef.current
-                );
-
-                tapAnimationTimerRef.current =
-                    null;
-
-            }
-
-
-            if (
-                refreshTimerRef.current
-            ) {
-
-                clearInterval(
-                    refreshTimerRef.current
-                );
-
-                refreshTimerRef.current =
-                    null;
-
-            }
-
-
-            // ------------------------------------------------
-            // État du match
-            // ------------------------------------------------
-
-            setCurrentMatch(null);
-
-            setGameState(null);
-
-
-            // ------------------------------------------------
-            // Joueurs
-            // ------------------------------------------------
-
-            setMe(null);
-
-            setOpponent(null);
-
-
-            // ------------------------------------------------
-            // Score
-            // ------------------------------------------------
-
-            setMyTaps(0);
-
-            setOpponentTaps(0);
-
-            setWinner(null);
-
-
-            // ------------------------------------------------
-            // Temps
-            // ------------------------------------------------
-
-            setTimer(
-                GAME_DURATION
-            );
-
-            setCountdown(0);
-
-
-            // ------------------------------------------------
-            // Arène
-            // ------------------------------------------------
-
-            setArmRotation(0);
-
-            setArmProgress(50);
-
-            setMyPunch(false);
-
-            setOpponentPunch(false);
-
-
-            // ------------------------------------------------
-            // Réseau
-            // ------------------------------------------------
-
-            setPing(null);
-
-
-            // ------------------------------------------------
-            // Erreur
-            // ------------------------------------------------
-
-            setError("");
-
-
-            // ------------------------------------------------
-            // Retour au menu
-            // ------------------------------------------------
-
-            setStatus(
-                STATUS.MENU
-            );
-
-
-        }, []);
-
-
-    // ======================================================
-    // QUITTER PROPREMENT LE MATCH
-    // ======================================================
-
-    const leaveMatch =
-        useCallback(() => {
-
-            console.log(
-                "BRAVMAN LEAVE MATCH:",
-                matchId
-            );
-
-
-            // ------------------------------------------------
-            // IMPORTANT :
-            // On ne détruit PAS la connexion Socket.
-            //
-            // On quitte uniquement le contexte React
-            // du match courant.
-            // ------------------------------------------------
-
-            resetGame();
-
-
-        }, [
-            matchId,
-            resetGame
-        ]);
-
-
-    // ======================================================
-    // PROTECTION CONTRE UN MATCH INVALIDE
-    // ======================================================
-
-    useEffect(() => {
-
-        if (!matchId) {
-            return;
-        }
-
-
-        const numericMatchId =
-            Number(matchId);
-
-
-        if (
-            !Number.isFinite(
-                numericMatchId
-            )
-        ) {
-
-            console.error(
-                "BRAVMAN MATCH ID INVALID:",
-                matchId
-            );
-
-
-            setError(
-                "Identifiant de match BraVMan invalide."
-            );
-
-
-            setStatus(
-                STATUS.ERROR
-            );
-
-        }
-
-    }, [
-        matchId
-    ]);
-
-
-    // ======================================================
-    // MATCH TERMINÉ → RAFRAÎCHIR LE SAC
-    // ======================================================
-
-    useEffect(() => {
-
-        if (
-            status !==
-            STATUS.FINISHED
-        ) {
-
-            return;
-        }
-
-
-        // ------------------------------------------------
-        // Le résultat reste affiché.
-        //
-        // On actualise seulement les données du match
-        // et la liste des défis.
-        // ------------------------------------------------
-
-        if (matchId) {
-
-            loadCurrentMatch(
-                matchId
-            );
-
-        }
-
-
-        loadMatches();
-
-
-    }, [
-        status,
-        matchId,
-        loadCurrentMatch,
-        loadMatches
-    ]);
-
-
-    // ======================================================
-    // SÉCURITÉ : NE PAS TAPER HORS MATCH
-    // ======================================================
-
-    useEffect(() => {
-
-        if (
-            status !==
-            STATUS.PLAYING
-        ) {
-
-            setMyPunch(false);
-
-        }
-
-    }, [
-        status
-    ]);
-
-
-    // ======================================================
-    // SÉCURITÉ : FIN DU TIMER LOCAL
-    // ======================================================
-
-    useEffect(() => {
-
-        if (
-            status !==
-            STATUS.PLAYING
-        ) {
-
-            return;
-        }
-
-
-        if (
-            timer <= 0
-        ) {
-
-            setTimer(0);
-
-        }
-
-    }, [
-        status,
-        timer
-    ]);
-
-
-    // ======================================================
-    // RAFRAÎCHISSEMENT DES MATCHS APRÈS RETOUR MENU
-    // ======================================================
-
-    useEffect(() => {
-
-        if (
-            status !==
-            STATUS.MENU
-        ) {
-
-            return;
-        }
-
-
-        loadMatches();
-
-    }, [
-        status,
-        loadMatches
-    ]);
-
-
-    // ======================================================
-    // NETTOYAGE FINAL DU COMPOSANT
-    // ======================================================
-
-    useEffect(() => {
-
-        return () => {
-
-            console.log(
-                "BRAVMAN COMPONENT UNMOUNT"
-            );
-
-
-            // ----------------------------------------------
-            // Timer TAP
-            // ----------------------------------------------
-
-            if (
-                tapAnimationTimerRef.current
-            ) {
-
-                clearTimeout(
-                    tapAnimationTimerRef.current
-                );
-
-                tapAnimationTimerRef.current =
-                    null;
-
-            }
-
-
-            // ----------------------------------------------
-            // Timer refresh
-            // ----------------------------------------------
-
-            if (
-                refreshTimerRef.current
-            ) {
-
-                clearInterval(
-                    refreshTimerRef.current
-                );
-
-                refreshTimerRef.current =
-                    null;
-
-            }
-
-
-            // ----------------------------------------------
-            // Socket
-            //
-            // Le useEffect de connexion Socket possède
-            // déjà son propre cleanup.
-            // ----------------------------------------------
-
-            socketRef.current =
-                null;
-
-        };
-
-    }, []);
-
-    return (
-
-        <div className="bravman-page">
-
-            <header className="bravman-header">
-
-                <div>
-
-                    <h1>
-                        💪 BraVMan
-                    </h1>
-
-                    <p>
-                        Affrontez un adversaire dans un
-                        duel de bras de fer en temps réel.
-                    </p>
-
-                </div>
-
-                <div className="connection">
-
-                    <span
-                        className={
-                            connected
-                                ? "online"
-                                : "offline"
-                        }
-                    />
-
-                    {connected
-                        ? "Connecté"
-                        : "Déconnecté"
-                    }
-
-                </div>
-
-            </header>
 
         </div>
 
