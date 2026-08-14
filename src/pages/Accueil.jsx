@@ -915,8 +915,7 @@ const handleCreateChallenge =
         <div style={spinner}></div>
 
         <h2>
-          Chargement de
-          6BetBall...
+          Chargement du Système SAJCL...
         </h2>
       </div>
     );
@@ -936,13 +935,12 @@ const handleCreateChallenge =
           <div style={topBar}>
             <div>
               <h1 style={title}>
-                🎮 6BetBall
+                6BetBall 
               </h1>
 
               <p style={subtitle}>
-                Plateforme
-                compétitive nouvelle
-                génération.
+                Le Système d'Arbitrage de Jeux Compétitifs
+                en Ligne 6BetBall
                 Authentique,
                 Honnête et Sûre !
               </p>
@@ -1576,7 +1574,7 @@ const handleCreateChallenge =
         {/* ================= FOOTER ================= */}
         <div style={footer}>
           <div>
-            🎮 6BetBall © 2026
+            Tout Fait Nombre © 2026
           </div>
 
           <div

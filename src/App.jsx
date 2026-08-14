@@ -7,13 +7,15 @@ import Accueil from "./pages/Accueil";
 import Competition from "./pages/Competitions";
 import Infos from "./pages/Infos";
 import Menu from "./pages/Menu";
-import Dames from "./pages/Dames";
+import Dames from "./pages/Dames"; 
 
 import BravmanPage 
-from "./sac/games/bravman/pages/BravmanPage";
+from "./sac/games/bravman/Bravman";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import PrivacyPolicy from "./legal/PrivacyPolicy";
+import TermsOfUse from "./legal/TermsOfUse";
 
 import ProfileRadar from "./components/Profile/ProfileRadar";
 import AdsPage from "./pages/AdsPage";
@@ -224,10 +226,12 @@ export default function App() {
   // 🔐 LOGIN GUARD
   // =========================
 
-  if (
+ if (
     !isAuth &&
-    page !== "register"
-  ) {
+    page !== "register" &&
+    page !== "terms" &&
+    page !== "privacy"
+ ) {
     return (
       <Login
         setPage={setPage}
@@ -266,6 +270,27 @@ export default function App() {
             setPage={setPage}
           />
         )}
+
+      {/* =========================
+          📄 CONDITIONS
+      ========================= */}
+
+      {page === "terms" && (
+        <TermsOfUse
+          setPage={setPage}
+        />
+      )}
+
+
+      {/* =========================
+          🔐 CONFIDENTIALITÉ
+      ========================= */}
+
+      {page === "privacy" && (
+        <PrivacyPolicy
+          setPage={setPage}
+        />
+      )}
 
       {/* =========================
           🔐 AUTH
@@ -428,11 +453,12 @@ export default function App() {
       )
       }
       
-    {
-    page === "bravman" && (
-
-    <BravmanPage />
-
+    {page === "bravman" && (
+      <BravmanPage
+      gameConfig={gameConfig}
+      setPage={setPage}
+      resetGame={resetGame}
+    />
     )
     }
 

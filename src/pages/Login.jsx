@@ -88,11 +88,11 @@ export default function Login({ setPage, setIsAuth }) {
           </h1>
 
           <p style={{ fontSize: "14px", color: "#cbd5f5", lineHeight: "1.6" }}>
-            Bienvenue sur <strong>6BetBall</strong>, votre plateforme de Jeux en ligne.
+            Bienvenue sur <strong>6BetBall</strong>, votre plateforme de Jeux compétitifs en ligne.
           </p>
         </div>
 
-        <h2 style={{ marginBottom: "15px" }}>🔐 Connexion</h2>
+        <h2 style={{ marginBottom: "15px" }}>Connexion</h2>
 
         {error && (
           <div style={{
@@ -116,7 +116,7 @@ export default function Login({ setPage, setIsAuth }) {
 
         <input
           type="password"
-          placeholder="🔑 Mot de passe"
+          placeholder="Mot de passe"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           style={inputStyle}
@@ -142,7 +142,7 @@ export default function Login({ setPage, setIsAuth }) {
             color: "#38bdf8"
           }}
         >
-          Pas encore de compte ? S'inscrire
+          Pas encore de compte ? Inscrivez-vous !
         </p>
 
       </div>

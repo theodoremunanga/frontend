@@ -444,29 +444,42 @@ export default function Register({ setPage }) {
             sécurisation du compte.
           </div>
 
-          {/* TERMS */}
-          <label
-            style={
-              checkboxContainer
-            }
-          >
-            <input
-              type="checkbox"
-              name="acceptTerms"
-              checked={
-                form.acceptTerms
-              }
-              onChange={handleChange}
-            />
+          <label style={checkboxContainer}>
 
-            <span>
-              J'accepte les conditions
-              d'utilisation et la
-              politique de
-              confidentialité de
-              6BetBall.
-            </span>
-          </label>
+          <input
+            type="checkbox"
+            name="acceptTerms"
+            checked={form.acceptTerms}
+            onChange={handleChange}
+          />
+
+          <span>
+
+            J'accepte les{" "}
+
+            <button
+              type="button"
+              onClick={() => setPage("terms")}
+              style={legalLink}
+            >
+              Conditions d'utilisation
+            </button>
+
+            {" "}et la{" "}
+
+            <button
+              type="button"
+              onClick={() => setPage("privacy")}
+              style={legalLink}
+            >
+              Politique de confidentialité
+            </button>
+
+            {" "}de 6BetBall.
+
+          </span>
+
+        </label>
 
           {/* BUTTON */}
           <button
@@ -654,4 +667,16 @@ const successStyle = {
   borderRadius: 10,
   marginBottom: 15,
   color: "#bbf7d0",
+};
+
+const legalLink = {
+  background: "none",
+  border: "none",
+  padding: 0,
+  margin: 0,
+  color: "#38bdf8",
+  cursor: "pointer",
+  textDecoration: "underline",
+  fontSize: "inherit",
+  fontFamily: "inherit",
 };
