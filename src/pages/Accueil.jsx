@@ -915,7 +915,7 @@ const handleCreateChallenge =
         <div style={spinner}></div>
 
         <h2>
-          Chargement du Système SAJCL...
+          Le SAJCL cherge le SAC...
         </h2>
       </div>
     );

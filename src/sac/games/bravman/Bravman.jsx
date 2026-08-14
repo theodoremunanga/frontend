@@ -13,14 +13,14 @@ import {
     useMemo
 } from "react";
 
-import { io } from "socket.io-client";
-
 import {
     createSacMatch,
     joinSacMatch,
     getSacMatch,
     getSacMatches
 } from "../../sacApi";
+
+import bravmanSocket from "./bravmanSocket";
 
 
 // ==========================================================
@@ -29,19 +29,10 @@ import {
 
 const GAME_ID = "bravman";
 
-const API_URL =
-    import.meta.env.VITE_API_URL || "";
-
-const SOCKET_URL =
-    import.meta.env.VITE_SOCKET_URL ||
-    API_URL.replace(/\/api\/?$/, "");
-
 const GAME_DURATION = 45;
 const COUNTDOWN_DURATION = 3;
 
 const MATCH_REFRESH = 3000;
-const SOCKET_TIMEOUT = 15000;
-
 const MAX_ARM_ROTATION = 45;
 const MAX_PROGRESS = 200;
 
@@ -149,9 +140,6 @@ export default function Bravman() {
     // ======================================================
     // SOCKET
     // ======================================================
-
-    const socketRef =
-        useRef(null);
 
     const currentMatchIdRef =
         useRef(null);
@@ -1269,80 +1257,10 @@ export default function Bravman() {
 
 
     // ======================================================
-    // SOCKET — CONNEXION
+    // SOCKET — CONNEXION SAC
     // ======================================================
 
     useEffect(() => {
-
-        if (!SOCKET_URL) {
-
-            console.error(
-                "BRAVMAN SOCKET URL ABSENTE"
-            );
-
-            setError(
-                "VITE_SOCKET_URL est absent. Impossible de connecter BraVMan."
-            );
-
-            return;
-        }
-
-
-        console.log(
-            "BRAVMAN SOCKET URL:",
-            SOCKET_URL
-        );
-
-
-        const token =
-    localStorage.getItem("token");
-
-if (!token) {
-
-    console.error(
-        "BRAVMAN SOCKET : TOKEN ABSENT"
-    );
-
-    setConnected(false);
-
-    setError(
-        "Session utilisateur absente. Reconnecte-toi."
-    );
-
-    return;
-}
-
-
-const socket =
-    io(
-        SOCKET_URL,
-        {
-            transports: [
-                "websocket",
-                "polling"
-            ],
-
-            auth: {
-                token
-            },
-
-            autoConnect: true,
-
-            reconnection: true,
-
-            reconnectionAttempts: Infinity,
-
-            reconnectionDelay: 1000,
-
-            timeout:
-                SOCKET_TIMEOUT
-        }
-    );
-
-
-        socketRef.current =
-            socket;
-
 
         // ----------------------------------------------
         // CONNECT
@@ -1353,7 +1271,7 @@ const socket =
 
                 console.log(
                     "BRAVMAN SOCKET CONNECTED:",
-                    socket.id
+                    bravmanSocket.getSocket()?.id
                 );
 
                 setConnected(true);
@@ -1393,22 +1311,6 @@ const socket =
                 setConnected(false);
 
             };
-
-
-        socket.on(
-            "connect",
-            handleConnect
-        );
-
-        socket.on(
-            "disconnect",
-            handleDisconnect
-        );
-
-        socket.on(
-            "connect_error",
-            handleConnectError
-        );
 
 
         // ----------------------------------------------
@@ -2066,90 +1968,61 @@ const socket =
             };
 
 
-        socket.on(
-            "bravman:update",
-            handleUpdate
-        );
 
-        socket.on(
-            "bravman:matchReady",
-            handleMatchReady
-        );
-
-        socket.on(
-            "bravman:joined",
-            handleJoined
-        );
-
-        socket.on(
-            "bravman:finished",
-            handleFinished
-        );
-
-        socket.on(
-            "bravman:error",
-            handleGameError
-        );
-
-
-        // ----------------------------------------------
-        // CLEANUP
-        // ----------------------------------------------
-
-        return () => {
-
-            socket.off(
-                "connect",
+        const unsubscribeConnect =
+            bravmanSocket.onConnect(
                 handleConnect
             );
 
-            socket.off(
-                "disconnect",
+        const unsubscribeDisconnect =
+            bravmanSocket.onDisconnect(
                 handleDisconnect
             );
 
-            socket.off(
-                "connect_error",
+        const unsubscribeConnectError =
+            bravmanSocket.onConnectError(
                 handleConnectError
             );
 
-            socket.off(
-                "bravman:update",
+        const unsubscribeUpdate =
+            bravmanSocket.onUpdate(
                 handleUpdate
             );
 
-            socket.off(
-                "bravman:matchReady",
+        const unsubscribeMatchReady =
+            bravmanSocket.onMatchReady(
                 handleMatchReady
             );
 
-            socket.off(
-                "bravman:joined",
+        const unsubscribeJoined =
+            bravmanSocket.onJoined(
                 handleJoined
             );
 
-            socket.off(
-                "bravman:finished",
+        const unsubscribeFinished =
+            bravmanSocket.onFinished(
                 handleFinished
             );
 
-            socket.off(
-                "bravman:error",
+        const unsubscribeError =
+            bravmanSocket.onError(
                 handleGameError
             );
 
-            socket.disconnect();
+        bravmanSocket.connect();
 
+        return () => {
 
-            if (
-                socketRef.current ===
-                socket
-            ) {
+            unsubscribeConnect();
+            unsubscribeDisconnect();
+            unsubscribeConnectError();
+            unsubscribeUpdate();
+            unsubscribeMatchReady();
+            unsubscribeJoined();
+            unsubscribeFinished();
+            unsubscribeError();
 
-                socketRef.current =
-                    null;
-
-            }
+            bravmanSocket.disconnect();
 
             setConnected(false);
 
@@ -2169,14 +2042,11 @@ const socket =
 
         if (
             !connected ||
-            !socketRef.current ||
             !matchId ||
             !me?.id
         ) {
-
             return;
         }
-
 
         const numericMatchId =
             Number(matchId);
@@ -2184,104 +2054,36 @@ const socket =
         const numericUserId =
             Number(me.id);
 
-
         if (
-            !Number.isFinite(
-                numericMatchId
-            ) ||
-            !Number.isFinite(
-                numericUserId
-            )
+            !Number.isFinite(numericMatchId) ||
+            !Number.isFinite(numericUserId)
         ) {
-
             return;
         }
 
+        currentMatchIdRef.current =
+            numericMatchId;
 
-        const socket =
-            socketRef.current;
+        currentUserIdRef.current =
+            numericUserId;
 
+        bravmanSocket.setMatch(
+            numericMatchId,
+            numericUserId
+        );
 
         console.log(
-            "BRAVMAN SOCKET JOIN:",
+            "BRAVMAN SAC SOCKET JOIN:",
             {
-                matchId:
-                    numericMatchId,
-
-                userId:
-                    numericUserId
+                matchId: numericMatchId,
+                userId: numericUserId
             }
         );
 
-
-        let acknowledged =
-            false;
-
-
-        const payload = {
-
-            matchId:
-                numericMatchId,
-
-            userId:
-                numericUserId
-
-        };
-
-
-        socket.emit(
-            "bravman:join",
-            payload,
-            (ack) => {
-
-                acknowledged =
-                    true;
-
-
-                console.log(
-                    "BRAVMAN SOCKET JOIN ACK:",
-                    ack
-                );
-
-
-                if (
-                    ack?.success === false
-                ) {
-
-                    setError(
-                        ack?.message ||
-                        "Impossible de rejoindre la room BraVMan."
-                    );
-
-                }
-
-            }
+        bravmanSocket.join(
+            numericMatchId,
+            numericUserId
         );
-
-
-        const timeout =
-            setTimeout(() => {
-
-                if (
-                    !acknowledged
-                ) {
-
-                    console.warn(
-                        "BRAVMAN SOCKET JOIN ACK NON REÇU"
-                    );
-
-                }
-
-            }, SOCKET_TIMEOUT);
-
-
-        return () => {
-
-            clearTimeout(
-                timeout
-            );
-
-        };
 
     }, [
         connected,
@@ -2297,46 +2099,14 @@ const socket =
     useEffect(() => {
 
         if (!connected) {
+            setPing("--");
             return;
         }
 
-
-        const interval =
-            setInterval(() => {
-
-                if (
-                    !socketRef.current
-                ) {
-                    return;
-                }
-
-
-                const started =
-                    Date.now();
-
-
-                socketRef.current.emit(
-                    "bravman:ping",
-                    () => {
-
-                        setPing(
-                            Date.now() -
-                            started
-                        );
-
-                    }
-                );
-
-            }, 5000);
-
-
-        return () => {
-
-            clearInterval(
-                interval
-            );
-
-        };
+        // Le backend BraVMan actuel ne déclare pas
+        // d'événement bravman:ping. On conserve l'indicateur
+        // dans l'UI sans émettre un événement non supporté.
+        setPing("--");
 
     }, [
         connected
@@ -2355,9 +2125,6 @@ const socket =
             }
 
 
-            const socket =
-                socketRef.current;
-
             const numericMatchId =
                 Number(matchId);
 
@@ -2366,7 +2133,6 @@ const socket =
 
 
             if (
-                !socket ||
                 !Number.isFinite(
                     numericMatchId
                 ) ||
@@ -2409,17 +2175,9 @@ const socket =
             // ENVOI SERVEUR
             // ------------------------------------------
 
-            socket.emit(
-                "bravman:tap",
-                {
-
-                    matchId:
-                        numericMatchId,
-
-                    userId:
-                        numericUserId
-
-                }
+            bravmanSocket.tap(
+                numericMatchId,
+                numericUserId
             );
 
         }, [
@@ -3519,4 +3277,4 @@ const socket =
 
     );
 
-}
+} 
