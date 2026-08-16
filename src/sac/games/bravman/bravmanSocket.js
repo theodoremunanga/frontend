@@ -1,31 +1,6 @@
 // ==========================================================
-// BRAVMAN SOCKET
+// BRAVMAN — SOCKET FRONTEND
 // Système d'Arbitrage Centralisé (SAC)
-// ==========================================================
-//
-// Responsabilités
-//
-// ✓ Connexion Socket.IO BraVMan
-// ✓ Authentification JWT
-// ✓ Gestion des événements BraVMan
-// ✓ JOIN d'une partie
-// ✓ Envoi des TAP
-// ✓ Demande d'état
-// ✓ Réception des mises à jour
-// ✓ Réception du démarrage
-// ✓ Réception de la fin de partie
-// ✓ Gestion des erreurs
-// ✓ Nettoyage propre
-//
-// Ne gère jamais
-//
-// ✗ API REST
-// ✗ Création de match
-// ✗ Join financier SAC
-// ✗ PostgreSQL
-// ✗ Logique du jeu
-// ✗ Calcul du gagnant
-//
 // ==========================================================
 
 import { io } from "socket.io-client";
@@ -44,18 +19,145 @@ const SOCKET_URL =
     import.meta.env.VITE_SOCKET_URL ||
     API_URL.replace(/\/api\/?$/, "");
 
-const SOCKET_TIMEOUT = 15000;
+
+// ==========================================================
+// TOKEN
+// ==========================================================
+
+const getAuthToken = () => {
+
+    if (
+        typeof window ===
+        "undefined"
+    ) {
+
+        return null;
+
+    }
+
+
+    const storageKeys = [
+
+        "token",
+
+        "accessToken",
+
+        "authToken",
+
+        "jwt"
+
+    ];
+
+
+    for (
+        const key of storageKeys
+    ) {
+
+        const localValue =
+            window.localStorage.getItem(
+                key
+            );
+
+        if (localValue) {
+
+            return localValue;
+
+        }
+
+
+        const sessionValue =
+            window.sessionStorage.getItem(
+                key
+            );
+
+        if (sessionValue) {
+
+            return sessionValue;
+
+        }
+
+    }
+
+
+    return null;
+
+};
+
+
+// ==========================================================
+// SOCKET.IO
+// ==========================================================
+
+const socket = io(
+    SOCKET_URL || undefined,
+    {
+
+        autoConnect: false,
+
+        transports: [
+            "websocket",
+            "polling"
+        ],
+
+        reconnection: true,
+
+        reconnectionAttempts:
+            Infinity,
+
+        reconnectionDelay:
+            1000,
+
+        reconnectionDelayMax:
+            5000,
+
+        auth: (callback) => {
+
+            const token =
+                getAuthToken();
+
+
+            console.log(
+                "BRAVMAN SOCKET AUTH:",
+                token
+                    ? "TOKEN PRÉSENT"
+                    : "TOKEN ABSENT"
+            );
+
+
+            callback({
+
+                token
+
+            });
+
+        }
+
+    }
+);
+
+
+// ==========================================================
+// ETAT LOCAL DU SOCKET
+// ==========================================================
+
+let currentMatchId = null;
+
+let currentUserId = null;
 
 
 // ==========================================================
 // NORMALISATION
 // ==========================================================
 
-const normalizeId = (value) => {
+const normalizeId = (
+    value
+) => {
 
-    const id = Number(value);
+    const id =
+        Number(value);
 
-    return Number.isFinite(id) && id > 0
+    return Number.isFinite(id) &&
+        id > 0
         ? id
         : null;
 
@@ -63,499 +165,59 @@ const normalizeId = (value) => {
 
 
 // ==========================================================
-// TOKEN
+// NORMALISER MATCH ID
 // ==========================================================
 
-const getToken = () => {
-
-    const token =
-        localStorage.getItem("token");
-
-    if (!token) {
-
-        console.error(
-            "BRAVMAN SOCKET : TOKEN ABSENT"
-        );
-
-        return null;
-    }
-
-    return token;
-
-};
-
-
-// ==========================================================
-// SOCKET INSTANCE
-// ==========================================================
-
-let socket = null;
-
-
-// ==========================================================
-// ÉTAT INTERNE
-// ==========================================================
-
-let currentMatchId = null;
-let currentUserId = null;
-
-
-// ==========================================================
-// HANDLERS
-// ==========================================================
-
-const handlers = {
-
-    connect: new Set(),
-
-    disconnect: new Set(),
-
-    connectError: new Set(),
-
-    update: new Set(),
-
-    matchReady: new Set(),
-
-    joined: new Set(),
-
-    running: new Set(),
-
-    finished: new Set(),
-
-    tapRejected: new Set(),
-
-    error: new Set()
-
-};
-
-
-// ==========================================================
-// UTILITAIRE HANDLERS
-// ==========================================================
-
-const notify = (
-    collection,
-    payload
+const normalizeMatchId = (
+    value
 ) => {
 
-    collection.forEach(
-        (handler) => {
-
-            try {
-
-                handler(payload);
-
-            }
-            catch (error) {
-
-                console.error(
-                    "BRAVMAN SOCKET HANDLER ERROR:",
-                    error
-                );
-
-            }
-
-        }
+    return normalizeId(
+        value
     );
 
 };
 
 
 // ==========================================================
-// INSTALLATION DES LISTENERS
+// NORMALISER USER ID
 // ==========================================================
 
-const installListeners = (instance) => {
+const normalizeUserId = (
+    value
+) => {
 
-    // ------------------------------------------------------
-    // CONNECT
-    // ------------------------------------------------------
-
-    instance.on(
-        "connect",
-        () => {
-
-            console.log(
-                "================================="
-            );
-
-            console.log(
-                "🟢 BRAVMAN SOCKET CONNECTED"
-            );
-
-            console.log(
-                "socket:",
-                instance.id
-            );
-
-            console.log(
-                "================================="
-            );
-
-            notify(
-                handlers.connect,
-                {
-                    socketId:
-                        instance.id
-                }
-            );
-
-        }
-    );
-
-
-    // ------------------------------------------------------
-    // DISCONNECT
-    // ------------------------------------------------------
-
-    instance.on(
-        "disconnect",
-        (reason) => {
-
-            console.warn(
-                "🔴 BRAVMAN SOCKET DISCONNECTED:",
-                reason
-            );
-
-            notify(
-                handlers.disconnect,
-                reason
-            );
-
-        }
-    );
-
-
-    // ------------------------------------------------------
-    // CONNECT ERROR
-    // ------------------------------------------------------
-
-    instance.on(
-        "connect_error",
-        (error) => {
-
-            console.error(
-                "BRAVMAN SOCKET CONNECT ERROR:",
-                error
-            );
-
-            notify(
-                handlers.connectError,
-                error
-            );
-
-        }
-    );
-
-
-    // ------------------------------------------------------
-    // UPDATE
-    // ------------------------------------------------------
-
-    instance.on(
-        "bravman:update",
-        (payload) => {
-
-            console.log(
-                "BRAVMAN SOCKET UPDATE:",
-                payload
-            );
-
-            notify(
-                handlers.update,
-                payload
-            );
-
-        }
-    );
-
-
-    // ------------------------------------------------------
-    // MATCH READY
-    // ------------------------------------------------------
-
-    instance.on(
-        "bravman:matchReady",
-        (payload) => {
-
-            console.log(
-                "🔥 BRAVMAN MATCH READY:",
-                payload
-            );
-
-            notify(
-                handlers.matchReady,
-                payload
-            );
-
-        }
-    );
-
-
-    // ------------------------------------------------------
-    // JOINED
-    // ------------------------------------------------------
-
-    instance.on(
-        "bravman:joined",
-        (payload) => {
-
-            console.log(
-                "BRAVMAN JOINED:",
-                payload
-            );
-
-            notify(
-                handlers.joined,
-                payload
-            );
-
-        }
-    );
-
-
-    // ------------------------------------------------------
-    // RUNNING
-    // ------------------------------------------------------
-
-    instance.on(
-        "bravman:running",
-        (payload) => {
-
-            console.log(
-                "BRAVMAN RUNNING:",
-                payload
-            );
-
-            notify(
-                handlers.running,
-                payload
-            );
-
-        }
-    );
-
-
-    // ------------------------------------------------------
-    // FINISHED
-    // ------------------------------------------------------
-
-    instance.on(
-        "bravman:finished",
-        (payload) => {
-
-            console.log(
-                "🏁 BRAVMAN FINISHED:",
-                payload
-            );
-
-            notify(
-                handlers.finished,
-                payload
-            );
-
-        }
-    );
-
-
-    // ------------------------------------------------------
-    // TAP REJECTED
-    // ------------------------------------------------------
-
-    instance.on(
-        "bravman:tapRejected",
-        (payload) => {
-
-            console.warn(
-                "BRAVMAN TAP REJECTED:",
-                payload
-            );
-
-            notify(
-                handlers.tapRejected,
-                payload
-            );
-
-        }
-    );
-
-
-    // ------------------------------------------------------
-    // ERROR
-    // ------------------------------------------------------
-
-    instance.on(
-        "bravman:error",
-        (payload) => {
-
-            console.error(
-                "BRAVMAN SOCKET ERROR:",
-                payload
-            );
-
-            notify(
-                handlers.error,
-                payload
-            );
-
-        }
+    return normalizeId(
+        value
     );
 
 };
 
 
 // ==========================================================
-// CONNEXION
+// DEFINIR LA PARTIE COURANTE
 // ==========================================================
 
-const connect = () => {
+const setMatch = (
+    matchId,
+    userId
+) => {
 
-    // ------------------------------------------------------
-    // DÉJÀ CONNECTÉ
-    // ------------------------------------------------------
-
-    if (
-        socket &&
-        socket.connected
-    ) {
-
-        return socket;
-
-    }
-
-
-    // ------------------------------------------------------
-    // URL
-    // ------------------------------------------------------
-
-    if (!SOCKET_URL) {
-
-        const error =
-            new Error(
-                "VITE_SOCKET_URL est absent. Impossible de connecter BraVMan."
-            );
-
-        console.error(
-            "BRAVMAN SOCKET URL ABSENTE"
+    currentMatchId =
+        normalizeMatchId(
+            matchId
         );
 
-        notify(
-            handlers.connectError,
-            error
+    currentUserId =
+        normalizeUserId(
+            userId
         );
-
-        return null;
-
-    }
-
-
-    // ------------------------------------------------------
-    // TOKEN
-    // ------------------------------------------------------
-
-    const token =
-        getToken();
-
-    if (!token) {
-
-        const error =
-            new Error(
-                "Token manquant."
-            );
-
-        notify(
-            handlers.connectError,
-            error
-        );
-
-        return null;
-
-    }
-
-
-    // ------------------------------------------------------
-    // CRÉATION SOCKET
-    // ------------------------------------------------------
-
-    console.log(
-        "BRAVMAN SOCKET URL:",
-        SOCKET_URL
-    );
-
-
-    socket =
-        io(
-            SOCKET_URL,
-            {
-
-                transports: [
-                    "websocket",
-                    "polling"
-                ],
-
-                auth: {
-                    token
-                },
-
-                autoConnect: true,
-
-                reconnection: true,
-
-                reconnectionAttempts:
-                    Infinity,
-
-                reconnectionDelay:
-                    1000,
-
-                timeout:
-                    SOCKET_TIMEOUT
-
-            }
-        );
-
-
-    // ------------------------------------------------------
-    // LISTENERS
-    // ------------------------------------------------------
-
-    installListeners(
-        socket
-    );
-
-
-    return socket;
 
 };
 
 
 // ==========================================================
-// DISCONNECTION
-// ==========================================================
-
-const disconnect = () => {
-
-    if (!socket) {
-        return;
-    }
-
-
-    console.log(
-        "BRAVMAN SOCKET DISCONNECT"
-    );
-
-
-    socket.disconnect();
-
-    socket = null;
-
-    currentMatchId = null;
-    currentUserId = null;
-
-};
-
-
-// ==========================================================
-// SOCKET INSTANCE
+// OBTENIR LE SOCKET
 // ==========================================================
 
 const getSocket = () => {
@@ -566,15 +228,99 @@ const getSocket = () => {
 
 
 // ==========================================================
-// ÉTAT CONNEXION
+// ETAT DE CONNEXION
 // ==========================================================
 
 const isConnected = () => {
 
-    return Boolean(
-        socket &&
-        socket.connected
+    return socket.connected;
+
+};
+
+
+// ==========================================================
+// CONNECT
+// ==========================================================
+
+const connect = () => {
+
+    const token =
+        getAuthToken();
+
+
+    console.log(
+        "BRAVMAN SOCKET CONNECT",
+        {
+            hasToken:
+                Boolean(token),
+
+            socketConnected:
+                socket.connected,
+
+            socketActive:
+                socket.active
+        }
     );
+
+
+    if (!token) {
+
+        console.error(
+            "BRAVMAN SOCKET CONNECT BLOCKED: TOKEN ABSENT"
+        );
+
+        return false;
+
+    }
+
+
+    /*
+     * Important :
+     *
+     * On réactualise explicitement auth
+     * avant socket.connect().
+     *
+     * Cela évite que le socket ait été
+     * créé avant l'authentification.
+     */
+
+    socket.auth = {
+        token
+    };
+
+
+    if (
+        !socket.connected
+    ) {
+
+        socket.connect();
+
+    }
+
+
+    return true;
+
+};
+
+
+// ==========================================================
+// DISCONNECT
+// ==========================================================
+
+const disconnect = () => {
+
+    if (
+        socket.connected
+    ) {
+
+        console.log(
+            "BRAVMAN SOCKET DISCONNECT"
+        );
+
+
+        socket.disconnect();
+
+    }
 
 };
 
@@ -584,52 +330,82 @@ const isConnected = () => {
 // ==========================================================
 
 const join = (
-    matchId,
-    userId
+    matchId = currentMatchId,
+    userId = currentUserId
 ) => {
 
-    const instance =
-        socket || connect();
-
-    if (!instance) {
-
-        throw new Error(
-            "Socket BraVMan non disponible."
-        );
-
-    }
-
-
     const numericMatchId =
-        normalizeId(matchId);
+        normalizeMatchId(
+            matchId
+        );
 
     const numericUserId =
-        normalizeId(userId);
-
-
-    if (!numericMatchId) {
-
-        throw new Error(
-            "Identifiant de match BraVMan invalide."
+        normalizeUserId(
+            userId
         );
+
+
+    if (
+        !numericMatchId ||
+        !numericUserId
+    ) {
+
+        console.error(
+            "BRAVMAN SOCKET JOIN INVALID",
+            {
+                matchId,
+                userId
+            }
+        );
+
+        return false;
 
     }
 
 
-    if (!numericUserId) {
+    setMatch(
+        numericMatchId,
+        numericUserId
+    );
 
-        throw new Error(
-            "Identifiant utilisateur BraVMan invalide."
+
+    if (
+        !socket.connected
+    ) {
+
+        console.warn(
+            "BRAVMAN SOCKET JOIN WAITING FOR CONNECTION"
         );
 
+        const connectHandler =
+            () => {
+
+                socket.off(
+                    "connect",
+                    connectHandler
+                );
+
+
+                join(
+                    numericMatchId,
+                    numericUserId
+                );
+
+            };
+
+
+        socket.once(
+            "connect",
+            connectHandler
+        );
+
+
+        connect();
+
+
+        return true;
+
     }
-
-
-    currentMatchId =
-        numericMatchId;
-
-    currentUserId =
-        numericUserId;
 
 
     console.log(
@@ -657,7 +433,7 @@ const join = (
 
     console.log(
         "socket:",
-        instance.id
+        socket.id
     );
 
     console.log(
@@ -665,9 +441,12 @@ const join = (
     );
 
 
-    instance.emit(
+    socket.emit(
         "bravman:join",
         {
+
+            game:
+                GAME_ID,
 
             matchId:
                 numericMatchId,
@@ -677,6 +456,9 @@ const join = (
 
         }
     );
+
+
+    return true;
 
 };
 
@@ -690,42 +472,28 @@ const tap = (
     userId = currentUserId
 ) => {
 
-    const instance =
-        socket;
-
-    if (!instance) {
-
-        console.warn(
-            "BRAVMAN TAP : socket absente."
-        );
-
-        return false;
-
-    }
-
-
-    if (!instance.connected) {
-
-        console.warn(
-            "BRAVMAN TAP : socket non connectée."
-        );
-
-        return false;
-
-    }
-
-
     const numericMatchId =
-        normalizeId(matchId);
+        normalizeMatchId(
+            matchId
+        );
 
     const numericUserId =
-        normalizeId(userId);
+        normalizeUserId(
+            userId
+        );
 
 
-    if (!numericMatchId) {
+    if (
+        !numericMatchId ||
+        !numericUserId
+    ) {
 
-        console.warn(
-            "BRAVMAN TAP : matchId invalide."
+        console.error(
+            "BRAVMAN SOCKET TAP INVALID",
+            {
+                matchId,
+                userId
+            }
         );
 
         return false;
@@ -733,10 +501,12 @@ const tap = (
     }
 
 
-    if (!numericUserId) {
+    if (
+        !socket.connected
+    ) {
 
         console.warn(
-            "BRAVMAN TAP : userId invalide."
+            "BRAVMAN SOCKET TAP BLOCKED: DISCONNECTED"
         );
 
         return false;
@@ -744,7 +514,13 @@ const tap = (
     }
 
 
-    instance.emit(
+    setMatch(
+        numericMatchId,
+        numericUserId
+    );
+
+
+    socket.emit(
         "bravman:tap",
         {
 
@@ -768,55 +544,57 @@ const tap = (
 // ==========================================================
 
 const requestState = (
-    matchId = currentMatchId
+    matchId = currentMatchId,
+    userId = currentUserId
 ) => {
 
-    const instance =
-        socket;
-
-    if (!instance) {
-
-        console.warn(
-            "BRAVMAN STATE : socket absente."
-        );
-
-        return false;
-
-    }
-
-
-    if (!instance.connected) {
-
-        console.warn(
-            "BRAVMAN STATE : socket non connectée."
-        );
-
-        return false;
-
-    }
-
-
     const numericMatchId =
-        normalizeId(matchId);
-
-
-    if (!numericMatchId) {
-
-        console.warn(
-            "BRAVMAN STATE : matchId invalide."
+        normalizeMatchId(
+            matchId
         );
+
+    const numericUserId =
+        normalizeUserId(
+            userId
+        );
+
+
+    if (
+        !numericMatchId ||
+        !numericUserId
+    ) {
 
         return false;
 
     }
 
 
-    currentMatchId =
-        numericMatchId;
+    if (
+        !socket.connected
+    ) {
+
+        return false;
+
+    }
 
 
-    instance.emit(
-        "bravman:state"
+    setMatch(
+        numericMatchId,
+        numericUserId
+    );
+
+
+    socket.emit(
+        "bravman:state",
+        {
+
+            matchId:
+                numericMatchId,
+
+            userId:
+                numericUserId
+
+        }
     );
 
 
@@ -826,72 +604,55 @@ const requestState = (
 
 
 // ==========================================================
-// MATCH COURANT
+// LISTENER CONNECT
 // ==========================================================
 
-const setMatch = (
-    matchId,
-    userId
+const onConnect = (
+    callback
 ) => {
 
-    currentMatchId =
-        normalizeId(matchId);
+    const handler = () => {
 
-    currentUserId =
-        normalizeId(userId);
+        console.log(
+            "================================="
+        );
 
-};
+        console.log(
+            "🟢 BRAVMAN SOCKET CONNECTED"
+        );
 
+        console.log(
+            "socket:",
+            socket.id
+        );
 
-// ==========================================================
-// GET MATCH COURANT
-// ==========================================================
-
-const getCurrentMatchId = () => {
-
-    return currentMatchId;
-
-};
-
-
-// ==========================================================
-// GET USER COURANT
-// ==========================================================
-
-const getCurrentUserId = () => {
-
-    return currentUserId;
-
-};
+        console.log(
+            "================================="
+        );
 
 
-// ==========================================================
-// SUBSCRIBE
-// ==========================================================
+        if (
+            typeof callback ===
+            "function"
+        ) {
 
-const subscribe = (
-    event,
-    handler
-) => {
+            callback();
 
-    if (
-        !handlers[event] ||
-        typeof handler !== "function"
-    ) {
+        }
 
-        return () => {};
-
-    }
+    };
 
 
-    handlers[event].add(
+    socket.on(
+        "connect",
         handler
     );
 
 
     return () => {
 
-        handlers[event].delete(
+        socket.off(
+            "connect",
             handler
         );
 
@@ -901,134 +662,531 @@ const subscribe = (
 
 
 // ==========================================================
-// EVENT API
+// LISTENER DISCONNECT
 // ==========================================================
 
-const onConnect = (
-    handler
-) => {
-
-    return subscribe(
-        "connect",
-        handler
-    );
-
-};
-
-
 const onDisconnect = (
-    handler
+    callback
 ) => {
 
-    return subscribe(
+    const handler = (
+        reason
+    ) => {
+
+        console.warn(
+            "BRAVMAN SOCKET DISCONNECTED:",
+            reason
+        );
+
+
+        if (
+            typeof callback ===
+            "function"
+        ) {
+
+            callback(
+                reason
+            );
+
+        }
+
+    };
+
+
+    socket.on(
         "disconnect",
         handler
     );
 
+
+    return () => {
+
+        socket.off(
+            "disconnect",
+            handler
+        );
+
+    };
+
 };
 
+
+// ==========================================================
+// LISTENER CONNECT ERROR
+// ==========================================================
 
 const onConnectError = (
-    handler
+    callback
 ) => {
 
-    return subscribe(
-        "connectError",
+    const handler = (
+        error
+    ) => {
+
+        console.error(
+            "BRAVMAN SOCKET CONNECT ERROR:",
+            error
+        );
+
+
+        if (
+            typeof callback ===
+            "function"
+        ) {
+
+            callback(
+                error
+            );
+
+        }
+
+    };
+
+
+    socket.on(
+        "connect_error",
         handler
     );
 
+
+    return () => {
+
+        socket.off(
+            "connect_error",
+            handler
+        );
+
+    };
+
 };
 
+
+// ==========================================================
+// LISTENER UPDATE
+// ==========================================================
 
 const onUpdate = (
-    handler
+    callback
 ) => {
 
-    return subscribe(
-        "update",
+    const handler = (
+        payload
+    ) => {
+
+        if (
+            typeof callback ===
+            "function"
+        ) {
+
+            callback(
+                payload
+            );
+
+        }
+
+    };
+
+
+    socket.on(
+        "bravman:update",
         handler
     );
 
+
+    return () => {
+
+        socket.off(
+            "bravman:update",
+            handler
+        );
+
+    };
+
 };
 
+
+// ==========================================================
+// LISTENER MATCH READY
+// ==========================================================
 
 const onMatchReady = (
-    handler
+    callback
 ) => {
 
-    return subscribe(
-        "matchReady",
+    const handler = (
+        payload
+    ) => {
+
+        console.log(
+            "BRAVMAN MATCH READY:",
+            payload
+        );
+
+
+        if (
+            typeof callback ===
+            "function"
+        ) {
+
+            callback(
+                payload
+            );
+
+        }
+
+    };
+
+
+    socket.on(
+        "bravman:matchReady",
         handler
     );
 
+
+    return () => {
+
+        socket.off(
+            "bravman:matchReady",
+            handler
+        );
+
+    };
+
 };
 
+
+// ==========================================================
+// LISTENER JOINED
+// ==========================================================
 
 const onJoined = (
-    handler
+    callback
 ) => {
 
-    return subscribe(
-        "joined",
+    const handler = (
+        payload
+    ) => {
+
+        console.log(
+            "BRAVMAN JOINED:",
+            payload
+        );
+
+
+        if (
+            typeof callback ===
+            "function"
+        ) {
+
+            callback(
+                payload
+            );
+
+        }
+
+    };
+
+
+    socket.on(
+        "bravman:joined",
         handler
     );
+
+
+    return () => {
+
+        socket.off(
+            "bravman:joined",
+            handler
+        );
+
+    };
 
 };
 
 
-const onRunning = (
-    handler
-) => {
-
-    return subscribe(
-        "running",
-        handler
-    );
-
-};
-
-
-const onFinished = (
-    handler
-) => {
-
-    return subscribe(
-        "finished",
-        handler
-    );
-
-};
-
+// ==========================================================
+// LISTENER TAP REJECTED
+// ==========================================================
 
 const onTapRejected = (
-    handler
+    callback
 ) => {
 
-    return subscribe(
-        "tapRejected",
+    const handler = (
+        payload
+    ) => {
+
+        console.warn(
+            "BRAVMAN TAP REJECTED:",
+            payload
+        );
+
+
+        if (
+            typeof callback ===
+            "function"
+        ) {
+
+            callback(
+                payload
+            );
+
+        }
+
+    };
+
+
+    socket.on(
+        "bravman:tapRejected",
         handler
     );
 
+
+    return () => {
+
+        socket.off(
+            "bravman:tapRejected",
+            handler
+        );
+
+    };
+
 };
 
+
+// ==========================================================
+// LISTENER FINISHED
+// ==========================================================
+
+const onFinished = (
+    callback
+) => {
+
+    const handler = (
+        payload
+    ) => {
+
+        console.log(
+            "================================="
+        );
+
+        console.log(
+            "🏁 BRAVMAN FINISHED"
+        );
+
+        console.log(
+            payload
+        );
+
+        console.log(
+            "================================="
+        );
+
+
+        if (
+            typeof callback ===
+            "function"
+        ) {
+
+            callback(
+                payload
+            );
+
+        }
+
+    };
+
+
+    socket.on(
+        "bravman:finished",
+        handler
+    );
+
+
+    return () => {
+
+        socket.off(
+            "bravman:finished",
+            handler
+        );
+
+    };
+
+};
+
+
+// ==========================================================
+// LISTENER ERROR
+// ==========================================================
 
 const onError = (
-    handler
+    callback
 ) => {
 
-    return subscribe(
-        "error",
+    const handler = (
+        payload
+    ) => {
+
+        console.error(
+            "BRAVMAN SOCKET ERROR:",
+            payload
+        );
+
+
+        if (
+            typeof callback ===
+            "function"
+        ) {
+
+            callback(
+                payload
+            );
+
+        }
+
+    };
+
+
+    socket.on(
+        "bravman:error",
         handler
     );
+
+
+    return () => {
+
+        socket.off(
+            "bravman:error",
+            handler
+        );
+
+    };
 
 };
 
 
 // ==========================================================
-// RESET
+// LISTENER DISCONNECT RESULT
 // ==========================================================
 
-const reset = () => {
+const onDisconnectResult = (
+    callback
+) => {
+
+    const handler = (
+        payload
+    ) => {
+
+        console.log(
+            "BRAVMAN DISCONNECT RESULT:",
+            payload
+        );
+
+
+        if (
+            typeof callback ===
+            "function"
+        ) {
+
+            callback(
+                payload
+            );
+
+        }
+
+    };
+
+
+    socket.on(
+        "bravman:disconnectResult",
+        handler
+    );
+
+
+    return () => {
+
+        socket.off(
+            "bravman:disconnectResult",
+            handler
+        );
+
+    };
+
+};
+
+
+// ==========================================================
+// LISTENER GENERIQUE
+// ==========================================================
+
+const on = (
+    event,
+    callback
+) => {
+
+    if (
+        typeof event !==
+        "string" ||
+        !event
+    ) {
+
+        return () => {};
+
+    }
+
+
+    if (
+        typeof callback !==
+        "function"
+    ) {
+
+        return () => {};
+
+    }
+
+
+    socket.on(
+        event,
+        callback
+    );
+
+
+    return () => {
+
+        socket.off(
+            event,
+            callback
+        );
+
+    };
+
+};
+
+
+// ==========================================================
+// ETAT COURANT
+// ==========================================================
+
+const getCurrentMatch = () => {
+
+    return currentMatchId;
+
+};
+
+
+const getCurrentUser = () => {
+
+    return currentUserId;
+
+};
+
+
+// ==========================================================
+// CLEAR MATCH
+// ==========================================================
+
+const clearMatch = () => {
 
     currentMatchId = null;
 
@@ -1038,48 +1196,32 @@ const reset = () => {
 
 
 // ==========================================================
-// EXPORT
+// API
 // ==========================================================
 
 const bravmanSocket = {
 
-    // Configuration
-
-    GAME_ID,
-
-    SOCKET_URL,
-
-
-    // Connection
+    getSocket,
 
     connect,
 
     disconnect,
 
-    getSocket,
-
     isConnected,
-
-
-    // Match
 
     setMatch,
 
-    getCurrentMatchId,
+    getCurrentMatch,
 
-    getCurrentUserId,
+    getCurrentUser,
+
+    clearMatch,
 
     join,
-
-
-    // Gameplay
 
     tap,
 
     requestState,
-
-
-    // Events
 
     onConnect,
 
@@ -1093,18 +1235,15 @@ const bravmanSocket = {
 
     onJoined,
 
-    onRunning,
+    onTapRejected,
 
     onFinished,
 
-    onTapRejected,
-
     onError,
 
+    onDisconnectResult,
 
-    // Reset
-
-    reset
+    on
 
 };
 
