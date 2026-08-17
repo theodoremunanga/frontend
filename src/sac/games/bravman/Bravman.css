@@ -1282,3 +1282,479 @@ button:active:not(:disabled) {
 .bravman-page::-webkit-scrollbar-thumb:hover {
     background: #2f6dc2;
 }
+
+/* ==========================================================
+   CLASSEMENT BRAVMAN
+========================================================== */
+
+.bravman-ranking {
+    margin-top: 28px;
+    padding: 20px;
+
+    border-radius: 18px;
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.07),
+            rgba(255, 255, 255, 0.025)
+        );
+
+    border: 1px solid rgba(255, 255, 255, 0.08);
+
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.18);
+
+    overflow: hidden;
+}
+
+
+/* ==========================================================
+   HEADER
+========================================================== */
+
+.bravman-ranking-header {
+    display: flex;
+    align-items: center;
+
+    gap: 14px;
+
+    margin-bottom: 18px;
+}
+
+
+.bravman-ranking-trophy {
+    width: 48px;
+    height: 48px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 14px;
+
+    background:
+        rgba(255, 193, 7, 0.12);
+
+    border:
+        1px solid rgba(255, 193, 7, 0.2);
+
+    font-size: 25px;
+}
+
+
+.bravman-ranking-header h2 {
+    margin: 0;
+
+    font-size: 19px;
+
+    font-weight: 800;
+
+    letter-spacing: -0.3px;
+}
+
+
+.bravman-ranking-header p {
+    margin: 4px 0 0;
+
+    font-size: 12px;
+
+    opacity: 0.58;
+}
+
+
+/* ==========================================================
+   LISTE
+========================================================== */
+
+.bravman-ranking-list {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 8px;
+}
+
+
+/* ==========================================================
+   CARTE JOUEUR
+========================================================== */
+
+.bravman-ranking-player {
+
+    display: grid;
+
+    grid-template-columns:
+        48px
+        minmax(150px, 1fr)
+        75px
+        85px
+        75px;
+
+    align-items: center;
+
+    gap: 10px;
+
+    min-height: 70px;
+
+    padding: 10px 12px;
+
+    border-radius: 13px;
+
+    background:
+        rgba(255, 255, 255, 0.035);
+
+    border:
+        1px solid rgba(255, 255, 255, 0.045);
+
+    transition:
+        transform 0.2s ease,
+        background 0.2s ease;
+}
+
+
+.bravman-ranking-player:hover {
+
+    transform:
+        translateX(3px);
+
+    background:
+        rgba(255, 255, 255, 0.065);
+}
+
+
+/* ==========================================================
+   PODIUM
+========================================================== */
+
+.bravman-ranking-player.rank-1 {
+
+    background:
+        linear-gradient(
+            90deg,
+            rgba(255, 193, 7, 0.14),
+            rgba(255, 193, 7, 0.035)
+        );
+
+    border-color:
+        rgba(255, 193, 7, 0.18);
+}
+
+
+.bravman-ranking-player.rank-2 {
+
+    background:
+        linear-gradient(
+            90deg,
+            rgba(192, 192, 192, 0.10),
+            rgba(255, 255, 255, 0.025)
+        );
+}
+
+
+.bravman-ranking-player.rank-3 {
+
+    background:
+        linear-gradient(
+            90deg,
+            rgba(205, 127, 50, 0.10),
+            rgba(255, 255, 255, 0.025)
+        );
+}
+
+
+/* ==========================================================
+   MÉDAILLE / POSITION
+========================================================== */
+
+.ranking-medal {
+
+    width: 40px;
+    height: 40px;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 12px;
+
+    background:
+        rgba(255, 255, 255, 0.045);
+
+    font-size: 20px;
+
+    font-weight: 800;
+}
+
+
+.rank-1 .ranking-medal {
+    background:
+        rgba(255, 193, 7, 0.12);
+}
+
+
+.rank-2 .ranking-medal {
+    background:
+        rgba(192, 192, 192, 0.10);
+}
+
+
+.rank-3 .ranking-medal {
+    background:
+        rgba(205, 127, 50, 0.10);
+}
+
+
+/* ==========================================================
+   NOM + NIVEAU
+========================================================== */
+
+.ranking-main {
+    min-width: 0;
+
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 5px;
+}
+
+
+.ranking-name {
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+    white-space: nowrap;
+
+    font-size: 14px;
+
+    font-weight: 750;
+}
+
+
+.ranking-level {
+
+    display: flex;
+
+    align-items: center;
+}
+
+
+.ranking-stars {
+
+    font-size: 13px;
+
+    letter-spacing: 2px;
+
+    line-height: 1;
+}
+
+
+/* ==========================================================
+   STATISTIQUES
+========================================================== */
+
+.ranking-stat {
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 2px;
+}
+
+
+.ranking-stat strong {
+
+    font-size: 16px;
+
+    font-weight: 800;
+}
+
+
+.ranking-stat span {
+
+    font-size: 8px;
+
+    font-weight: 700;
+
+    letter-spacing: 0.5px;
+
+    opacity: 0.48;
+}
+
+
+.ranking-win strong {
+    opacity: 0.95;
+}
+
+
+.ranking-loss strong {
+    opacity: 0.65;
+}
+
+
+/* ==========================================================
+   ÉTAT VIDE / CHARGEMENT
+========================================================== */
+
+.bravman-ranking-state {
+
+    min-height: 120px;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    justify-content: center;
+
+    gap: 8px;
+
+    text-align: center;
+
+    border-radius: 14px;
+
+    background:
+        rgba(255, 255, 255, 0.025);
+}
+
+
+.bravman-ranking-state span {
+
+    font-size: 25px;
+}
+
+
+.bravman-ranking-state p {
+
+    margin: 0;
+
+    font-size: 12px;
+
+    opacity: 0.6;
+}
+
+
+/* ==========================================================
+   MOBILE
+========================================================== */
+
+@media (max-width: 700px) {
+
+    .bravman-ranking {
+
+        padding: 14px;
+
+    }
+
+
+    .bravman-ranking-player {
+
+        grid-template-columns:
+            42px
+            minmax(0, 1fr)
+            55px
+            55px;
+
+        gap: 8px;
+
+        min-height: 64px;
+
+        padding: 9px;
+
+    }
+
+
+    .ranking-loss {
+
+        display: none;
+
+    }
+
+
+    .ranking-medal {
+
+        width: 36px;
+        height: 36px;
+
+        font-size: 17px;
+
+    }
+
+
+    .ranking-name {
+
+        font-size: 13px;
+
+    }
+
+
+    .ranking-stars {
+
+        font-size: 11px;
+
+    }
+
+
+    .ranking-stat strong {
+
+        font-size: 14px;
+
+    }
+
+
+    .ranking-stat span {
+
+        font-size: 7px;
+
+    }
+
+}
+
+
+/* ==========================================================
+   PETIT MOBILE
+========================================================== */
+
+@media (max-width: 430px) {
+
+    .bravman-ranking-header {
+
+        gap: 10px;
+
+    }
+
+
+    .bravman-ranking-trophy {
+
+        width: 42px;
+        height: 42px;
+
+        font-size: 21px;
+
+    }
+
+
+    .bravman-ranking-header h2 {
+
+        font-size: 16px;
+
+    }
+
+
+    .bravman-ranking-header p {
+
+        font-size: 10px;
+
+    }
+
+}

@@ -79,3 +79,17 @@ export const getSacMatches = async (
 
     return response.data;
 };
+
+
+// ==========================================================
+// CLASSEMENT BRAVMAN
+// ==========================================================
+
+export const getBravmanRanking = async () => {
+
+    const response = await api.get(
+        "/bravman/ranking"
+    );
+
+    return response.data;
+};

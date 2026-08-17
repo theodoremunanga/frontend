@@ -17,7 +17,8 @@ import {
     createSacMatch,
     joinSacMatch,
     getSacMatch,
-    getSacMatches
+    getSacMatches,
+    getBravmanRanking
 } from "../../sacApi";
 
 import bravmanSocket from "./bravmanSocket";
@@ -781,7 +782,18 @@ export default function Bravman() {
     const [myMatches, setMyMatches] =
         useState([]);
 
+    // ======================================================
+    // CLASSEMENT BRAVMAN
+    // ======================================================
 
+    const [ranking, setRanking] =
+        useState([]);
+
+    const [rankingLoading, setRankingLoading] =
+        useState(false);
+
+    const [rankingError, setRankingError] =
+        useState("");
     // ======================================================
     // MATCH COURANT
     // ======================================================
@@ -2359,6 +2371,65 @@ export default function Bravman() {
         }, [
             loadMatches
         ]);
+        
+    // ======================================================
+    // CHARGER LE CLASSEMENT BRAVMAN
+    // ======================================================
+
+    const loadRanking =
+        useCallback(async () => {
+
+            try {
+
+                setRankingLoading(true);
+                setRankingError("");
+
+                const response =
+                    await getBravmanRanking();
+
+                if (!response?.success) {
+
+                    console.error(
+                        "BRAVMAN RANKING RESPONSE:",
+                        response
+                    );
+
+                    setRanking([]);
+                    setRankingError(
+                        "Impossible de charger le classement."
+                    );
+
+                    return;
+                }
+
+                const list =
+                    Array.isArray(
+                        response.ranking
+                    )
+                        ? response.ranking
+                        : [];
+
+                setRanking(list);
+
+            } catch (err) {
+
+                console.error(
+                    "BRAVMAN RANKING ERROR:",
+                    err
+                );
+
+                setRanking([]);
+                setRankingError(
+                    "Impossible de charger le classement."
+                );
+
+            } finally {
+
+                setRankingLoading(false);
+
+            }
+
+        }, []);
 
 
     // ======================================================
@@ -2373,16 +2444,16 @@ export default function Bravman() {
         const initialize =
             async () => {
 
-                await loadMatches();
-
+                await Promise.all([
+                    loadMatches(),
+                    loadRanking()
+                ]);
 
                 if (cancelled) {
                     return;
                 }
 
-
                 await recoverActiveMatch();
-
             };
 
 
@@ -2397,6 +2468,7 @@ export default function Bravman() {
 
     }, [
         loadMatches,
+        loadRanking,
         recoverActiveMatch
     ]);
 
@@ -4131,6 +4203,182 @@ export default function Bravman() {
                             </div>
 
                         )}
+
+                        {/* ==================================================
+                                CLASSEMENT BRAVMAN
+                            ================================================== */}
+
+                            <section className="bravman-ranking">
+
+                                <div className="bravman-ranking-header">
+
+                                    <div className="bravman-ranking-trophy">
+                                        🏆
+                                    </div>
+
+                                    <div>
+
+                                        <h2>
+                                            Classement BraVMan
+                                        </h2>
+
+                                        <p>
+                                            Les meilleurs combattants de l'arène
+                                        </p>
+
+                                    </div>
+
+                                </div>
+
+
+                                {rankingLoading && (
+
+                                    <div className="bravman-ranking-state">
+                                        <span>⏳</span>
+                                        <p>Chargement du classement...</p>
+                                    </div>
+
+                                )}
+
+
+                                {!rankingLoading &&
+                                    rankingError && (
+
+                                    <div className="bravman-ranking-state">
+                                        <span>⚠️</span>
+                                        <p>{rankingError}</p>
+                                    </div>
+
+                                )}
+
+
+                                {!rankingLoading &&
+                                    !rankingError &&
+                                    ranking.length === 0 && (
+
+                                    <div className="bravman-ranking-state">
+                                        <span>🏆</span>
+                                        <p>
+                                            Aucun combattant n'a encore
+                                            participé à BraVMan.
+                                        </p>
+                                    </div>
+
+                                )}
+
+
+                                {!rankingLoading &&
+                                    !rankingError &&
+                                    ranking.length > 0 && (
+
+                                    <div className="bravman-ranking-list">
+
+                                        {ranking.map((player, index) => {
+
+                                            const stars =
+                                                Number(player.stars || 1);
+
+                                            const position =
+                                                index + 1;
+
+                                            return (
+
+                                                <article
+                                                    key={player.id}
+                                                    className={`
+                                                        bravman-ranking-player
+                                                        rank-${position}
+                                                    `}
+                                                >
+
+                                                    {/* POSITION */}
+
+                                                    <div className="ranking-medal">
+
+                                                        {position === 1 && "🥇"}
+
+                                                        {position === 2 && "🥈"}
+
+                                                        {position === 3 && "🥉"}
+
+                                                        {position > 3 &&
+                                                            `#${position}`}
+
+                                                    </div>
+
+
+                                                    {/* JOUEUR */}
+
+                                                    <div className="ranking-main">
+
+                                                        <strong className="ranking-name">
+                                                            {player.username}
+                                                        </strong>
+
+
+                                                        <div className="ranking-level">
+
+                                                            <span className="ranking-stars">
+                                                                {"★".repeat(stars)}
+                                                                {"☆".repeat(5 - stars)}
+                                                            </span>
+
+                                                        </div>
+
+                                                    </div>
+
+
+                                                    {/* STATISTIQUES */}
+
+                                                    <div className="ranking-stat">
+
+                                                        <strong>
+                                                            {player.matchesPlayed}
+                                                        </strong>
+
+                                                        <span>
+                                                            MATCHS
+                                                        </span>
+
+                                                    </div>
+
+
+                                                    <div className="ranking-stat ranking-win">
+
+                                                        <strong>
+                                                            {player.wins}
+                                                        </strong>
+
+                                                        <span>
+                                                            VICTOIRES
+                                                        </span>
+
+                                                    </div>
+
+
+                                                    <div className="ranking-stat ranking-loss">
+
+                                                        <strong>
+                                                            {player.losses}
+                                                        </strong>
+
+                                                        <span>
+                                                            DÉFAITES
+                                                        </span>
+
+                                                    </div>
+
+                                                </article>
+
+                                            );
+
+                                        })}
+
+                                    </div>
+
+                                )}
+
+                            </section>
 
 
                         {matches.length > 0 && (
