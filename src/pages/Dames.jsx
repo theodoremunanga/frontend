@@ -118,7 +118,7 @@ function oppositePlayer(player) {
 }
 
 // ======================================================
-// BOARD RESULT HELPERS
+// RESULT HELPERS
 // ======================================================
 
 function countPieces(board, player) {
@@ -178,28 +178,109 @@ function getBoardWinner(board) {
   return null;
 }
 
+/**
+ * Normalise toutes les formes possibles
+ * de résultat envoyées par le backend.
+ *
+ * Exemples acceptés :
+ *
+ * winnerSide: 1
+ * winnerSide: 2
+ * winner: 1
+ * winner: 2
+ * winnerSide: "1"
+ * winnerSide: "2"
+ * result: "player1"
+ * result: "player2"
+ * result: "PLAYER_1"
+ * result: "PLAYER_2"
+ *
+ * Les valeurs draw/nul sont volontairement
+ * exclues de cette fonction.
+ */
 function normalizeWinnerSide(data) {
   if (!data) {
     return null;
   }
 
-  if (
-    data.winnerSide === PLAYER_1 ||
-    data.winnerSide === PLAYER_2
-  ) {
-    return Number(
-      data.winnerSide
-    );
-  }
+  const candidates = [
+    data.winnerSide,
+    data.winner,
+    data.winnerPlayer,
+    data.winnerPlayerSide,
+    data.result,
+  ];
 
-  if (
-    data.winner === PLAYER_1 ||
-    data.winner === PLAYER_2
-  ) {
-    return Number(data.winner);
+  for (const candidate of candidates) {
+    if (
+      candidate === PLAYER_1 ||
+      candidate === PLAYER_2
+    ) {
+      return Number(candidate);
+    }
+
+    const value =
+      String(candidate ?? "")
+        .toLowerCase()
+        .trim();
+
+    if (
+      value === "1" ||
+      value === "player1" ||
+      value === "player_1" ||
+      value === "player-1" ||
+      value === "p1" ||
+      value === "joueur1" ||
+      value === "joueur_1"
+    ) {
+      return PLAYER_1;
+    }
+
+    if (
+      value === "2" ||
+      value === "player2" ||
+      value === "player_2" ||
+      value === "player-2" ||
+      value === "p2" ||
+      value === "joueur2" ||
+      value === "joueur_2"
+    ) {
+      return PLAYER_2;
+    }
   }
 
   return null;
+}
+
+function isDrawResult(data) {
+  if (!data) {
+    return false;
+  }
+
+  if (Boolean(data.draw)) {
+    return true;
+  }
+
+  const values = [
+    data.result,
+    data.winnerSide,
+    data.winner,
+  ];
+
+  return values.some((value) => {
+    const normalized =
+      String(value ?? "")
+        .toLowerCase()
+        .trim();
+
+    return [
+      "draw",
+      "nul",
+      "match_nul",
+      "match-nul",
+      "tie",
+    ].includes(normalized);
+  });
 }
 
 // ======================================================
@@ -317,7 +398,7 @@ function getPlayerAvatar(
 }
 
 // ======================================================
-// CONDITIONS
+// GAME MODE
 // ======================================================
 
 function getGameMode(gameConfig) {
@@ -376,7 +457,7 @@ function getConditions(mode) {
         "La partie commence directement afin de vous permettre de jouer " +
         "sans attendre un autre participant.",
       notice:
-        "En jouant directement, vous acceptez les conditions d'utilisation " +
+        "En cliquant sur « Commencer », vous acceptez les conditions d'utilisation " +
         "du jeu ainsi que la politique de confidentialité du SAJCL.",
     };
   }
@@ -740,6 +821,140 @@ function ConditionsModal({
 }
 
 // ======================================================
+// FEEDBACK
+// ======================================================
+
+function FeedbackPanel({
+  rating,
+  setRating,
+  impression,
+  setImpression,
+  onSubmit,
+  onSkip,
+  submitted,
+}) {
+  if (submitted) {
+    return (
+      <div className="dames-feedback-card">
+        <div className="dames-feedback-icon">
+          💚
+        </div>
+
+        <h2>
+          Merci pour votre avis !
+        </h2>
+
+        <p>
+          Votre retour aidera SAJCL à améliorer
+          l'expérience de jeu et 6BetBall.
+        </p>
+
+        <button
+          type="button"
+          className="dames-primary-button"
+          onClick={onSkip}
+        >
+          Continuer
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="dames-feedback-card">
+      <div className="dames-feedback-icon">
+        ⭐
+      </div>
+
+      <div className="dames-conditions-kicker">
+        SAJCL • VOTRE AVIS COMPTE
+      </div>
+
+      <h2>
+        Comment avez-vous trouvé 6BetBall ?
+      </h2>
+
+      <p>
+        Votre impression nous aidera à améliorer
+        les Jeux de Dames et l'ensemble de
+        l'expérience 6BetBall.
+      </p>
+
+      <div className="dames-feedback-rating-title">
+        Combien d'étoiles mérite 6BetBall ?
+      </div>
+
+      <div
+        className="dames-feedback-stars"
+        role="radiogroup"
+        aria-label="Évaluation de 6BetBall"
+      >
+        {[1, 2, 3, 4, 5].map(
+          (star) => (
+            <button
+              key={star}
+              type="button"
+              className={
+                star <= rating
+                  ? "dames-feedback-star dames-feedback-star--active"
+                  : "dames-feedback-star"
+              }
+              onClick={() =>
+                setRating(star)
+              }
+              aria-label={`${star} étoile${
+                star > 1
+                  ? "s"
+                  : ""
+              }`}
+              aria-checked={
+                rating === star
+              }
+              role="radio"
+            >
+              ★
+            </button>
+          )
+        )}
+      </div>
+
+      <textarea
+        className="dames-feedback-textarea"
+        value={impression}
+        onChange={(event) =>
+          setImpression(
+            sanitizeText(
+              event.target.value
+            )
+          )
+        }
+        maxLength={1000}
+        placeholder="Partagez votre impression sur le match, l'interface ou 6BetBall..."
+      />
+
+      <div className="dames-feedback-actions">
+        <button
+          type="button"
+          className="dames-secondary-button"
+          onClick={onSkip}
+        >
+          Plus tard
+        </button>
+
+        <button
+          type="button"
+          className="dames-primary-button"
+          disabled={!rating}
+          onClick={onSubmit}
+        >
+          Envoyer mon avis
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ======================================================
 // MAIN
 // ======================================================
 
@@ -832,6 +1047,18 @@ export default function Dames({
   const [cellSize, setCellSize] =
     useState(getCellSize());
 
+  const [feedbackOpen, setFeedbackOpen] =
+    useState(false);
+
+  const [feedbackRating, setFeedbackRating] =
+    useState(0);
+
+  const [feedbackImpression, setFeedbackImpression] =
+    useState("");
+
+  const [feedbackSubmitted, setFeedbackSubmitted] =
+    useState(false);
+
   const [playerInfo, setPlayerInfo] =
     useState({
       1: {
@@ -889,6 +1116,9 @@ export default function Dames({
   const matchJoinedRef =
     useRef(false);
 
+  const feedbackShownRef =
+    useRef(false);
+
   // ====================================================
   // RESPONSIVE
   // ====================================================
@@ -926,31 +1156,58 @@ export default function Dames({
   );
 
   // ====================================================
+  // BOARD ORIENTATION
+  // ====================================================
+  //
+  // IMPORTANT :
+  //
+  // Le backend conserve une seule orientation
+  // logique du plateau.
+  //
+  // Dans cette orientation canonique :
+  //
+  // PLAYER 1 = côté haut
+  // PLAYER 2 = côté bas
+  //
+  // Chaque joueur doit pourtant voir SES propres
+  // pions en bas.
+  //
+  // Donc :
+  //
+  // PLAYER 1 -> rotation 180°
+  // PLAYER 2 -> orientation normale
+  //
+  // Ainsi, pour les deux joueurs :
+  //
+  // adversaire = haut
+  // moi         = bas
+  //
+  // On ne modifie JAMAIS les coordonnées réelles
+  // envoyées au backend.
+  //
+
+  // ====================================================
   // ORIENTATION
   // ====================================================
 
   const shouldRotateBoard =
     myPlayer === PLAYER_2;
 
-  const displayBoard =
-    useMemo(() => {
-      if (!board) {
-        return [];
-      }
+  const displayBoard = useMemo(() => {
+    if (!board) {
+      return [];
+    }
 
-      if (!shouldRotateBoard) {
-        return board;
-      }
+    if (!shouldRotateBoard) {
+      return board;
+    }
 
-      return [...board]
-        .reverse()
-        .map((row) =>
-          [...row].reverse()
-        );
-    }, [
-      board,
-      shouldRotateBoard,
-    ]);
+    return [...board]
+      .reverse()
+      .map((row) =>
+        [...row].reverse()
+      );
+  }, [board, shouldRotateBoard]);
 
   // ====================================================
   // COORDINATES
@@ -1020,10 +1277,23 @@ export default function Dames({
   // ====================================================
 
   const myPieces = useMemo(
-    () =>
-      myPlayer === PLAYER_1
-        ? [PLAYER_1, KING_1]
-        : [PLAYER_2, KING_2],
+    () => {
+      if (myPlayer === PLAYER_1) {
+        return [
+          PLAYER_1,
+          KING_1,
+        ];
+      }
+
+      if (myPlayer === PLAYER_2) {
+        return [
+          PLAYER_2,
+          KING_2,
+        ];
+      }
+
+      return [];
+    },
     [myPlayer]
   );
 
@@ -1168,6 +1438,94 @@ export default function Dames({
     ]);
 
   // ====================================================
+  // OPEN FEEDBACK
+  // ====================================================
+
+  const openFeedback =
+    useCallback(() => {
+      if (
+        feedbackShownRef.current
+      ) {
+        return;
+      }
+
+      feedbackShownRef.current =
+        true;
+
+      setFeedbackOpen(true);
+    }, []);
+
+  // ====================================================
+  // FINISH LOCAL
+  // ====================================================
+
+  const finishLocalMatch =
+    useCallback(
+      ({
+        winner = null,
+        winnerId: nextWinnerId = null,
+        isDraw = false,
+        finalBoard = null,
+      } = {}) => {
+        if (
+          matchEndedRef.current
+        ) {
+          return true;
+        }
+
+        matchEndedRef.current =
+          true;
+
+        if (
+          finalBoard &&
+          isValidBoard(
+            finalBoard
+          )
+        ) {
+          setBoard(
+            finalBoard
+          );
+        }
+
+        setWinnerSide(
+          winner
+        );
+
+        setWinnerId(
+          nextWinnerId
+        );
+
+        setDraw(
+          Boolean(isDraw)
+        );
+
+        setGameOver(
+          true
+        );
+
+        setSelected(null);
+        setValidMoves([]);
+        setSendingMove(false);
+
+        clearTimeout(
+          moveTimeout.current
+        );
+
+        /*
+         * Le feedback ne doit apparaître
+         * qu'après l'affichage de la fin
+         * du match.
+         */
+        setTimeout(() => {
+          openFeedback();
+        }, 350);
+
+        return true;
+      },
+      [openFeedback]
+    );
+
+  // ====================================================
   // FINISH LOCAL FALLBACK
   // ====================================================
 
@@ -1191,34 +1549,27 @@ export default function Dames({
           );
 
         if (boardWinner) {
-          matchEndedRef.current =
-            true;
-
-          setWinnerSide(
-            boardWinner
-          );
-
-          setWinnerId(null);
-          setDraw(false);
-          setGameOver(true);
-          setSendingMove(false);
-
-          return true;
+          return finishLocalMatch({
+            winner:
+              boardWinner,
+            winnerId: null,
+            isDraw: false,
+            finalBoard:
+              nextBoard,
+          });
         }
 
         /*
          * Si le joueur qui doit jouer
          * n'a aucun mouvement, il perd.
-         *
-         * Le backend calcule déjà allMoves.
-         * Ceci sert de filet de sécurité
-         * pour que l'UI ne reste jamais
-         * bloquée.
          */
+        const normalizedTurn =
+          Number(nextTurn);
+
         if (
-          Number(nextTurn) ===
+          normalizedTurn ===
             PLAYER_1 ||
-          Number(nextTurn) ===
+          normalizedTurn ===
             PLAYER_2
         ) {
           if (
@@ -1227,22 +1578,6 @@ export default function Dames({
             ) &&
             nextMoves.length === 0
           ) {
-            const winner =
-              oppositePlayer(
-                Number(nextTurn)
-              );
-
-            /*
-             * Attention :
-             * au tout premier état,
-             * allMoves peut être vide
-             * pendant un chargement.
-             *
-             * On ne déclenche donc
-             * cette règle que si le
-             * plateau contient bien
-             * des pièces des deux côtés.
-             */
             const p1 =
               countPieces(
                 nextBoard,
@@ -1255,30 +1590,35 @@ export default function Dames({
                 PLAYER_2
               );
 
+            /*
+             * On ne déclenche cette
+             * condition que si les deux
+             * joueurs possèdent encore
+             * des pièces.
+             */
             if (
               p1 > 0 &&
               p2 > 0
             ) {
-              matchEndedRef.current =
-                true;
+              const winner =
+                oppositePlayer(
+                  normalizedTurn
+                );
 
-              setWinnerSide(
-                winner
-              );
-
-              setWinnerId(null);
-              setDraw(false);
-              setGameOver(true);
-              setSendingMove(false);
-
-              return true;
+              return finishLocalMatch({
+                winner,
+                winnerId: null,
+                isDraw: false,
+                finalBoard:
+                  nextBoard,
+              });
             }
           }
         }
 
         return false;
       },
-      []
+      [finishLocalMatch]
     );
 
   // ====================================================
@@ -1296,6 +1636,12 @@ export default function Dames({
     matchJoinedRef.current =
       false;
 
+    feedbackShownRef.current =
+      false;
+
+    setGameOver(false);
+    setFeedbackOpen(false);
+    setFeedbackSubmitted(false);
     setLoadingError(false);
 
     const socket =
@@ -1480,10 +1826,39 @@ export default function Dames({
         setSendingMove(false);
 
         /*
-         * Failsafe immédiat :
-         * si on rejoint un match déjà
-         * terminé dans la DB.
+         * Match déjà terminé côté backend.
          */
+        if (
+          data.finished ||
+          data.gameOver ||
+          data.ended ||
+          data.status ===
+            "FINISHED"
+        ) {
+          const isDraw =
+            isDrawResult(data);
+
+          const side =
+            normalizeWinnerSide(
+              data
+            );
+
+          finishLocalMatch({
+            winner:
+              isDraw
+                ? null
+                : side,
+            winnerId:
+              data.winnerId ??
+              null,
+            isDraw,
+            finalBoard:
+              data.board,
+          });
+
+          return;
+        }
+
         finishFromBoard(
           data.board,
           data.turn,
@@ -1540,15 +1915,41 @@ export default function Dames({
         setSendingMove(false);
 
         /*
-         * IMPORTANT :
-         * le backend doit normalement
-         * envoyer match:end.
-         *
-         * Mais si le dernier pion vient
-         * d'être capturé et que le backend
-         * n'émet pas encore match:end,
-         * l'UI termine immédiatement.
+         * Si le backend fournit déjà
+         * une information de fin dans
+         * match:update, on termine ici.
          */
+        if (
+          data.finished ||
+          data.gameOver ||
+          data.ended ||
+          data.status ===
+            "FINISHED"
+        ) {
+          const isDraw =
+            isDrawResult(data);
+
+          const side =
+            normalizeWinnerSide(
+              data
+            );
+
+          finishLocalMatch({
+            winner:
+              isDraw
+                ? null
+                : side,
+            winnerId:
+              data.winnerId ??
+              null,
+            isDraw,
+            finalBoard:
+              data.board,
+          });
+
+          return;
+        }
+
         finishFromBoard(
           data.board,
           nextTurn,
@@ -1564,51 +1965,97 @@ export default function Dames({
           return;
         }
 
-        if (
+        const finalBoard =
           data?.board &&
           isValidBoard(
             data.board
           )
+            ? data.board
+            : board;
+
+        const isDraw =
+          isDrawResult(data);
+
+        /*
+         * IMPORTANT :
+         *
+         * Ne jamais considérer
+         *
+         * winnerSide: "draw"
+         *
+         * comme une victoire/défaite.
+         *
+         * Le résultat nul est traité
+         * séparément.
+         */
+        const side =
+          isDraw
+            ? null
+            : normalizeWinnerSide(
+                data
+              );
+
+        /*
+         * Si le backend envoie uniquement
+         * winnerId mais pas winnerSide,
+         * on tente de déterminer le côté
+         * à partir des joueurs connus.
+         */
+        let resolvedWinnerSide =
+          side;
+
+        if (
+          !resolvedWinnerSide &&
+          !isDraw &&
+          data?.winnerId != null
         ) {
-          setBoard(
-            data.board
-          );
+          const winner =
+            Number(
+              data.winnerId
+            );
+
+          const creatorId =
+            Number(
+              data.creatorId ??
+                data.creator?.id ??
+                data.players?.[1]
+                  ?.id
+            );
+
+          const opponentId =
+            Number(
+              data.opponentId ??
+                data.opponent?.id ??
+                data.players?.[2]
+                  ?.id
+            );
+
+          if (
+            creatorId &&
+            winner ===
+              creatorId
+          ) {
+            resolvedWinnerSide =
+              PLAYER_1;
+          } else if (
+            opponentId &&
+            winner ===
+              opponentId
+          ) {
+            resolvedWinnerSide =
+              PLAYER_2;
+          }
         }
 
-        const side =
-          normalizeWinnerSide(
-            data
-          );
-
-        matchEndedRef.current =
-          true;
-
-        setWinnerSide(
-          side
-        );
-
-        setWinnerId(
-          data?.winnerId ??
-            null
-        );
-
-        setDraw(
-          data?.result ===
-            "draw" ||
-            Boolean(data?.draw)
-        );
-
-        setGameOver(
-          true
-        );
-
-        setSelected(null);
-        setValidMoves([]);
-        setSendingMove(false);
-
-        clearTimeout(
-          moveTimeout.current
-        );
+        finishLocalMatch({
+          winner:
+            resolvedWinnerSide,
+          winnerId:
+            data?.winnerId ??
+            null,
+          isDraw,
+          finalBoard,
+        });
       };
 
     const handleChatMessage =
@@ -1720,11 +2167,6 @@ export default function Dames({
         setConnected(false);
         setSendingMove(false);
 
-        /*
-         * Ne pas afficher immédiatement
-         * une erreur fatale si le socket
-         * est simplement en reconnexion.
-         */
         if (!board) {
           setLoadingError(
             false
@@ -1806,11 +2248,6 @@ export default function Dames({
         }
       }, SOCKET_TIMEOUT);
 
-    /*
-     * Si le singleton était déjà connecté
-     * avant le montage de Dames, on rejoint
-     * immédiatement.
-     */
     if (
       socket.connected &&
       !matchJoinedRef.current
@@ -1824,13 +2261,6 @@ export default function Dames({
     }
 
     return () => {
-      /*
-       * IMPORTANT :
-       * NE PAS disconnect le singleton ici.
-       *
-       * D'autres écrans / composants peuvent
-       * utiliser checkersSocket.
-       */
       clearInterval(
         pingInterval.current
       );
@@ -1897,24 +2327,12 @@ export default function Dames({
         handleSocketError
       );
     };
-
-    /*
-     * TRÈS IMPORTANT :
-     *
-     * On ne met PAS :
-     *
-     * board
-     * chatOpen
-     * sendingMove
-     *
-     * dans les dépendances.
-     *
-     * Sinon le socket est recréé à chaque
-     * mouvement ou ouverture du chat.
-     */
   }, [
     matchId,
     gameConfig,
+    finishFromBoard,
+    finishLocalMatch,
+    openFeedback,
   ]);
 
   // ====================================================
@@ -2056,21 +2474,6 @@ export default function Dames({
             );
           }, MOVE_TIMEOUT);
 
-        /*
-         * IMPORTANT FIX :
-         *
-         * Le backend accepte :
-         * {
-         *   matchId,
-         *   move
-         * }
-         *
-         * Et sa validation de secours
-         * utilise notamment move.path.
-         *
-         * On envoie donc LE MOVE COMPLET,
-         * pas seulement from/to/id.
-         */
         const payloadMove =
           {
             ...move,
@@ -2225,20 +2628,6 @@ export default function Dames({
         return;
       }
 
-      /*
-       * Le backend :
-       *
-       * socket.on("chat:message")
-       *
-       * sauvegarde avec addMessage()
-       * puis broadcast :
-       *
-       * io.to(`match_${matchId}`)
-       *    .emit("chat:message", message)
-       *
-       * Donc les deux joueurs reçoivent
-       * le même message.
-       */
       sendCheckersMessage(
         matchId,
         text
@@ -2432,6 +2821,111 @@ export default function Dames({
     }, []);
 
   // ====================================================
+  // FEEDBACK SUBMIT
+  // ====================================================
+
+  const submitFeedback =
+    useCallback(() => {
+      if (!feedbackRating) {
+        return;
+      }
+
+      const feedback = {
+        game: "dames",
+        matchId,
+        mode: gameMode,
+        rating: Number(
+          feedbackRating
+        ),
+        impression:
+          sanitizeText(
+            feedbackImpression
+          ),
+        playerSide:
+          normalizePlayerId(
+            myPlayer
+          ),
+        winnerSide:
+          normalizePlayerId(
+            winnerSide
+          ),
+        winnerId:
+          winnerId ?? null,
+        draw: Boolean(draw),
+        createdAt:
+          new Date().toISOString(),
+      };
+
+      /*
+       * Pas d'appel HTTP ici.
+       *
+       * Le module backend de collecte
+       * n'existe pas encore.
+       *
+       * On expose déjà une structure
+       * stable afin que le futur module
+       * puisse écouter directement :
+       *
+       * window.addEventListener(
+       *   "dames:feedback",
+       *   ...
+       * )
+       */
+      window.dispatchEvent(
+        new CustomEvent(
+          "dames:feedback",
+          {
+            detail: feedback,
+          }
+        )
+      );
+
+      /*
+       * Également disponible pour
+       * l'intégration future avec
+       * un service central.
+       */
+      window.dispatchEvent(
+        new CustomEvent(
+          "sixbetball:feedback",
+          {
+            detail: feedback,
+          }
+        )
+      );
+
+      setFeedbackSubmitted(
+        true
+      );
+    }, [
+      feedbackRating,
+      feedbackImpression,
+      matchId,
+      gameMode,
+      myPlayer,
+      winnerSide,
+      winnerId,
+      draw,
+    ]);
+
+  // ====================================================
+  // CLOSE FEEDBACK
+  // ====================================================
+
+  const closeFeedback =
+    useCallback(() => {
+      setFeedbackOpen(
+        false
+      );
+
+      /*
+       * On ne réinitialise pas les
+       * données : elles restent disponibles
+       * jusqu'à la destruction du composant.
+       */
+    }, []);
+
+  // ====================================================
   // LOADING
   // ====================================================
 
@@ -2486,6 +2980,7 @@ export default function Dames({
 
     const iLost =
       !draw &&
+      winnerSide !== null &&
       Number(winnerSide) !==
         Number(myPlayer);
 
@@ -2509,7 +3004,7 @@ export default function Dames({
 
       resultText =
         "Cette partie est terminée. " +
-        "Démarrez un autre match.";
+        "Aucun joueur ne remporte la partie.";
 
       buttonText =
         "Démarrer un autre match";
@@ -2532,8 +3027,8 @@ export default function Dames({
         "Match terminé";
 
       resultText =
-        "Ce match est complètement terminé. " +
-        "Démarrez un autre match.";
+        "Votre adversaire remporte cette partie. " +
+        "Vous pouvez démarrer un nouveau match.";
 
       buttonText =
         "Démarrer un autre match";
@@ -2566,6 +3061,34 @@ export default function Dames({
             {buttonText}
           </button>
         </div>
+
+        {feedbackOpen && (
+          <div className="dames-modal-backdrop">
+            <FeedbackPanel
+              rating={
+                feedbackRating
+              }
+              setRating={
+                setFeedbackRating
+              }
+              impression={
+                feedbackImpression
+              }
+              setImpression={
+                setFeedbackImpression
+              }
+              onSubmit={
+                submitFeedback
+              }
+              onSkip={
+                closeFeedback
+              }
+              submitted={
+                feedbackSubmitted
+              }
+            />
+          </div>
+        )}
       </div>
     );
   }
@@ -2580,15 +3103,22 @@ export default function Dames({
   const player2 =
     playerInfo[PLAYER_2];
 
+  /*
+   * L'ordre visuel est indépendant
+   * de l'orientation interne du plateau.
+   *
+   * Toujours :
+   *
+   * TOP    = adversaire
+   * BOTTOM = moi
+   */
   const topPlayer =
-    myPlayer === PLAYER_1
-      ? PLAYER_2
-      : PLAYER_1;
+    oppositePlayer(
+      myPlayer
+    );
 
   const bottomPlayer =
-    myPlayer === PLAYER_1
-      ? PLAYER_1
-      : PLAYER_2;
+    myPlayer;
 
   // ====================================================
   // RENDER
