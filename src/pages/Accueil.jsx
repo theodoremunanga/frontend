@@ -49,9 +49,9 @@ const games = [
     name: "Football",
     icon: "⚽",
     id: "football",
-    available: true,
+    available: false,
     description:
-      "Le jeu officiel Football maintenant disponible sur 6BetBall.",
+      "Ici on joue, on ne parie pas.",
   },
 
   {
@@ -915,7 +915,7 @@ const handleCreateChallenge =
         <div style={spinner}></div>
 
         <h2>
-          Le SAJCL cherge le SAC...
+          Le SAJCL charge le SAC...
         </h2>
       </div>
     );
@@ -939,10 +939,9 @@ const handleCreateChallenge =
               </h1>
 
               <p style={subtitle}>
-                Le Système d'Arbitrage de Jeux Compétitifs
-                en Ligne 6BetBall
-                Authentique,
-                Honnête et Sûre !
+                Le Système d'Arbitrage de Jeux Compétitifs en Ligne. 
+                6BetBall est une plateforme Authentique, Honnête et Sûre ; 
+                Ici on ne parie pas, mais on Joue !
               </p>
             </div>
 
@@ -995,8 +994,8 @@ const handleCreateChallenge =
               value={
                 stats.games
               }
-              label="Jeu disponible"
-              icon="♟️"
+              label="Jeux disponibles"
+              icon="🕹"
             />
           </div>
         </div>

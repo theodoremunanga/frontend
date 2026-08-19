@@ -1,0 +1,2105 @@
+/* ======================================================
+   DAMES
+   PROFESSIONAL GAME UI
+====================================================== */
+
+:root {
+  --dames-bg: #020617;
+  --dames-panel: #0f172a;
+  --dames-panel-2: #111827;
+
+  --dames-light-square: #ead8b8;
+  --dames-dark-square: #70452f;
+
+  --dames-primary: #2563eb;
+  --dames-primary-2: #7c3aed;
+
+  --dames-green: #22c55e;
+  --dames-red: #ef4444;
+  --dames-yellow: #facc15;
+
+  --dames-text: #f8fafc;
+  --dames-muted: #94a3b8;
+
+  --dames-border:
+    rgba(255, 255, 255, 0.08);
+
+  --dames-shadow:
+    0 24px 80px rgba(0, 0, 0, 0.45);
+}
+
+/* ======================================================
+   PAGE
+====================================================== */
+
+.dames-chat-message {
+  margin-bottom: 13px;
+
+  animation:
+    damesMessageIn
+    0.22s
+    ease-out;
+}
+
+.dames-chat-message--mine {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.dames-chat-message--opponent {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.dames-chat-message-author {
+  margin-bottom: 4px;
+
+  color:
+    #93c5fd;
+
+  font-size: 10px;
+
+  font-weight: 800;
+}
+
+.dames-chat-message--mine
+.dames-chat-message-author {
+  color:
+    #86efac;
+
+  text-align: right;
+}
+
+.dames-chat-message-bubble {
+  width: fit-content;
+
+  max-width: 90%;
+
+  padding:
+    9px 12px;
+
+  border-radius:
+    4px
+    14px
+    14px
+    14px;
+
+  background:
+    rgba(255, 255, 255, 0.07);
+
+  color:
+    #e2e8f0;
+
+  font-size: 13px;
+
+  line-height: 1.45;
+
+  word-break: break-word;
+}
+
+.dames-chat-message--mine
+.dames-chat-message-bubble {
+  border-radius:
+    14px
+    4px
+    14px
+    14px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(37, 99, 235, 0.28),
+      rgba(124, 58, 237, 0.22)
+    );
+
+  color:
+    #eff6ff;
+}
+
+/* ======================================================
+   HEADER
+====================================================== */
+
+.dames-header {
+  max-width: 1180px;
+
+  margin:
+    0 auto 18px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 16px;
+
+  padding:
+    16px 20px;
+
+  border:
+    1px solid var(--dames-border);
+
+  border-radius: 20px;
+
+  background:
+    rgba(15, 23, 42, 0.78);
+
+  backdrop-filter:
+    blur(18px);
+
+  box-shadow:
+    0 15px 45px
+    rgba(0, 0, 0, 0.2);
+}
+
+.dames-brand {
+  font-size: 22px;
+
+  font-weight: 800;
+
+  letter-spacing: -0.02em;
+}
+
+.dames-match-id {
+  margin-top: 4px;
+
+  color: var(--dames-muted);
+
+  font-size: 12px;
+}
+
+.dames-header-actions {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  flex-wrap: wrap;
+
+  justify-content: flex-end;
+}
+
+.dames-connection,
+.dames-ping,
+.dames-report-button {
+  min-height: 38px;
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 7px;
+
+  padding:
+    0 12px;
+
+  border-radius: 11px;
+
+  border:
+    1px solid var(--dames-border);
+
+  background:
+    rgba(255, 255, 255, 0.05);
+
+  color: var(--dames-text);
+
+  font-size: 12px;
+
+  font-weight: 700;
+}
+
+.dames-connection span {
+  width: 8px;
+
+  height: 8px;
+
+  border-radius: 50%;
+
+  background: var(--dames-red);
+}
+
+.dames-connection--online span {
+  background:
+    var(--dames-green);
+
+  box-shadow:
+    0 0 12px
+    rgba(34, 197, 94, 0.8);
+}
+
+.dames-report-button {
+  border: none;
+
+  cursor: pointer;
+
+  background:
+    rgba(239, 68, 68, 0.12);
+
+  color:
+    #fca5a5;
+
+  transition:
+    0.2s ease;
+}
+
+.dames-report-button:hover {
+  transform:
+    translateY(-1px);
+
+  background:
+    rgba(239, 68, 68, 0.2);
+}
+
+/* ======================================================
+   GAME LAYOUT
+====================================================== */
+
+.dames-game-layout {
+  max-width: 1180px;
+
+  margin: 0 auto;
+
+  display: flex;
+
+  justify-content: center;
+}
+
+/* ======================================================
+   BOARD SECTION
+====================================================== */
+
+.dames-board-section {
+  width: 100%;
+
+  max-width: 760px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  gap: 12px;
+}
+
+/* ======================================================
+   PLAYER CARD
+====================================================== */
+
+.dames-player-card {
+  min-width: 190px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 10px;
+
+  padding:
+    8px 14px;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.06);
+
+  border-radius: 15px;
+
+  background:
+    rgba(15, 23, 42, 0.75);
+
+  transition:
+    0.25s ease;
+}
+
+.dames-player-card--active {
+  border-color:
+    rgba(34, 197, 94, 0.55);
+
+  box-shadow:
+    0 0 25px
+    rgba(34, 197, 94, 0.13);
+
+  transform:
+    translateY(-2px);
+}
+
+.dames-player-card--me {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(37, 99, 235, 0.18),
+      rgba(124, 58, 237, 0.12)
+    );
+}
+
+.dames-player-avatar-wrap {
+  position: relative;
+
+  width: 42px;
+
+  height: 42px;
+
+  flex-shrink: 0;
+}
+
+.dames-player-avatar {
+  width: 42px;
+
+  height: 42px;
+
+  object-fit: cover;
+
+  border-radius: 50%;
+
+  border:
+    2px solid
+    rgba(255, 255, 255, 0.15);
+
+  background:
+    #1e293b;
+}
+
+.dames-player-avatar--fallback {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  font-size: 22px;
+}
+
+.dames-player-online {
+  position: absolute;
+
+  right: -1px;
+
+  bottom: -1px;
+
+  width: 13px;
+
+  height: 13px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  color:
+    var(--dames-green);
+
+  font-size: 13px;
+
+  background:
+    #0f172a;
+
+  border-radius: 50%;
+}
+
+.dames-player-name {
+  font-size: 14px;
+
+  font-weight: 800;
+
+  max-width: 180px;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+.dames-player-you {
+  padding:
+    3px 6px;
+
+  border-radius: 6px;
+
+  background:
+    rgba(37, 99, 235, 0.2);
+
+  color:
+    #93c5fd;
+
+  font-size: 9px;
+
+  font-weight: 800;
+
+  text-transform: uppercase;
+}
+
+/* ======================================================
+   TURN
+====================================================== */
+
+.dames-turn-status {
+  min-height: 24px;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  color:
+    var(--dames-muted);
+
+  font-size: 13px;
+
+  font-weight: 700;
+
+  text-align: center;
+}
+
+.dames-turn-status--mine {
+  color:
+    #86efac;
+
+  animation:
+    damesPulse 1.6s
+    ease-in-out infinite;
+}
+
+.dames-turn-status span {
+  margin-top: 2px;
+
+  color:
+    #64748b;
+
+  font-size: 10px;
+}
+
+/* ======================================================
+   BOARD FRAME
+====================================================== */
+
+.dames-board-frame {
+  padding: 9px;
+
+  border-radius: 22px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #3f2a1d,
+      #1f2937
+    );
+
+  box-shadow:
+    0 30px 90px
+    rgba(0, 0, 0, 0.5),
+
+    inset 0 0 0
+      1px
+      rgba(255, 255, 255, 0.1);
+}
+
+.dames-board {
+  display: block;
+
+  overflow: hidden;
+
+  box-sizing: border-box;
+
+  border-radius: 13px;
+
+  box-shadow:
+    inset
+    0 0 0
+    2px
+    rgba(0, 0, 0, 0.25);
+}
+
+.dames-row {
+  display: flex;
+}
+
+/* ======================================================
+   CELLS
+====================================================== */
+
+.dames-cell {
+  position: relative;
+
+  flex-shrink: 0;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  padding: 0;
+
+  border: none;
+
+  outline: none;
+
+  appearance: none;
+
+  overflow: hidden;
+
+  box-sizing: border-box;
+
+  transition:
+    filter 0.16s ease,
+    transform 0.16s ease;
+}
+
+.dames-cell--light {
+  background:
+    var(--dames-light-square);
+}
+
+.dames-cell--dark {
+  background:
+    var(--dames-dark-square);
+}
+
+.dames-cell--dark:not(:disabled) {
+  cursor: pointer;
+}
+
+.dames-cell--dark:not(:disabled):hover {
+  filter:
+    brightness(1.12);
+}
+
+.dames-cell--selected {
+  background:
+    #ca8a04;
+
+  box-shadow:
+    inset
+    0 0 0
+    4px
+    rgba(254, 240, 138, 0.75);
+
+  animation:
+    damesSelected
+    0.8s
+    ease-in-out
+    infinite alternate;
+}
+
+.dames-cell--last {
+  box-shadow:
+    inset
+    0 0 0
+    4px
+    rgba(59, 130, 246, 0.65);
+}
+
+.dames-cell--move {
+  background:
+    #15803d;
+
+  animation:
+    damesMoveCell
+    1.2s
+    ease-in-out
+    infinite;
+}
+
+/* ======================================================
+   PIECES
+====================================================== */
+
+.dames-piece {
+  position: relative;
+
+  z-index: 2;
+
+  border-radius: 50%;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  border:
+    2px solid;
+
+  box-sizing: border-box;
+
+  transition:
+    transform 0.25s
+      cubic-bezier(
+        0.2,
+        0.8,
+        0.2,
+        1
+      ),
+
+    box-shadow 0.25s ease;
+
+  animation:
+    damesPieceAppear
+    0.28s
+    ease-out;
+}
+
+.dames-piece:hover {
+  transform:
+    translateY(-2px)
+    scale(1.03);
+}
+
+.dames-piece--white {
+  background:
+    linear-gradient(
+      145deg,
+      #ffffff,
+      #d1d5db
+    );
+
+  border-color:
+    #9ca3af;
+
+  box-shadow:
+    0
+    8px
+    16px
+    rgba(0, 0, 0, 0.4),
+
+    inset
+    0
+    2px
+    4px
+    rgba(255, 255, 255, 0.8);
+}
+
+.dames-piece--black {
+  background:
+    linear-gradient(
+      145deg,
+      #374151,
+      #030712
+    );
+
+  border-color:
+    #6b7280;
+
+  box-shadow:
+    0
+    8px
+    18px
+    rgba(0, 0, 0, 0.55),
+
+    inset
+    0
+    2px
+    3px
+    rgba(255, 255, 255, 0.08);
+}
+
+.dames-piece--king {
+  box-shadow:
+    0
+    0
+    0
+    3px
+    rgba(250, 204, 21, 0.3),
+
+    0
+    8px
+    18px
+    rgba(0, 0, 0, 0.45);
+}
+
+.dames-piece-inner {
+  font-size: 24px;
+
+  line-height: 1;
+
+  color:
+    #facc15;
+
+  text-shadow:
+    0
+    2px
+    4px
+    rgba(0, 0, 0, 0.5);
+}
+
+/* ======================================================
+   PLAYABLE / MOVE INDICATORS
+====================================================== */
+
+.dames-playable-dot {
+  position: absolute;
+
+  top: 6px;
+
+  right: 6px;
+
+  width: 8px;
+
+  height: 8px;
+
+  border-radius: 50%;
+
+  background:
+    var(--dames-yellow);
+
+  box-shadow:
+    0 0 10px
+    rgba(250, 204, 21, 0.8);
+
+  animation:
+    damesDotPulse
+    1s
+    infinite;
+}
+
+.dames-move-dot {
+  position: absolute;
+
+  width: 17px;
+
+  height: 17px;
+
+  border-radius: 50%;
+
+  background:
+    rgba(255, 255, 255, 0.95);
+
+  box-shadow:
+    0
+    0
+    14px
+    rgba(255, 255, 255, 0.5);
+
+  animation:
+    damesTargetPulse
+    0.9s
+    infinite;
+}
+
+/* ======================================================
+   STATS
+====================================================== */
+
+.dames-stats {
+  width: min(
+    100%,
+    680px
+  );
+
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, 1fr);
+
+  gap: 8px;
+
+  margin-top: 3px;
+}
+
+.dames-stats > div {
+  padding:
+    10px;
+
+  border:
+    1px solid
+    var(--dames-border);
+
+  border-radius: 13px;
+
+  background:
+    rgba(15, 23, 42, 0.7);
+
+  text-align: center;
+}
+
+.dames-stats span {
+  display: block;
+
+  margin-bottom: 4px;
+
+  color:
+    var(--dames-muted);
+
+  font-size: 9px;
+
+  font-weight: 700;
+}
+
+.dames-stats strong {
+  font-size: 18px;
+}
+
+/* ======================================================
+   CHAT FAB
+====================================================== */
+
+.dames-chat-fab {
+  position: fixed;
+
+  right: 24px;
+
+  bottom: 24px;
+
+  z-index: 3000;
+
+  width: 58px;
+
+  height: 58px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  border: none;
+
+  border-radius: 50%;
+
+  background:
+    linear-gradient(
+      135deg,
+      #2563eb,
+      #7c3aed
+    );
+
+  color: white;
+
+  font-size: 24px;
+
+  cursor: pointer;
+
+  box-shadow:
+    0
+    14px
+    35px
+    rgba(37, 99, 235, 0.4);
+
+  transition:
+    transform 0.2s ease;
+}
+
+.dames-chat-fab:hover {
+  transform:
+    translateY(-3px)
+    scale(1.04);
+}
+
+.dames-chat-badge {
+  position: absolute;
+
+  top: -3px;
+
+  right: -3px;
+
+  min-width: 21px;
+
+  height: 21px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  padding: 0 5px;
+
+  border-radius: 50px;
+
+  background:
+    #ef4444;
+
+  border:
+    2px solid
+    #020617;
+
+  color: white;
+
+  font-size: 10px;
+
+  font-weight: 900;
+}
+
+/* ======================================================
+   CHAT OVERLAY
+====================================================== */
+
+.dames-chat-overlay {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 4000;
+
+  display: flex;
+
+  align-items: flex-end;
+
+  justify-content: flex-end;
+
+  padding: 24px;
+
+  background:
+    rgba(2, 6, 23, 0.25);
+
+  backdrop-filter:
+    blur(3px);
+
+  animation:
+    damesFadeIn
+    0.18s
+    ease-out;
+}
+
+.dames-chat-window {
+  width: min(
+    420px,
+    100%
+  );
+
+  height: min(
+    650px,
+    calc(100vh - 48px)
+  );
+
+  display: flex;
+
+  flex-direction: column;
+
+  overflow: hidden;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.1);
+
+  border-radius: 22px;
+
+  background:
+    linear-gradient(
+      180deg,
+      #111827,
+      #020617
+    );
+
+  box-shadow:
+    0
+    30px
+    100px
+    rgba(0, 0, 0, 0.65);
+
+  animation:
+    damesChatOpen
+    0.25s
+    cubic-bezier(
+      0.2,
+      0.8,
+      0.2,
+      1
+    );
+}
+
+.dames-chat-header {
+  min-height: 68px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  padding:
+    0 16px;
+
+  border-bottom:
+    1px solid
+    var(--dames-border);
+
+  background:
+    rgba(255, 255, 255, 0.03);
+}
+
+.dames-chat-header strong {
+  display: block;
+
+  font-size: 15px;
+}
+
+.dames-chat-header span {
+  display: block;
+
+  margin-top: 3px;
+
+  color:
+    var(--dames-muted);
+
+  font-size: 10px;
+}
+
+.dames-chat-close {
+  width: 38px;
+
+  height: 38px;
+
+  border: none;
+
+  border-radius: 10px;
+
+  background:
+    rgba(255, 255, 255, 0.06);
+
+  color: white;
+
+  cursor: pointer;
+
+  font-size: 16px;
+}
+
+.dames-chat-messages {
+  flex: 1;
+
+  min-height: 0;
+
+  overflow-y: auto;
+
+  padding: 16px;
+
+  scrollbar-width: thin;
+}
+
+.dames-chat-empty {
+  height: 100%;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  color:
+    var(--dames-muted);
+
+  text-align: center;
+}
+
+.dames-chat-empty span {
+  font-size: 42px;
+
+  margin-bottom: 10px;
+}
+
+.dames-chat-empty p {
+  margin: 0 0 4px;
+
+  color:
+    var(--dames-text);
+
+  font-weight: 700;
+}
+
+.dames-chat-empty small {
+  max-width: 240px;
+
+  line-height: 1.5;
+}
+
+.dames-chat-message {
+  margin-bottom: 13px;
+
+  animation:
+    damesMessageIn
+    0.22s
+    ease-out;
+}
+
+.dames-chat-message-author {
+  margin-bottom: 4px;
+
+  color:
+    #93c5fd;
+
+  font-size: 10px;
+
+  font-weight: 800;
+}
+
+.dames-chat-message-bubble {
+  width: fit-content;
+
+  max-width: 90%;
+
+  padding:
+    9px 12px;
+
+  border-radius:
+    4px
+    14px
+    14px
+    14px;
+
+  background:
+    rgba(255, 255, 255, 0.07);
+
+  color:
+    #e2e8f0;
+
+  font-size: 13px;
+
+  line-height: 1.45;
+
+  word-break: break-word;
+}
+
+.dames-chat-typing {
+  color:
+    var(--dames-muted);
+
+  font-size: 11px;
+
+  font-style: italic;
+}
+
+.dames-chat-composer {
+  display: flex;
+
+  gap: 8px;
+
+  padding: 12px;
+
+  border-top:
+    1px solid
+    var(--dames-border);
+
+  background:
+    rgba(2, 6, 23, 0.7);
+}
+
+.dames-chat-composer input {
+  flex: 1;
+
+  min-width: 0;
+
+  height: 44px;
+
+  box-sizing: border-box;
+
+  padding:
+    0 13px;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.08);
+
+  border-radius: 12px;
+
+  outline: none;
+
+  background:
+    #0b1220;
+
+  color: white;
+
+  font-size: 13px;
+}
+
+.dames-chat-composer input:focus {
+  border-color:
+    rgba(37, 99, 235, 0.65);
+}
+
+.dames-chat-composer button {
+  width: 44px;
+
+  height: 44px;
+
+  flex-shrink: 0;
+
+  border: none;
+
+  border-radius: 12px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #2563eb,
+      #7c3aed
+    );
+
+  color: white;
+
+  cursor: pointer;
+
+  font-size: 18px;
+}
+
+/* ======================================================
+   CONDITIONS MODAL
+====================================================== */
+
+.dames-modal-backdrop {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 5000;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  padding: 20px;
+
+  background:
+    rgba(2, 6, 23, 0.82);
+
+  backdrop-filter:
+    blur(12px);
+
+  animation:
+    damesFadeIn
+    0.2s
+    ease-out;
+}
+
+.dames-conditions-modal {
+  width: min(
+    520px,
+    100%
+  );
+
+  max-height:
+    calc(100vh - 40px);
+
+  overflow-y: auto;
+
+  padding: 30px;
+
+  box-sizing: border-box;
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.1);
+
+  border-radius: 26px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #111827,
+      #020617
+    );
+
+  box-shadow:
+    0
+    35px
+    120px
+    rgba(0, 0, 0, 0.7);
+
+  text-align: center;
+
+  animation:
+    damesModalIn
+    0.3s
+    cubic-bezier(
+      0.2,
+      0.8,
+      0.2,
+      1
+    );
+}
+
+.dames-conditions-icon {
+  width: 70px;
+
+  height: 70px;
+
+  margin:
+    0 auto 14px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  border-radius: 20px;
+
+  background:
+    linear-gradient(
+      135deg,
+      rgba(37, 99, 235, 0.2),
+      rgba(124, 58, 237, 0.2)
+    );
+
+  font-size: 35px;
+}
+
+.dames-conditions-kicker {
+  color:
+    #93c5fd;
+
+  font-size: 10px;
+
+  font-weight: 900;
+
+  letter-spacing: 0.15em;
+}
+
+.dames-conditions-modal h2 {
+  margin:
+    8px 0 14px;
+
+  font-size: 27px;
+}
+
+.dames-conditions-text {
+  margin: 0;
+
+  color:
+    #cbd5e1;
+
+  font-size: 14px;
+
+  line-height: 1.7;
+}
+
+.dames-conditions-notice {
+  display: flex;
+
+  gap: 10px;
+
+  margin-top: 18px;
+
+  padding: 13px;
+
+  border-radius: 14px;
+
+  background:
+    rgba(37, 99, 235, 0.09);
+
+  border:
+    1px solid
+    rgba(59, 130, 246, 0.18);
+
+  text-align: left;
+}
+
+.dames-conditions-notice span {
+  flex-shrink: 0;
+}
+
+.dames-conditions-notice p {
+  margin: 0;
+
+  color:
+    #bfdbfe;
+
+  font-size: 12px;
+
+  line-height: 1.6;
+}
+
+.dames-conditions-rules {
+  display: grid;
+
+  gap: 8px;
+
+  margin:
+    18px 0;
+}
+
+.dames-conditions-rules div {
+  display: flex;
+
+  align-items: center;
+
+  gap: 8px;
+
+  color:
+    #cbd5e1;
+
+  font-size: 12px;
+
+  text-align: left;
+}
+
+.dames-conditions-rules span {
+  color:
+    #4ade80;
+
+  font-weight: 900;
+}
+
+.dames-primary-button {
+  width: 100%;
+
+  min-height: 48px;
+
+  border: none;
+
+  border-radius: 13px;
+
+  background:
+    linear-gradient(
+      135deg,
+      #2563eb,
+      #7c3aed
+    );
+
+  color: white;
+
+  font-weight: 800;
+
+  cursor: pointer;
+
+  box-shadow:
+    0
+    12px
+    30px
+    rgba(37, 99, 235, 0.25);
+
+  transition:
+    0.2s ease;
+}
+
+.dames-primary-button:hover {
+  transform:
+    translateY(-2px);
+
+  box-shadow:
+    0
+    16px
+    35px
+    rgba(37, 99, 235, 0.35);
+}
+
+/* ======================================================
+   LOADING
+====================================================== */
+
+.dames-loading {
+  min-height: 100vh;
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 10px;
+
+  background:
+    radial-gradient(
+      circle at top,
+      #172554,
+      #020617 65%
+    );
+
+  color: white;
+
+  text-align: center;
+}
+
+.dames-loading h2 {
+  margin: 8px 0 0;
+
+  font-size: 22px;
+}
+
+.dames-loading p {
+  margin: 0;
+
+  color:
+    var(--dames-muted);
+}
+
+.dames-loading-orbit {
+  width: 74px;
+
+  height: 74px;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  border:
+    2px solid
+    rgba(59, 130, 246, 0.2);
+
+  border-top-color:
+    #3b82f6;
+
+  border-radius: 50%;
+
+  font-size: 30px;
+
+  animation:
+    damesSpin
+    1s
+    linear
+    infinite;
+}
+
+.dames-error {
+  margin-top: 12px;
+
+  color:
+    #fca5a5;
+
+  font-size: 13px;
+}
+
+/* ======================================================
+   GAME OVER
+====================================================== */
+
+.dames-gameover {
+  min-height: 100vh;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  padding: 20px;
+
+  box-sizing: border-box;
+
+  background:
+    radial-gradient(
+      circle at top,
+      #172554,
+      #020617 70%
+    );
+
+  color: white;
+}
+
+.dames-gameover-card {
+  width: min(
+    500px,
+    100%
+  );
+
+  padding: 40px 30px;
+
+  border:
+    1px solid
+    var(--dames-border);
+
+  border-radius: 28px;
+
+  background:
+    rgba(15, 23, 42, 0.82);
+
+  box-shadow:
+    var(--dames-shadow);
+
+  text-align: center;
+}
+
+.dames-gameover-trophy {
+  font-size: 60px;
+
+  animation:
+    damesVictory
+    1s
+    ease-out;
+}
+
+.dames-gameover-kicker {
+  margin-top: 14px;
+
+  color:
+    #93c5fd;
+
+  font-size: 10px;
+
+  font-weight: 900;
+
+  letter-spacing: 0.15em;
+}
+
+.dames-gameover-card h1 {
+  margin:
+    8px 0;
+
+  font-size: 28px;
+}
+
+.dames-gameover-card p {
+  margin-bottom: 24px;
+
+  color:
+    var(--dames-muted);
+}
+
+/* ======================================================
+   ANIMATIONS
+====================================================== */
+
+@keyframes damesPieceAppear {
+  from {
+    opacity: 0;
+
+    transform:
+      scale(0.7)
+      translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      scale(1)
+      translateY(0);
+  }
+}
+
+@keyframes damesSelected {
+  from {
+    box-shadow:
+      inset
+      0
+      0
+      0
+      3px
+      rgba(254, 240, 138, 0.45);
+  }
+
+  to {
+    box-shadow:
+      inset
+      0
+      0
+      0
+      5px
+      rgba(254, 240, 138, 0.9);
+  }
+}
+
+@keyframes damesMoveCell {
+  0%,
+  100% {
+    filter:
+      brightness(1);
+  }
+
+  50% {
+    filter:
+      brightness(1.2);
+  }
+}
+
+@keyframes damesDotPulse {
+  0%,
+  100% {
+    transform:
+      scale(0.8);
+
+    opacity: 0.6;
+  }
+
+  50% {
+    transform:
+      scale(1.15);
+
+    opacity: 1;
+  }
+}
+
+@keyframes damesTargetPulse {
+  0%,
+  100% {
+    transform:
+      scale(0.8);
+
+    opacity: 0.55;
+  }
+
+  50% {
+    transform:
+      scale(1.15);
+
+    opacity: 1;
+  }
+}
+
+@keyframes damesPulse {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes damesFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes damesModalIn {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(18px)
+      scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0)
+      scale(1);
+  }
+}
+
+@keyframes damesChatOpen {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(25px)
+      scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0)
+      scale(1);
+  }
+}
+
+@keyframes damesMessageIn {
+  from {
+    opacity: 0;
+
+    transform:
+      translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform:
+      translateY(0);
+  }
+}
+
+@keyframes damesSpin {
+  to {
+    transform:
+      rotate(360deg);
+  }
+}
+
+@keyframes damesVictory {
+  0% {
+    transform:
+      scale(0.5)
+      rotate(-12deg);
+
+    opacity: 0;
+  }
+
+  70% {
+    transform:
+      scale(1.15)
+      rotate(4deg);
+
+    opacity: 1;
+  }
+
+  100% {
+    transform:
+      scale(1)
+      rotate(0);
+  }
+}
+
+/* ======================================================
+   TABLET
+====================================================== */
+
+@media (max-width: 900px) {
+  .dames-page {
+    padding: 12px;
+  }
+
+  .dames-header {
+    border-radius: 16px;
+
+    padding:
+      12px 14px;
+  }
+
+  .dames-header-actions {
+    gap: 5px;
+  }
+
+  .dames-connection {
+    display: none;
+  }
+}
+
+/* ======================================================
+   MOBILE
+====================================================== */
+
+@media (max-width: 640px) {
+  .dames-page {
+    padding:
+      8px;
+
+    padding-bottom:
+      90px;
+  }
+
+  .dames-header {
+    margin-bottom: 8px;
+
+    padding:
+      10px 12px;
+
+    border-radius: 14px;
+  }
+
+  .dames-brand {
+    font-size: 17px;
+  }
+
+  .dames-match-id {
+    font-size: 9px;
+  }
+
+  .dames-ping {
+    min-height: 32px;
+
+    padding:
+      0 8px;
+
+    font-size: 10px;
+  }
+
+  .dames-report-button {
+    min-height: 32px;
+
+    padding:
+      0 8px;
+
+    font-size: 10px;
+  }
+
+  .dames-player-card {
+    min-width: 160px;
+
+    padding:
+      7px 10px;
+  }
+
+  .dames-player-avatar,
+  .dames-player-avatar-wrap {
+    width: 36px;
+
+    height: 36px;
+  }
+
+  .dames-player-name {
+    max-width: 130px;
+
+    font-size: 12px;
+  }
+
+  .dames-turn-status {
+    font-size: 11px;
+  }
+
+  .dames-board-frame {
+  width: fit-content;
+  max-width: 100%;
+
+  box-sizing: border-box;
+
+  padding: 9px;
+
+  border-radius: 22px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #3f2a1d,
+      #1f2937
+    );
+
+  box-shadow:
+    0 30px 90px
+    rgba(0, 0, 0, 0.5),
+
+    inset 0 0 0
+      1px
+      rgba(255, 255, 255, 0.1);
+}
+
+  .dames-board {
+    border-radius: 9px;
+  }
+
+  .dames-piece-inner {
+    font-size: 17px;
+  }
+
+  .dames-playable-dot {
+    width: 5px;
+
+    height: 5px;
+
+    top: 3px;
+
+    right: 3px;
+  }
+
+  .dames-move-dot {
+    width: 10px;
+
+    height: 10px;
+  }
+
+  .dames-stats {
+    gap: 4px;
+  }
+
+  .dames-stats > div {
+    padding:
+      7px 4px;
+
+    border-radius: 9px;
+  }
+
+  .dames-stats span {
+    font-size: 7px;
+  }
+
+  .dames-stats strong {
+    font-size: 14px;
+  }
+
+  .dames-chat-fab {
+    right: 16px;
+
+    bottom: 18px;
+
+    width: 54px;
+
+    height: 54px;
+  }
+
+  .dames-chat-overlay {
+    align-items: flex-end;
+
+    justify-content: center;
+
+    padding: 8px;
+  }
+
+  .dames-chat-window {
+    width: 100%;
+
+    height:
+      min(
+        620px,
+        calc(100vh - 16px)
+      );
+
+    border-radius: 20px;
+  }
+
+  .dames-conditions-modal {
+    padding:
+      24px 18px;
+
+    border-radius: 22px;
+  }
+
+  .dames-conditions-modal h2 {
+    font-size: 23px;
+  }
+
+  .dames-conditions-text {
+    font-size: 13px;
+  }
+}
+
+/* ======================================================
+   VERY SMALL DEVICES
+====================================================== */
+
+@media (max-width: 380px) {
+  .dames-header-actions {
+    display: none;
+  }
+
+  .dames-player-card {
+    min-width: 145px;
+  }
+
+  .dames-stats strong {
+    font-size: 13px;
+  }
+
+  .dames-conditions-modal {
+    padding:
+      20px 15px;
+  }
+}
+
+/* ======================================================
+   REDUCED MOTION
+====================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration:
+      0.01ms !important;
+
+    animation-iteration-count:
+      1 !important;
+
+    transition-duration:
+      0.01ms !important;
+  }
+}

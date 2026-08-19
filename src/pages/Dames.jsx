@@ -1,4 +1,3 @@
-import { io } from "socket.io-client";
 import {
   useEffect,
   useMemo,
@@ -10,16 +9,23 @@ import {
 
 import html2canvas from "html2canvas";
 
+import "./Dames.css";
+
+import {
+  checkersSocket,
+  connectCheckers,
+  joinCheckersMatch,
+  sendCheckersMove,
+  sendCheckersMessage,
+  sendCheckersTyping,
+} from "../services/checkersSocket";
+
 // ======================================================
 // CONFIG
 // ======================================================
 
 const API =
-  import.meta.env.VITE_API_URL;
-
-const SOCKET_URL =
-  import.meta.env.VITE_SOCKET_URL ||
-  API?.replace(/\/api$/, "");
+  import.meta.env.VITE_API_URL || "";
 
 const PLAYER_1 = 1;
 const PLAYER_2 = 2;
@@ -33,17 +39,35 @@ const MAX_CHAT_LENGTH = 300;
 const MAX_MESSAGES = 100;
 
 const SOCKET_TIMEOUT = 15000;
+const MOVE_TIMEOUT = 7000;
 
-const CELL_SIZE = Math.floor(
-  Math.min(window.innerWidth * 0.9, 680) / 10
-);
+// ======================================================
+// HELPERS
+// ======================================================
 
-const MOBILE =
-  typeof window !== "undefined" &&
-  window.innerWidth < 768;
-// ======================================================
-// VALIDATORS
-// ======================================================
+function getCellSize() {
+  if (typeof window === "undefined") {
+    return 52;
+  }
+
+  const width = window.innerWidth;
+
+  if (width < 380) {
+    return Math.floor((width - 32) / 10);
+  }
+
+  if (width < 480) {
+    return Math.floor((width - 40) / 10);
+  }
+
+  if (width < 768) {
+    return Math.floor((width - 48) / 10);
+  }
+
+  return Math.floor(
+    Math.min(width * 0.82, 680) / 10
+  );
+}
 
 function isValidBoard(board) {
   if (!Array.isArray(board)) {
@@ -65,188 +89,658 @@ function isValidBoard(board) {
 }
 
 function isValidMove(move) {
-  if (!move) {
-    return false;
-  }
-
-  if (!move.from) {
-    return false;
-  }
-
-  if (!Array.isArray(move.path)) {
-    return false;
-  }
-
-  if (move.path.length === 0) {
-    return false;
-  }
-
-  return true;
+  return Boolean(
+    move &&
+      move.from &&
+      Array.isArray(move.path) &&
+      move.path.length > 0
+  );
 }
 
-function sanitizeText(text) {
-  return text
+function sanitizeText(text = "") {
+  return String(text)
     .replace(/[\u0000-\u001F\u007F]/g, "")
     .slice(0, MAX_CHAT_LENGTH);
 }
 
+function normalizePlayerId(value) {
+  const id = Number(value);
+
+  return id === PLAYER_1 || id === PLAYER_2
+    ? id
+    : null;
+}
+
+function oppositePlayer(player) {
+  return player === PLAYER_1
+    ? PLAYER_2
+    : PLAYER_1;
+}
+
 // ======================================================
-// MEMO CELL
+// BOARD RESULT HELPERS
 // ======================================================
 
-const Cell = memo(function Cell({
-  cell,
-  r,
-  c,
-  handleClick,
-  selected,
-  isMove,
-  isLastMove,
-  isPlayable,
-  isMyTurn,
-}) {
-  const isDark = (r + c) % 2 === 1;
+function countPieces(board, player) {
+  if (!isValidBoard(board)) {
+    return 0;
+  }
 
-  const isWhite =
-    cell === PLAYER_1 ||
-    cell === KING_1;
+  const pieces =
+    player === PLAYER_1
+      ? [PLAYER_1, KING_1]
+      : [PLAYER_2, KING_2];
 
-  const isKing =
-    cell === KING_1 ||
-    cell === KING_2;
+  let count = 0;
 
-  return (
-    <div
-      onClick={() =>
-        handleClick(r, c)
+  for (const row of board) {
+    for (const cell of row) {
+      if (pieces.includes(cell)) {
+        count++;
       }
-      style={{
-        width: CELL_SIZE,
-        height: CELL_SIZE,
+    }
+  }
 
-        background:
-          !isDark
-            ? "#f1dfc0"
-            : selected
-            ? "#eab308"
-            : isMove
-            ? "#22c55e"
-            : isLastMove
-            ? "#2563eb"
-            : "#7c4a2d",
+  return count;
+}
 
-        display: "flex",
+function getBoardWinner(board) {
+  if (!isValidBoard(board)) {
+    return null;
+  }
 
-        alignItems: "center",
+  const player1Pieces =
+    countPieces(
+      board,
+      PLAYER_1
+    );
 
-        justifyContent:
-          "center",
+  const player2Pieces =
+    countPieces(
+      board,
+      PLAYER_2
+    );
 
-        position: "relative",
+  if (
+    player1Pieces === 0 &&
+    player2Pieces > 0
+  ) {
+    return PLAYER_2;
+  }
 
-        cursor:
-          isDark &&
-          isMyTurn
-            ? "pointer"
-            : "default",
+  if (
+    player2Pieces === 0 &&
+    player1Pieces > 0
+  ) {
+    return PLAYER_1;
+  }
 
-        transition:
-          "all 0.15s ease",
+  return null;
+}
 
-        boxSizing:
-          "border-box",
+function normalizeWinnerSide(data) {
+  if (!data) {
+    return null;
+  }
 
-        border: selected
-          ? "3px solid #fde047"
-          : "1px solid rgba(0,0,0,0.08)",
-      }}
-    >
-      {cell !== 0 && (
-        <div
-          style={{
-            width: CELL_SIZE * 0.74,
-            height: CELL_SIZE * 0.74,
+  if (
+    data.winnerSide === PLAYER_1 ||
+    data.winnerSide === PLAYER_2
+  ) {
+    return Number(
+      data.winnerSide
+    );
+  }
 
-            borderRadius: "50%",
+  if (
+    data.winner === PLAYER_1 ||
+    data.winner === PLAYER_2
+  ) {
+    return Number(data.winner);
+  }
 
-            background: isWhite
-              ? "linear-gradient(145deg,#f9fafb,#d1d5db)"
-              : "linear-gradient(145deg,#111827,#000)",
+  return null;
+}
 
-            border: isWhite
-              ? "2px solid #9ca3af"
-              : "2px solid #4b5563",
+// ======================================================
+// PLAYER DATA HELPERS
+// ======================================================
 
-            display: "flex",
+function getPlayerName(
+  player,
+  gameConfig,
+  data
+) {
+  const players =
+    data?.players ||
+    gameConfig?.players ||
+    {};
 
-            alignItems: "center",
+  const playerData =
+    players?.[player] ||
+    players?.[String(player)] ||
+    null;
 
-            justifyContent:
-              "center",
+  const candidates =
+    player === PLAYER_1
+      ? [
+          playerData?.username,
+          playerData?.name,
+          playerData?.displayName,
+          data?.creator?.username,
+          data?.creator?.name,
+          data?.creatorName,
+          gameConfig?.creatorName,
+          gameConfig?.creatorUsername,
+          gameConfig?.creator?.username,
+          gameConfig?.creator?.name,
+        ]
+      : [
+          playerData?.username,
+          playerData?.name,
+          playerData?.displayName,
+          data?.opponent?.username,
+          data?.opponent?.name,
+          data?.opponentName,
+          gameConfig?.opponentName,
+          gameConfig?.opponentUsername,
+          gameConfig?.opponent?.username,
+          gameConfig?.opponent?.name,
+        ];
 
-            boxShadow:
-              "0 8px 18px rgba(0,0,0,0.4)",
-          }}
-        >
-          {isKing && (
-            <span
-              style={{
-                fontSize: 22,
+  const found =
+    candidates.find(
+      (value) =>
+        value !== undefined &&
+        value !== null &&
+        String(value).trim() !== ""
+    );
+
+  return found
+    ? sanitizeText(found)
+    : player === PLAYER_1
+    ? "Joueur 1"
+    : "Joueur 2";
+}
+
+function getPlayerAvatar(
+  player,
+  gameConfig,
+  data
+) {
+  const players =
+    data?.players ||
+    gameConfig?.players ||
+    {};
+
+  const playerData =
+    players?.[player] ||
+    players?.[String(player)] ||
+    null;
+
+  const candidates =
+    player === PLAYER_1
+      ? [
+          playerData?.avatar,
+          playerData?.avatarUrl,
+          playerData?.photo,
+          playerData?.profileImage,
+          data?.creator?.avatar,
+          data?.creator?.avatarUrl,
+          data?.creatorAvatar,
+          gameConfig?.creatorAvatar,
+          gameConfig?.creator?.avatar,
+          gameConfig?.creator?.avatarUrl,
+        ]
+      : [
+          playerData?.avatar,
+          playerData?.avatarUrl,
+          playerData?.photo,
+          playerData?.profileImage,
+          data?.opponent?.avatar,
+          data?.opponent?.avatarUrl,
+          data?.opponentAvatar,
+          gameConfig?.opponentAvatar,
+          gameConfig?.opponent?.avatar,
+          gameConfig?.opponent?.avatarUrl,
+        ];
+
+  const found =
+    candidates.find(
+      (value) =>
+        value !== undefined &&
+        value !== null &&
+        String(value).trim() !== ""
+    );
+
+  return found || null;
+}
+
+// ======================================================
+// CONDITIONS
+// ======================================================
+
+function getGameMode(gameConfig) {
+  const raw =
+    gameConfig?.mode ||
+    gameConfig?.gameMode ||
+    gameConfig?.matchMode ||
+    gameConfig?.type ||
+    "user";
+
+  const mode = String(raw)
+    .toLowerCase()
+    .trim();
+
+  if (
+    mode.includes("training") ||
+    mode.includes("entrain")
+  ) {
+    return "training";
+  }
+
+  if (
+    mode === "ia" ||
+    mode === "ai" ||
+    mode.includes("computer")
+  ) {
+    return "ai";
+  }
+
+  return "user";
+}
+
+function getConditions(mode) {
+  if (mode === "training") {
+    return {
+      icon: "🎯",
+      title: "Mode entraînement",
+      text:
+        "Bienvenue dans votre espace d'entraînement aux Jeux de Dames. " +
+        "Profitez de cette partie pour améliorer votre stratégie, " +
+        "tester vos déplacements et perfectionner votre maîtrise du jeu. " +
+        "Jouez dans un esprit fair-play et respectez les règles du jeu.",
+      notice:
+        "En cliquant sur « Commencer », vous reconnaissez avoir pris connaissance " +
+        "des règles du jeu ainsi que des conditions d'utilisation et de la " +
+        "politique de confidentialité du SAJCL.",
+    };
+  }
+
+  if (mode === "ai") {
+    return {
+      icon: "🤖",
+      title: "Jeu contre l'IA",
+      text:
+        "Vous allez affronter l'intelligence artificielle des Jeux de Dames. " +
+        "La partie commence directement afin de vous permettre de jouer " +
+        "sans attendre un autre participant.",
+      notice:
+        "En jouant directement, vous acceptez les conditions d'utilisation " +
+        "du jeu ainsi que la politique de confidentialité du SAJCL.",
+    };
+  }
+
+  return {
+    icon: "♟️",
+    title: "Bienvenue aux Jeux de Dames",
+    text:
+      "Jouez avec sincérité, honnêteté et fair-play. " +
+      "Respectez votre adversaire et les règles du jeu. " +
+      "En cas de problème, de comportement suspect ou de litige, " +
+      "utilisez le signalement afin que l'administration puisse examiner " +
+      "la situation.",
+    notice:
+      "En cliquant sur « Commencer », vous acceptez les conditions " +
+      "d'utilisation de ce jeu ainsi que la politique de confidentialité " +
+      "du SAJCL.",
+  };
+}
+
+// ======================================================
+// AVATAR
+// ======================================================
+
+const PlayerAvatar = memo(
+  function PlayerAvatar({
+    player,
+    name,
+    avatar,
+    active,
+    isMe,
+  }) {
+    return (
+      <div
+        className={`dames-player-card ${
+          active
+            ? "dames-player-card--active"
+            : ""
+        } ${
+          isMe
+            ? "dames-player-card--me"
+            : ""
+        }`}
+      >
+        <div className="dames-player-avatar-wrap">
+          {avatar ? (
+            <img
+              src={avatar}
+              alt={name}
+              className="dames-player-avatar"
+              onError={(event) => {
+                event.currentTarget.style.display =
+                  "none";
               }}
-            >
-              👑
+            />
+          ) : (
+            <div className="dames-player-avatar dames-player-avatar--fallback">
+              {player === PLAYER_1
+                ? "♙"
+                : "♟"}
+            </div>
+          )}
+
+          {active && (
+            <span className="dames-player-online">
+              ●
             </span>
           )}
         </div>
-      )}
 
-      {isPlayable &&
-        !selected && (
-          <div
-            style={{
-              position:
-                "absolute",
+        <div className="dames-player-name">
+          {name}
+        </div>
 
-              width: 12,
-              height: 12,
-
-              borderRadius:
-                "50%",
-
-              background:
-                "#facc15",
-
-              top: 6,
-              right: 6,
-            }}
-          />
+        {isMe && (
+          <div className="dames-player-you">
+            Vous
+          </div>
         )}
-
-      {isMove && (
-        <div
-          style={{
-            position:
-              "absolute",
-
-            width: 18,
-            height: 18,
-
-            borderRadius:
-              "50%",
-
-            background:
-              "#fff",
-
-            opacity: 0.9,
-          }}
-        />
-      )}
-    </div>
-  );
-});
+      </div>
+    );
+  }
+);
 
 // ======================================================
-// COMPONENT
+// CELL
+// ======================================================
+
+const Cell = memo(
+  function Cell({
+    cell,
+    r,
+    c,
+    handleClick,
+    selected,
+    isMove,
+    isLastMove,
+    isPlayable,
+    isMyTurn,
+    cellSize,
+  }) {
+    const isDark =
+      (r + c) % 2 === 1;
+
+    const isWhite =
+      cell === PLAYER_1 ||
+      cell === KING_1;
+
+    const isKing =
+      cell === KING_1 ||
+      cell === KING_2;
+
+    const canClick =
+      isDark && isMyTurn;
+
+    return (
+      <button
+        type="button"
+        className={[
+          "dames-cell",
+          isDark
+            ? "dames-cell--dark"
+            : "dames-cell--light",
+          selected
+            ? "dames-cell--selected"
+            : "",
+          isMove
+            ? "dames-cell--move"
+            : "",
+          isLastMove
+            ? "dames-cell--last"
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        style={{
+          width: cellSize,
+          height: cellSize,
+        }}
+        onClick={() =>
+          handleClick(r, c)
+        }
+        disabled={!canClick}
+        aria-label={`Case ${
+          r + 1
+        }-${c + 1}`}
+      >
+        {cell !== 0 && (
+          <div
+            className={[
+              "dames-piece",
+              isWhite
+                ? "dames-piece--white"
+                : "dames-piece--black",
+              isKing
+                ? "dames-piece--king"
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            style={{
+              width:
+                cellSize * 0.74,
+              height:
+                cellSize * 0.74,
+            }}
+          >
+            <div className="dames-piece-inner">
+              {isKing && "♛"}
+            </div>
+          </div>
+        )}
+
+        {isPlayable &&
+          !selected && (
+            <span className="dames-playable-dot" />
+          )}
+
+        {isMove && (
+          <span className="dames-move-dot" />
+        )}
+      </button>
+    );
+  }
+);
+
+// ======================================================
+// CHAT
+// ======================================================
+
+function ChatPanel({
+  messages,
+  chatInput,
+  typingPlayer,
+  onChange,
+  onSend,
+  onClose,
+  chatRef,
+}) {
+  return (
+    <div className="dames-chat-overlay">
+      <div className="dames-chat-window">
+        <div className="dames-chat-header">
+          <div>
+            <strong>
+              💬 Discussion
+            </strong>
+
+            <span>
+              Discussion privée du match
+            </span>
+          </div>
+
+          <button
+            type="button"
+            className="dames-chat-close"
+            onClick={onClose}
+            aria-label="Fermer le chat"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div
+          ref={chatRef}
+          className="dames-chat-messages"
+        >
+          {messages.length === 0 ? (
+            <div className="dames-chat-empty">
+              <span>💬</span>
+
+              <p>
+                Aucun message pour le moment.
+              </p>
+
+              <small>
+                Soyez courtois avec votre
+                adversaire.
+              </small>
+            </div>
+          ) : (
+            messages.map(
+              (message, index) => (
+                <div
+                  key={`${index}-${message.text}-${message.playerId}`}
+                  className="dames-chat-message"
+                >
+                  <div className="dames-chat-message-author">
+                    {message.username}
+                  </div>
+
+                  <div className="dames-chat-message-bubble">
+                    {message.text}
+                  </div>
+                </div>
+              )
+            )
+          )}
+
+          {typingPlayer && (
+            <div className="dames-chat-typing">
+              ✍️ {typingPlayer} écrit...
+            </div>
+          )}
+        </div>
+
+        <div className="dames-chat-composer">
+          <input
+            value={chatInput}
+            maxLength={MAX_CHAT_LENGTH}
+            onChange={onChange}
+            placeholder="Écrire un message..."
+            onKeyDown={(event) => {
+              if (
+                event.key === "Enter"
+              ) {
+                event.preventDefault();
+                onSend();
+              }
+            }}
+          />
+
+          <button
+            type="button"
+            onClick={onSend}
+            aria-label="Envoyer"
+          >
+            ➤
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ======================================================
+// CONDITIONS MODAL
+// ======================================================
+
+function ConditionsModal({
+  mode,
+  onAccept,
+}) {
+  const conditions =
+    getConditions(mode);
+
+  return (
+    <div className="dames-modal-backdrop">
+      <div className="dames-conditions-modal">
+        <div className="dames-conditions-icon">
+          {conditions.icon}
+        </div>
+
+        <div className="dames-conditions-kicker">
+          SAJCL • JEUX DE DAMES
+        </div>
+
+        <h2>
+          {conditions.title}
+        </h2>
+
+        <p className="dames-conditions-text">
+          {conditions.text}
+        </p>
+
+        <div className="dames-conditions-notice">
+          <span>ℹ️</span>
+
+          <p>
+            {conditions.notice}
+          </p>
+        </div>
+
+        <div className="dames-conditions-rules">
+          <div>
+            <span>✓</span>
+            Fair-play obligatoire
+          </div>
+
+          <div>
+            <span>✓</span>
+            Respect de l'adversaire
+          </div>
+
+          <div>
+            <span>✓</span>
+            Signalement disponible en cas de problème
+          </div>
+        </div>
+
+        <button
+          type="button"
+          className="dames-primary-button"
+          onClick={onAccept}
+        >
+          Commencer la partie
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ======================================================
+// MAIN
 // ======================================================
 
 export default function Dames({
@@ -257,11 +751,13 @@ export default function Dames({
     gameConfig || {};
 
   const token =
-    localStorage.getItem("token");
+    localStorage.getItem("token") ||
+    localStorage.getItem("accessToken") ||
+    localStorage.getItem("jwt");
 
-  // ======================================================
-  // STATES
-  // ======================================================
+  // ====================================================
+  // STATE
+  // ====================================================
 
   const [board, setBoard] =
     useState(null);
@@ -285,7 +781,9 @@ export default function Dames({
     useState(null);
 
   const [connected, setConnected] =
-    useState(false);
+    useState(
+      checkersSocket.connected
+    );
 
   const [ping, setPing] =
     useState("--");
@@ -294,6 +792,9 @@ export default function Dames({
     useState(false);
 
   const [winnerSide, setWinnerSide] =
+    useState(null);
+
+  const [winnerId, setWinnerId] =
     useState(null);
 
   const [draw, setDraw] =
@@ -317,15 +818,58 @@ export default function Dames({
   const [typingPlayer, setTypingPlayer] =
     useState(null);
 
-  // ======================================================
+  const [chatOpen, setChatOpen] =
+    useState(false);
+
+  const [unreadMessages, setUnreadMessages] =
+    useState(0);
+
+  const [
+    conditionsAccepted,
+    setConditionsAccepted,
+  ] = useState(false);
+
+  const [cellSize, setCellSize] =
+    useState(getCellSize());
+
+  const [playerInfo, setPlayerInfo] =
+    useState({
+      1: {
+        name: getPlayerName(
+          PLAYER_1,
+          gameConfig,
+          null
+        ),
+        avatar: getPlayerAvatar(
+          PLAYER_1,
+          gameConfig,
+          null
+        ),
+      },
+
+      2: {
+        name: getPlayerName(
+          PLAYER_2,
+          gameConfig,
+          null
+        ),
+        avatar: getPlayerAvatar(
+          PLAYER_2,
+          gameConfig,
+          null
+        ),
+      },
+    });
+
+  // ====================================================
   // REFS
-  // ======================================================
+  // ====================================================
 
-  const socketRef = useRef(null);
+  const boardRef =
+    useRef(null);
 
-  const boardRef = useRef(null);
-
-  const chatRef = useRef(null);
+  const chatRef =
+    useRef(null);
 
   const typingTimeout =
     useRef(null);
@@ -339,263 +883,482 @@ export default function Dames({
   const moveTimeout =
     useRef(null);
 
-  // ======================================================
-  // HELPERS
-  // ======================================================
+  const matchEndedRef =
+    useRef(false);
+
+  const matchJoinedRef =
+    useRef(false);
+
+  // ====================================================
+  // RESPONSIVE
+  // ====================================================
+
+  useEffect(() => {
+    const handleResize = () => {
+      setCellSize(
+        getCellSize()
+      );
+    };
+
+    window.addEventListener(
+      "resize",
+      handleResize
+    );
+
+    return () => {
+      window.removeEventListener(
+        "resize",
+        handleResize
+      );
+    };
+  }, []);
+
+  // ====================================================
+  // MODE
+  // ====================================================
+
+  const gameMode = useMemo(
+    () =>
+      getGameMode(
+        gameConfig
+      ),
+    [gameConfig]
+  );
+
+  // ====================================================
+  // ORIENTATION
+  // ====================================================
+
+  const shouldRotateBoard =
+    myPlayer === PLAYER_2;
+
+  const displayBoard =
+    useMemo(() => {
+      if (!board) {
+        return [];
+      }
+
+      if (!shouldRotateBoard) {
+        return board;
+      }
+
+      return [...board]
+        .reverse()
+        .map((row) =>
+          [...row].reverse()
+        );
+    }, [
+      board,
+      shouldRotateBoard,
+    ]);
+
+  // ====================================================
+  // COORDINATES
+  // ====================================================
+
+  const toRealCoordinates =
+    useCallback(
+      (displayR, displayC) => {
+        if (
+          !shouldRotateBoard
+        ) {
+          return {
+            r: displayR,
+            c: displayC,
+          };
+        }
+
+        return {
+          r:
+            BOARD_SIZE -
+            1 -
+            displayR,
+          c:
+            BOARD_SIZE -
+            1 -
+            displayC,
+        };
+      },
+      [shouldRotateBoard]
+    );
+
+  const toDisplayCoordinates =
+    useCallback(
+      (realR, realC) => {
+        if (
+          !shouldRotateBoard
+        ) {
+          return {
+            r: realR,
+            c: realC,
+          };
+        }
+
+        return {
+          r:
+            BOARD_SIZE -
+            1 -
+            realR,
+          c:
+            BOARD_SIZE -
+            1 -
+            realC,
+        };
+      },
+      [shouldRotateBoard]
+    );
+
+  // ====================================================
+  // TURN
+  // ====================================================
 
   const isMyTurn =
     turn === myPlayer;
 
-  const myPieces = useMemo(() => {
-    return myPlayer === PLAYER_1
-      ? [PLAYER_1, KING_1]
-      : [PLAYER_2, KING_2];
-  }, [myPlayer]);
+  // ====================================================
+  // MY PIECES
+  // ====================================================
 
-  // ======================================================
-  // PLAYABLE
-  // ======================================================
+  const myPieces = useMemo(
+    () =>
+      myPlayer === PLAYER_1
+        ? [PLAYER_1, KING_1]
+        : [PLAYER_2, KING_2],
+    [myPlayer]
+  );
+
+  // ====================================================
+  // PLAYABLE PIECES
+  // ====================================================
 
   const playablePieces =
     useMemo(() => {
-      const set = new Set();
+      const set =
+        new Set();
 
-      allMoves.forEach((m) => {
-        if (!m?.from) {
-          return;
+      allMoves.forEach(
+        (move) => {
+          if (!move?.from) {
+            return;
+          }
+
+          const display =
+            toDisplayCoordinates(
+              move.from.r,
+              move.from.c
+            );
+
+          set.add(
+            `${display.r}-${display.c}`
+          );
         }
-
-        set.add(
-          `${m.from.r}-${m.from.c}`
-        );
-      });
+      );
 
       return set;
-    }, [allMoves]);
+    }, [
+      allMoves,
+      toDisplayCoordinates,
+    ]);
 
-  // ======================================================
+  // ====================================================
   // TARGETS
-  // ======================================================
+  // ====================================================
 
-  const targets = useMemo(() => {
-    const map = new Map();
+  const targets =
+    useMemo(() => {
+      const map =
+        new Map();
 
-    validMoves.forEach((move) => {
-      if (!isValidMove(move)) {
-        return;
+      validMoves.forEach(
+        (move) => {
+          if (
+            !isValidMove(move)
+          ) {
+            return;
+          }
+
+          const last =
+            move.path[
+              move.path.length - 1
+            ];
+
+          const display =
+            toDisplayCoordinates(
+              last.r,
+              last.c
+            );
+
+          map.set(
+            `${display.r}-${display.c}`,
+            move
+          );
+        }
+      );
+
+      return map;
+    }, [
+      validMoves,
+      toDisplayCoordinates,
+    ]);
+
+  // ====================================================
+  // STATS
+  // ====================================================
+
+  const boardStats =
+    useMemo(() => {
+      let my = 0;
+      let enemy = 0;
+      let myKings = 0;
+      let enemyKings = 0;
+
+      if (!board) {
+        return {
+          my: 0,
+          enemy: 0,
+          myKings: 0,
+          enemyKings: 0,
+        };
       }
 
-      const last =
-        move.path[
-          move.path.length - 1
-        ];
+      board.forEach(
+        (row) => {
+          row.forEach(
+            (cell) => {
+              const mine =
+                myPieces.includes(
+                  cell
+                );
 
-      map.set(
-        `${last.r}-${last.c}`,
-        move
+              if (mine) {
+                my++;
+
+                if (
+                  cell === KING_1 ||
+                  cell === KING_2
+                ) {
+                  myKings++;
+                }
+              } else if (
+                cell !== 0
+              ) {
+                enemy++;
+
+                if (
+                  cell === KING_1 ||
+                  cell === KING_2
+                ) {
+                  enemyKings++;
+                }
+              }
+            }
+          );
+        }
       );
-    });
 
-    return map;
-  }, [validMoves]);
-
-  // ======================================================
-  // STATS
-  // ======================================================
-
-  const boardStats = useMemo(() => {
-    let my = 0;
-    let enemy = 0;
-
-    let myKings = 0;
-    let enemyKings = 0;
-
-    if (!board) {
       return {
-        my: 0,
-        enemy: 0,
-        myKings: 0,
-        enemyKings: 0,
+        my,
+        enemy,
+        myKings,
+        enemyKings,
       };
-    }
+    }, [
+      board,
+      myPieces,
+    ]);
 
-    board.forEach((row) => {
-      row.forEach((cell) => {
-        const mine =
-          myPieces.includes(cell);
+  // ====================================================
+  // FINISH LOCAL FALLBACK
+  // ====================================================
 
-        if (mine) {
-          my++;
+  const finishFromBoard =
+    useCallback(
+      (
+        nextBoard,
+        nextTurn,
+        nextMoves
+      ) => {
+        if (
+          matchEndedRef.current ||
+          !isValidBoard(nextBoard)
+        ) {
+          return false;
+        }
 
+        const boardWinner =
+          getBoardWinner(
+            nextBoard
+          );
+
+        if (boardWinner) {
+          matchEndedRef.current =
+            true;
+
+          setWinnerSide(
+            boardWinner
+          );
+
+          setWinnerId(null);
+          setDraw(false);
+          setGameOver(true);
+          setSendingMove(false);
+
+          return true;
+        }
+
+        /*
+         * Si le joueur qui doit jouer
+         * n'a aucun mouvement, il perd.
+         *
+         * Le backend calcule déjà allMoves.
+         * Ceci sert de filet de sécurité
+         * pour que l'UI ne reste jamais
+         * bloquée.
+         */
+        if (
+          Number(nextTurn) ===
+            PLAYER_1 ||
+          Number(nextTurn) ===
+            PLAYER_2
+        ) {
           if (
-            cell === KING_1 ||
-            cell === KING_2
+            Array.isArray(
+              nextMoves
+            ) &&
+            nextMoves.length === 0
           ) {
-            myKings++;
-          }
-        } else if (cell !== 0) {
-          enemy++;
+            const winner =
+              oppositePlayer(
+                Number(nextTurn)
+              );
 
-          if (
-            cell === KING_1 ||
-            cell === KING_2
-          ) {
-            enemyKings++;
+            /*
+             * Attention :
+             * au tout premier état,
+             * allMoves peut être vide
+             * pendant un chargement.
+             *
+             * On ne déclenche donc
+             * cette règle que si le
+             * plateau contient bien
+             * des pièces des deux côtés.
+             */
+            const p1 =
+              countPieces(
+                nextBoard,
+                PLAYER_1
+              );
+
+            const p2 =
+              countPieces(
+                nextBoard,
+                PLAYER_2
+              );
+
+            if (
+              p1 > 0 &&
+              p2 > 0
+            ) {
+              matchEndedRef.current =
+                true;
+
+              setWinnerSide(
+                winner
+              );
+
+              setWinnerId(null);
+              setDraw(false);
+              setGameOver(true);
+              setSendingMove(false);
+
+              return true;
+            }
           }
         }
-      });
-    });
 
-    return {
-      my,
-      enemy,
-      myKings,
-      enemyKings,
-    };
-  }, [board, myPieces]);
+        return false;
+      },
+      []
+    );
 
-  // ======================================================
-  // SOCKET
-  // ======================================================
+  // ====================================================
+  // SOCKET — SINGLE SHARED CONNECTION
+  // ====================================================
 
   useEffect(() => {
-    if (!matchId || !token) {
+    if (!matchId) {
       return;
     }
 
-    if (socketRef.current) {
-      socketRef.current.off();
+    matchEndedRef.current =
+      false;
 
-      socketRef.current.disconnect();
-    }   
-       console.log(
-        "MATCH ID:",
-        matchId
-     );
+    matchJoinedRef.current =
+      false;
 
-      console.log(
-        "API:",
-        API
-     );
+    setLoadingError(false);
 
-     console.log(
-       "SOCKET URL:",
-       SOCKET_URL
-     );
+    const socket =
+      connectCheckers();
 
-    const socket = io(
-      SOCKET_URL,
-      {
-        auth: { token },
+    const handleConnect =
+      () => {
+        setConnected(true);
+        setLoadingError(false);
 
-        transports: [
-          "websocket",
-        ],
+        if (
+          !matchJoinedRef.current
+        ) {
+          matchJoinedRef.current =
+            true;
 
-        reconnection: true,
+          joinCheckersMatch(
+            matchId
+          );
+        }
 
-        reconnectionAttempts: 10,
+        clearInterval(
+          pingInterval.current
+        );
 
-        reconnectionDelay: 1000,
+        pingInterval.current =
+          setInterval(() => {
+            if (
+              !socket.connected
+            ) {
+              return;
+            }
 
-        timeout:
-          SOCKET_TIMEOUT,
+            const start =
+              performance.now();
 
-        autoConnect: true,
-
-        forceNew: true,
-      }
-    );
-
-    socketRef.current = socket;
-
-     // ======================================================
-     // DEBUG SOCKET
-     // ======================================================
-
-     socket.on("connect", () => {
-        console.log(
-        "✅ SOCKET CONNECTED:",
-        socket.id
-      );
-    });
-
-      socket.on("connect_error", (err) => {
-        console.error(
-        "❌ CONNECT ERROR:",
-        err
-      );
-    });
-
-    socket.on("error", (err) => {
-      console.error(
-      "❌ SOCKET ERROR:",
-     err
-    );
-  });
-
-    socket.onAny((event, ...args) => {
-      console.log(
-      "📩 SOCKET EVENT:",
-      event,
-      args
-    );
-  });
-
-    // ======================================================
-    // CONNECT
-    // ======================================================
-
-    socket.on("connect", () => {
-      setConnected(true);
-
-      setLoadingError(false);
-
-      console.log(
-        "➡️ JOIN MATCH:",
-        matchId
-      );
-
-      socket.emit(
-       "joinMatch",
-        { matchId }
-      );
-
-      clearInterval(
-        pingInterval.current
-      );
-
-      pingInterval.current =
-        setInterval(() => {
-          const start = performance.now();
-
-          socket.emit("ping:test", start);
-
-          socket.once("pong:test", (sentAt) => {
-            const ms = Math.floor(
-              performance.now() - sentAt
+            socket.emit(
+              "ping:test",
+              start
             );
 
-            setPing(ms);
-          });
-        }, 5000);
-    });
+            const handlePong =
+              (sentAt) => {
+                const ms =
+                  Math.floor(
+                    performance.now() -
+                      Number(
+                        sentAt
+                      )
+                  );
 
-    // ======================================================
-    // INIT
-    // ======================================================
+                setPing(ms);
+              };
 
+            socket.once(
+              "pong:test",
+              handlePong
+            );
+          }, 5000);
+      };
 
-    
-
-    socket.on(
-      "match:init",
+    const handleInit =
       (data) => {
-         console.log(
-           "🔥 MATCH INIT RECEIVED:",
-           data
-         );
-
         if (
           !data ||
           !isValidBoard(
@@ -609,27 +1372,77 @@ export default function Dames({
           loadingTimeout.current
         );
 
-        setBoard(data.board);
+        const player =
+          normalizePlayerId(
+            data.player
+          );
 
-        setTurn(data.turn);
-
-        setMyPlayer(data.player);
-
-        setLastMove(
-          data.lastMove || null
-        );
-
-        setAllMoves(
+        const moves =
           Array.isArray(
             data.allMoves
           )
             ? data.allMoves.filter(
                 isValidMove
               )
-            : []
+            : [];
+
+        setBoard(
+          data.board
         );
 
-        setMessages(
+        setTurn(
+          Number(data.turn)
+        );
+
+        setMyPlayer(
+          player
+        );
+
+        setLastMove(
+          data.lastMove ||
+            null
+        );
+
+        setAllMoves(
+          moves
+        );
+
+        setSelected(null);
+        setValidMoves([]);
+
+        setPlayerInfo({
+          1: {
+            name:
+              getPlayerName(
+                PLAYER_1,
+                gameConfig,
+                data
+              ),
+            avatar:
+              getPlayerAvatar(
+                PLAYER_1,
+                gameConfig,
+                data
+              ),
+          },
+
+          2: {
+            name:
+              getPlayerName(
+                PLAYER_2,
+                gameConfig,
+                data
+              ),
+            avatar:
+              getPlayerAvatar(
+                PLAYER_2,
+                gameConfig,
+                data
+              ),
+          },
+        });
+
+        const initialMessages =
           Array.isArray(
             data.messages
           )
@@ -637,47 +1450,49 @@ export default function Dames({
                 .slice(
                   -MAX_MESSAGES
                 )
-                .map((m) => ({
-                  username:
-                    sanitizeText(
-                      m.username ||
-                        "Joueur"
-                    ),
+                .map(
+                  (message) => ({
+                    username:
+                      sanitizeText(
+                        message.username ||
+                          "Joueur"
+                      ),
 
-                  text:
-                    sanitizeText(
-                      m.text || ""
-                    ),
+                    text:
+                      sanitizeText(
+                        message.text ||
+                          ""
+                      ),
 
-                  playerId:
-                    m.playerId,
-                }))
-            : []
+                    playerId:
+                      normalizePlayerId(
+                        message.playerId ??
+                          message.player
+                      ),
+                  })
+                )
+            : [];
+
+        setMessages(
+          initialMessages
         );
 
         setSendingMove(false);
-      }
-    );
 
-    // ======================================================
-    // UPDATE
-    // ======================================================
-   
+        /*
+         * Failsafe immédiat :
+         * si on rejoint un match déjà
+         * terminé dans la DB.
+         */
+        finishFromBoard(
+          data.board,
+          data.turn,
+          moves
+        );
+      };
 
-    socket.on(
-      "match:update",
+    const handleUpdate =
       (data) => {
-
-         console.log(
-           "🔥 MATCH UPDATE RECEIVED:",
-           data
-         );
-
-          console.log(
-            "🔥 BOARD:",
-            JSON.stringify(data.board)
-          );
-
         if (
           !data ||
           !isValidBoard(
@@ -691,117 +1506,174 @@ export default function Dames({
           moveTimeout.current
         );
 
-        setBoard(data.board);
-
-        setTurn(data.turn);
-
-        setAllMoves(
+        const nextMoves =
           Array.isArray(
             data.allMoves
           )
             ? data.allMoves.filter(
                 isValidMove
               )
-            : []
+            : [];
+
+        const nextTurn =
+          Number(data.turn);
+
+        setBoard(
+          data.board
+        );
+
+        setTurn(
+          nextTurn
+        );
+
+        setAllMoves(
+          nextMoves
         );
 
         setLastMove(
-          data.lastMove || null
+          data.lastMove ||
+            null
         );
 
         setSelected(null);
-
         setValidMoves([]);
-
         setSendingMove(false);
-      }
-    );
 
-    // ======================================================
-    // END
-    // ======================================================
-
-      socket.on("match:end", (data) => {
-
-        console.log(
-          "🏆 MATCH END:",
-          data
+        /*
+         * IMPORTANT :
+         * le backend doit normalement
+         * envoyer match:end.
+         *
+         * Mais si le dernier pion vient
+         * d'être capturé et que le backend
+         * n'émet pas encore match:end,
+         * l'UI termine immédiatement.
+         */
+        finishFromBoard(
+          data.board,
+          nextTurn,
+          nextMoves
         );
+      };
 
+    const handleEnd =
+      (data) => {
         if (
-          data.board &&
-          isValidBoard(data.board)
+          matchEndedRef.current
         ) {
-          setBoard(data.board);
-        }
-
-        setWinnerSide(
-          data.winner ?? null
-        );
-
-        setDraw(
-          Boolean(data.draw)
-        );
-
-        setGameOver(true);
-
-        setSendingMove(false);
-      });
-
-    // ======================================================
-    // CHAT
-    // ======================================================
-
-    socket.on(
-      "chat:message",
-      (msg) => {
-        if (!msg?.text) {
           return;
         }
 
-        const safeMessage = {
-          username:
-            sanitizeText(
-              msg.username ||
-                "Joueur"
-            ),
-
-          text: sanitizeText(
-            msg.text
-          ),
-
-          playerId:
-            msg.playerId,
-        };
-
-        setMessages((prev) =>
-          [
-            ...prev,
-            safeMessage,
-          ].slice(
-            -MAX_MESSAGES
+        if (
+          data?.board &&
+          isValidBoard(
+            data.board
           )
+        ) {
+          setBoard(
+            data.board
+          );
+        }
+
+        const side =
+          normalizeWinnerSide(
+            data
+          );
+
+        matchEndedRef.current =
+          true;
+
+        setWinnerSide(
+          side
         );
 
-        requestAnimationFrame(() => {
-          if (
-            chatRef.current
-          ) {
-            chatRef.current.scrollTop =
-              chatRef.current
-                .scrollHeight;
+        setWinnerId(
+          data?.winnerId ??
+            null
+        );
+
+        setDraw(
+          data?.result ===
+            "draw" ||
+            Boolean(data?.draw)
+        );
+
+        setGameOver(
+          true
+        );
+
+        setSelected(null);
+        setValidMoves([]);
+        setSendingMove(false);
+
+        clearTimeout(
+          moveTimeout.current
+        );
+      };
+
+    const handleChatMessage =
+      (msg) => {
+        if (
+          !msg ||
+          !msg.text
+        ) {
+          return;
+        }
+
+        const safeMessage =
+          {
+            username:
+              sanitizeText(
+                msg.username ||
+                  "Joueur"
+              ),
+
+            text:
+              sanitizeText(
+                msg.text
+              ),
+
+            playerId:
+              normalizePlayerId(
+                msg.playerId ??
+                  msg.player
+              ),
+          };
+
+        setMessages(
+          (previous) =>
+            [
+              ...previous,
+              safeMessage,
+            ].slice(
+              -MAX_MESSAGES
+            )
+        );
+
+        setUnreadMessages(
+          (value) => {
+            if (chatOpen) {
+              return value;
+            }
+
+            return value + 1;
           }
-        });
-      }
-    );
+        );
 
-    // ======================================================
-    // TYPING
-    // ======================================================
+        requestAnimationFrame(
+          () => {
+            if (
+              chatRef.current
+            ) {
+              chatRef.current.scrollTop =
+                chatRef.current.scrollHeight;
+            }
+          }
+        );
+      };
 
-    socket.on(
-      "chat:typing",
-      ({ username }) => {
+    const handleTyping =
+      ({ username } = {}) => {
         if (!username) {
           return;
         }
@@ -822,66 +1694,143 @@ export default function Dames({
               null
             );
           }, 1200);
-      }
+      };
+
+    const handleChatError =
+      ({ message } = {}) => {
+        window.dispatchEvent(
+          new CustomEvent(
+            "toast",
+            {
+              detail:
+                message ||
+                "Impossible d'envoyer le message",
+            }
+          )
+        );
+      };
+
+    const handleConnectError =
+      (error) => {
+        console.error(
+          "CHECKERS SOCKET CONNECT ERROR:",
+          error
+        );
+
+        setConnected(false);
+        setSendingMove(false);
+
+        /*
+         * Ne pas afficher immédiatement
+         * une erreur fatale si le socket
+         * est simplement en reconnexion.
+         */
+        if (!board) {
+          setLoadingError(
+            false
+          );
+        }
+      };
+
+    const handleDisconnect =
+      () => {
+        setConnected(false);
+      };
+
+    const handleSocketError =
+      (error) => {
+        console.error(
+          "CHECKERS SOCKET ERROR:",
+          error
+        );
+
+        setSendingMove(false);
+      };
+
+    socket.on(
+      "connect",
+      handleConnect
     );
 
-    // ======================================================
-    // ERRORS
-    // ======================================================
+    socket.on(
+      "match:init",
+      handleInit
+    );
+
+    socket.on(
+      "match:update",
+      handleUpdate
+    );
+
+    socket.on(
+      "match:end",
+      handleEnd
+    );
+
+    socket.on(
+      "chat:message",
+      handleChatMessage
+    );
+
+    socket.on(
+      "chat:typing",
+      handleTyping
+    );
+
+    socket.on(
+      "chat:error",
+      handleChatError
+    );
 
     socket.on(
       "connect_error",
-      (err) => {
-       console.error(
-         "SOCKET CONNECT ERROR:",
-         err?.message || err
-       );
-
-       setConnected(false);
-       setSendingMove(false);
-       setLoadingError(true);
-      }
+      handleConnectError
     );
 
     socket.on(
       "disconnect",
-      () => {
-        setConnected(false);
-
-        setSendingMove(false);
-      }
+      handleDisconnect
     );
 
     socket.on(
       "error",
-      (message) => {
-        console.error(
-          "SOCKET SERVER ERROR:",
-          message
-        );
-
-        setSendingMove(false);
-
-        if (!board) {
-          setLoadingError(true);
-        }
-      }
+      handleSocketError
     );
-
-    // ======================================================
-    // FAILSAFE
-    // ======================================================
 
     loadingTimeout.current =
       setTimeout(() => {
-        setLoadingError(true);
-      }, 15000);
+        if (!board) {
+          setLoadingError(
+            true
+          );
+        }
+      }, SOCKET_TIMEOUT);
 
-    // ======================================================
-    // CLEANUP
-    // ======================================================
+    /*
+     * Si le singleton était déjà connecté
+     * avant le montage de Dames, on rejoint
+     * immédiatement.
+     */
+    if (
+      socket.connected &&
+      !matchJoinedRef.current
+    ) {
+      matchJoinedRef.current =
+        true;
+
+      joinCheckersMatch(
+        matchId
+      );
+    }
 
     return () => {
+      /*
+       * IMPORTANT :
+       * NE PAS disconnect le singleton ici.
+       *
+       * D'autres écrans / composants peuvent
+       * utiliser checkersSocket.
+       */
       clearInterval(
         pingInterval.current
       );
@@ -898,39 +1847,138 @@ export default function Dames({
         moveTimeout.current
       );
 
-      socket.off();
+      socket.off(
+        "connect",
+        handleConnect
+      );
 
-      socket.disconnect();
+      socket.off(
+        "match:init",
+        handleInit
+      );
+
+      socket.off(
+        "match:update",
+        handleUpdate
+      );
+
+      socket.off(
+        "match:end",
+        handleEnd
+      );
+
+      socket.off(
+        "chat:message",
+        handleChatMessage
+      );
+
+      socket.off(
+        "chat:typing",
+        handleTyping
+      );
+
+      socket.off(
+        "chat:error",
+        handleChatError
+      );
+
+      socket.off(
+        "connect_error",
+        handleConnectError
+      );
+
+      socket.off(
+        "disconnect",
+        handleDisconnect
+      );
+
+      socket.off(
+        "error",
+        handleSocketError
+      );
     };
-  }, [matchId, token]);
 
-  // ======================================================
+    /*
+     * TRÈS IMPORTANT :
+     *
+     * On ne met PAS :
+     *
+     * board
+     * chatOpen
+     * sendingMove
+     *
+     * dans les dépendances.
+     *
+     * Sinon le socket est recréé à chaque
+     * mouvement ou ouverture du chat.
+     */
+  }, [
+    matchId,
+    gameConfig,
+  ]);
+
+  // ====================================================
+  // CHAT OPEN
+  // ====================================================
+
+  useEffect(() => {
+    if (!chatOpen) {
+      return;
+    }
+
+    setUnreadMessages(0);
+
+    requestAnimationFrame(
+      () => {
+        if (
+          chatRef.current
+        ) {
+          chatRef.current.scrollTop =
+            chatRef.current.scrollHeight;
+        }
+      }
+    );
+  }, [chatOpen]);
+
+  // ====================================================
   // SELECT
-  // ======================================================
+  // ====================================================
 
   const handleSelect =
     useCallback(
-      (r, c) => {
+      (displayR, displayC) => {
         if (
           !board ||
           !isMyTurn ||
-          gameOver
+          gameOver ||
+          !conditionsAccepted
         ) {
           return;
         }
+
+        const {
+          r,
+          c,
+        } =
+          toRealCoordinates(
+            displayR,
+            displayC
+          );
 
         const cell =
           board[r][c];
 
         if (
-          !myPieces.includes(cell)
+          !myPieces.includes(
+            cell
+          )
         ) {
           return;
         }
 
         if (
           !playablePieces.has(
-            `${r}-${c}`
+            `${displayR}-${displayC}`
           )
         ) {
           return;
@@ -938,41 +1986,53 @@ export default function Dames({
 
         const moves =
           allMoves.filter(
-            (m) =>
-              m.from?.r === r &&
-              m.from?.c === c
+            (move) =>
+              move.from?.r ===
+                r &&
+              move.from?.c ===
+                c
           );
 
-        setSelected({ r, c });
+        setSelected({
+          r,
+          c,
+        });
 
-        setValidMoves(moves);
+        setValidMoves(
+          moves
+        );
       },
       [
         board,
         isMyTurn,
         gameOver,
+        conditionsAccepted,
+        toRealCoordinates,
         myPieces,
         playablePieces,
         allMoves,
       ]
     );
 
-  // ======================================================
+  // ====================================================
   // MOVE
-  // ======================================================
+  // ====================================================
 
   const playMove =
     useCallback(
-      (r, c) => {
+      (displayR, displayC) => {
         if (
-          sendingMove
+          sendingMove ||
+          !conditionsAccepted ||
+          gameOver ||
+          !checkersSocket.connected
         ) {
           return;
         }
 
         const move =
           targets.get(
-            `${r}-${c}`
+            `${displayR}-${displayC}`
           );
 
         if (
@@ -981,351 +2041,430 @@ export default function Dames({
           return;
         }
 
-        setSendingMove(true);
+        setSendingMove(
+          true
+        );
+
+        clearTimeout(
+          moveTimeout.current
+        );
 
         moveTimeout.current =
           setTimeout(() => {
-            setSendingMove(false);
-          }, 7000);
+            setSendingMove(
+              false
+            );
+          }, MOVE_TIMEOUT);
 
-        socketRef.current?.emit(
-          "move",
+        /*
+         * IMPORTANT FIX :
+         *
+         * Le backend accepte :
+         * {
+         *   matchId,
+         *   move
+         * }
+         *
+         * Et sa validation de secours
+         * utilise notamment move.path.
+         *
+         * On envoie donc LE MOVE COMPLET,
+         * pas seulement from/to/id.
+         */
+        const payloadMove =
           {
-            matchId,
+            ...move,
 
-            move: {
-              from:
-                move.from,
-
-              to:
-                move.path[
-                  move.path
-                    .length -
-                    1
-                ],
-
-              id: move.id,
+            from: {
+              ...move.from,
             },
-          },
-          (response) => {
-            if (
-              !response?.ok
-            ) {
-              clearTimeout(
-                moveTimeout.current
-              );
 
-              setSendingMove(
-                false
-              );
-            }
-          }
+            path:
+              Array.isArray(
+                move.path
+              )
+                ? move.path.map(
+                    (point) => ({
+                      r: point.r,
+                      c: point.c,
+                    })
+                  )
+                : [],
+
+            to:
+              move.path[
+                move.path.length -
+                  1
+              ],
+          };
+
+        sendCheckersMove(
+          matchId,
+          payloadMove
         );
 
         setSelected(null);
-
         setValidMoves([]);
       },
       [
-        targets,
         sendingMove,
+        conditionsAccepted,
+        gameOver,
+        targets,
         matchId,
       ]
     );
 
-  // ======================================================
+  // ====================================================
   // CLICK
-  // ======================================================
+  // ====================================================
 
-  const handleClick = (
-    r,
-    c
-  ) => {
-    if (
-      sendingMove ||
-      !connected ||
-      !board
-    ) {
-      return;
-    }
+  const handleClick =
+    useCallback(
+      (displayR, displayC) => {
+        if (
+          sendingMove ||
+          !connected ||
+          !board ||
+          !conditionsAccepted ||
+          gameOver
+        ) {
+          return;
+        }
 
-    if (
-      (r + c) % 2 === 0
-    ) {
-      return;
-    }
+        if (
+          (displayR +
+            displayC) %
+            2 ===
+          0
+        ) {
+          return;
+        }
 
-    if (!selected) {
-      handleSelect(r, c);
+        if (!selected) {
+          handleSelect(
+            displayR,
+            displayC
+          );
 
-      return;
-    }
+          return;
+        }
 
-    const clickedCell =
-      board[r][c];
+        const {
+          r,
+          c,
+        } =
+          toRealCoordinates(
+            displayR,
+            displayC
+          );
 
-    if (
-      myPieces.includes(
-        clickedCell
-      )
-    ) {
-      handleSelect(r, c);
+        const clickedCell =
+          board[r][c];
 
-      return;
-    }
+        if (
+          myPieces.includes(
+            clickedCell
+          )
+        ) {
+          handleSelect(
+            displayR,
+            displayC
+          );
 
-    if (
-      targets.has(
-        `${r}-${c}`
-      )
-    ) {
-      playMove(r, c);
+          return;
+        }
 
-      return;
-    }
+        if (
+          targets.has(
+            `${displayR}-${displayC}`
+          )
+        ) {
+          playMove(
+            displayR,
+            displayC
+          );
 
-    setSelected(null);
+          return;
+        }
 
-    setValidMoves([]);
-  };
+        setSelected(null);
+        setValidMoves([]);
+      },
+      [
+        sendingMove,
+        connected,
+        board,
+        conditionsAccepted,
+        gameOver,
+        selected,
+        handleSelect,
+        toRealCoordinates,
+        myPieces,
+        targets,
+        playMove,
+      ]
+    );
 
-  // ======================================================
+  // ====================================================
   // CHAT SEND
-  // ======================================================
+  // ====================================================
 
-  const sendMessage = () => {
-    let text =
-      sanitizeText(
-        chatInput.trim()
-      );
-
-    if (!text) {
-      return;
-    }
-
-    socketRef.current?.emit(
-      "chat:message",
-      {
-        matchId,
-        text,
-      }
-    );
-
-    setChatInput("");
-  };
-
-  // ======================================================
-  // TYPING
-  // ======================================================
-
-  const handleTyping = (
-    e
-  ) => {
-    const value =
-      sanitizeText(
-        e.target.value
-      );
-
-    setChatInput(value);
-
-    clearTimeout(
-      typingTimeout.current
-    );
-
-    typingTimeout.current =
-      setTimeout(() => {
-        socketRef.current?.emit(
-          "chat:typing",
-          {
-            matchId,
-          }
+  const sendMessage =
+    useCallback(() => {
+      const text =
+        sanitizeText(
+          chatInput.trim()
         );
-      }, 700);
-  };
 
-  // ======================================================
-  // REPORT
-  // ======================================================
-
-  const handleReport =
-    async () => {
       if (
-        reporting ||
-        !boardRef.current
+        !text ||
+        !matchId ||
+        !checkersSocket.connected
       ) {
         return;
       }
 
-      try {
-        setReporting(true);
+      /*
+       * Le backend :
+       *
+       * socket.on("chat:message")
+       *
+       * sauvegarde avec addMessage()
+       * puis broadcast :
+       *
+       * io.to(`match_${matchId}`)
+       *    .emit("chat:message", message)
+       *
+       * Donc les deux joueurs reçoivent
+       * le même message.
+       */
+      sendCheckersMessage(
+        matchId,
+        text
+      );
 
-        const canvas =
-          await html2canvas(
-            boardRef.current,
-            {
-              scale: 0.8,
-            }
+      setChatInput("");
+    }, [
+      chatInput,
+      matchId,
+    ]);
+
+  // ====================================================
+  // TYPING
+  // ====================================================
+
+  const handleTyping =
+    useCallback(
+      (event) => {
+        const value =
+          sanitizeText(
+            event.target.value
           );
 
-        const blob =
-          await new Promise(
-            (resolve) =>
-              canvas.toBlob(
-                resolve,
-                "image/jpeg",
-                0.7
-              )
-          );
-
-        
-        const formData = new FormData();
-
-        formData.append(
-          "image",
-          blob,
-          "report.jpg"
+        setChatInput(
+          value
         );
 
-        formData.append(
-          "matchId",
-          String(matchId)
+        clearTimeout(
+          typingTimeout.current
         );
 
-        formData.append(
-          "playerSide",
-          String(myPlayer)
-        );
-
-        formData.append(
-          "board",
-          JSON.stringify(board)
-        );
-
-        formData.append(
-          "description",
-          "Signalement depuis le jeu"
-        );
-
-        const res =
-          await fetch(
-            `${API}/match/report`,
-            {
-              method:
-                "POST",
-
-              headers: {
-                Authorization:
-                  `Bearer ${token}`,
-              },
-
-              body: formData,
-            }
-          );
-
-        if (!res.ok) {
-          throw new Error(
-            "REPORT_FAILED"
-          );
+        if (
+          !value.trim() ||
+          !matchId ||
+          !checkersSocket.connected
+        ) {
+          return;
         }
 
-        window.dispatchEvent(
-          new CustomEvent(
-            "toast",
-            {
-              detail:
-                "✅ Signalement envoyé",
-            }
-          )
-        );
-      } catch (err) {
-        console.error(err);
+        typingTimeout.current =
+          setTimeout(() => {
+            sendCheckersTyping(
+              matchId
+            );
+          }, 300);
+      },
+      [matchId]
+    );
 
-        window.dispatchEvent(
-          new CustomEvent(
-            "toast",
-            {
-              detail:
-                "❌ Erreur signalement",
-            }
-          )
-        );
-      } finally {
-        setReporting(false);
-      }
-    };
+  // ====================================================
+  // REPORT
+  // ====================================================
 
-  // ======================================================
+  const handleReport =
+    useCallback(
+      async () => {
+        if (
+          reporting ||
+          !boardRef.current
+        ) {
+          return;
+        }
+
+        try {
+          setReporting(
+            true
+          );
+
+          const canvas =
+            await html2canvas(
+              boardRef.current,
+              {
+                scale: 0.8,
+              }
+            );
+
+          const blob =
+            await new Promise(
+              (resolve) =>
+                canvas.toBlob(
+                  resolve,
+                  "image/jpeg",
+                  0.7
+                )
+            );
+
+          if (!blob) {
+            throw new Error(
+              "REPORT_IMAGE_FAILED"
+            );
+          }
+
+          const formData =
+            new FormData();
+
+          formData.append(
+            "image",
+            blob,
+            "report.jpg"
+          );
+
+          formData.append(
+            "matchId",
+            String(matchId)
+          );
+
+          formData.append(
+            "playerSide",
+            String(myPlayer)
+          );
+
+          formData.append(
+            "board",
+            JSON.stringify(board)
+          );
+
+          formData.append(
+            "description",
+            "Signalement depuis le jeu"
+          );
+
+          const res =
+            await fetch(
+              `${API}/match/report`,
+              {
+                method: "POST",
+
+                headers: {
+                  Authorization:
+                    `Bearer ${token}`,
+                },
+
+                body: formData,
+              }
+            );
+
+          if (!res.ok) {
+            throw new Error(
+              "REPORT_FAILED"
+            );
+          }
+
+          window.dispatchEvent(
+            new CustomEvent(
+              "toast",
+              {
+                detail:
+                  "✅ Signalement envoyé",
+              }
+            )
+          );
+        } catch (error) {
+          console.error(
+            "Report error:",
+            error
+          );
+
+          window.dispatchEvent(
+            new CustomEvent(
+              "toast",
+              {
+                detail:
+                  "❌ Erreur lors du signalement",
+              }
+            )
+          );
+        } finally {
+          setReporting(
+            false
+          );
+        }
+      },
+      [
+        reporting,
+        matchId,
+        myPlayer,
+        board,
+        token,
+      ]
+    );
+
+  // ====================================================
+  // CONDITIONS
+  // ====================================================
+
+  const acceptConditions =
+    useCallback(() => {
+      setConditionsAccepted(
+        true
+      );
+    }, []);
+
+  // ====================================================
   // LOADING
-  // ======================================================
+  // ====================================================
 
   if (!board) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-
-          background:
-            "#020617",
-
-          display: "flex",
-
-          flexDirection:
-            "column",
-
-          alignItems: "center",
-
-          justifyContent:
-            "center",
-
-          color: "white",
-
-          gap: 20,
-        }}
-      >
-        <div
-          style={{
-            fontSize: 28,
-          }}
-        >
-          ⏳ Chargement...
+      <div className="dames-loading">
+        <div className="dames-loading-orbit">
+          ♟
         </div>
 
-        <div
-          style={{
-            opacity: 0.7,
-          }}
-        >
+        <h2>
+          Chargement de la partie
+        </h2>
+
+        <p>
           {connected
             ? "Connexion au match..."
             : "Connexion au serveur..."}
-        </div>
+        </p>
 
         {loadingError && (
           <>
-            <div
-              style={{
-                color:
-                  "#ef4444",
-              }}
-            >
-              Impossible de charger le match
+            <div className="dames-error">
+              Impossible de charger
+              le match.
             </div>
 
             <button
+              type="button"
+              className="dames-primary-button"
               onClick={() =>
                 window.location.reload()
               }
-              style={{
-                padding:
-                  "12px 18px",
-
-                border: "none",
-
-                borderRadius: 12,
-
-                cursor:
-                  "pointer",
-              }}
             >
               Reconnecter
             </button>
@@ -1335,316 +2474,287 @@ export default function Dames({
     );
   }
 
-  // ======================================================
-  // END GAME
-  // ======================================================
+  // ====================================================
+  // GAME OVER
+  // ====================================================
 
   if (gameOver) {
+    const iWon =
+      !draw &&
+      Number(winnerSide) ===
+        Number(myPlayer);
 
-      const text = draw
-        ? "🤝 Match nul"
-        : Number(winnerSide) ===
-        Number(myPlayer)
-        ? "🎉 Félicitations ! Vous avez gagné cette partie. Créez un nouveau match pour continuer à gagner."
-        : "🔚 Ce Match est complétement terminé, recommencez un autre.";
+    const iLost =
+      !draw &&
+      Number(winnerSide) !==
+        Number(myPlayer);
 
-      return (
-        <div
-          style={{
-            minHeight: "100vh",
+    let resultTitle =
+      "Partie terminée";
 
-            background:
-              "linear-gradient(135deg,#020617,#0f172a)",
+    let resultText =
+      "Ce match est complètement terminé.";
 
-            padding: 40,
+    let resultIcon =
+      "🏁";
 
-            color: "white",
-          }}
-        >
-      <h1
-        style={{
-          fontSize: 52,
-          marginBottom: 30,
-        }}
-      >
-        {text}
-      </h1>
+    let buttonText =
+      "Démarrer un autre match";
 
-      <button
-        onClick={resetGame}
-        style={{
-          padding:
-            "14px 24px",
+    if (draw) {
+      resultIcon = "🤝";
 
-          border: "none",
+      resultTitle =
+        "Match nul";
 
-          borderRadius: 14,
+      resultText =
+        "Cette partie est terminée. " +
+        "Démarrez un autre match.";
 
-          cursor: "pointer",
+      buttonText =
+        "Démarrer un autre match";
+    } else if (iWon) {
+      resultIcon = "🏆";
 
-          color: "white",
+      resultTitle =
+        "Félicitations, vous avez gagné !";
 
-          fontWeight: 700,
+      resultText =
+        "Félicitation, vous avez gagné ce match. " +
+        "Créez plus de défis et remportez-en plus.";
 
-          background:
-            "linear-gradient(135deg,#2563eb,#1d4ed8)",
-        }}
-      >
-        Retour
-      </button>
-    </div>
-  );
-}
+      buttonText =
+        "Créer un nouveau défi";
+    } else if (iLost) {
+      resultIcon = "🏁";
 
-  // ======================================================
-  // MAIN
-  // ======================================================
+      resultTitle =
+        "Match terminé";
+
+      resultText =
+        "Ce match est complètement terminé. " +
+        "Démarrez un autre match.";
+
+      buttonText =
+        "Démarrer un autre match";
+    }
+
+    return (
+      <div className="dames-gameover">
+        <div className="dames-gameover-card">
+          <div className="dames-gameover-trophy">
+            {resultIcon}
+          </div>
+
+          <div className="dames-gameover-kicker">
+            PARTIE COMPLÈTEMENT TERMINÉE
+          </div>
+
+          <h1>
+            {resultTitle}
+          </h1>
+
+          <p>
+            {resultText}
+          </p>
+
+          <button
+            type="button"
+            className="dames-primary-button"
+            onClick={resetGame}
+          >
+            {buttonText}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ====================================================
+  // PLAYERS
+  // ====================================================
+
+  const player1 =
+    playerInfo[PLAYER_1];
+
+  const player2 =
+    playerInfo[PLAYER_2];
+
+  const topPlayer =
+    myPlayer === PLAYER_1
+      ? PLAYER_2
+      : PLAYER_1;
+
+  const bottomPlayer =
+    myPlayer === PLAYER_1
+      ? PLAYER_1
+      : PLAYER_2;
+
+  // ====================================================
+  // RENDER
+  // ====================================================
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
+    <div className="dames-page">
 
-        background:
-          "radial-gradient(circle at top,#0f172a,#020617)",
+      {/* ================================================
+          TOP BAR
+      ================================================ */}
 
-        color: "white",
+      <header className="dames-header">
+        <div>
+          <div className="dames-brand">
+            ♟️ Jeux de Dames
+          </div>
 
-        padding: 24,
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 1700,
+          <div className="dames-match-id">
+            Match #{matchId}
+          </div>
+        </div>
 
-          margin: "0 auto"
-          
-          ,
-
-          display: "flex",
-          flexDirection:
-            MOBILE ? "column" : "row",
-          gap: 28,
-        }}
-      >
-        <div style={{ flex: 1 }}>
+        <div className="dames-header-actions">
           <div
-            style={{
-              display: "flex",
-
-              justifyContent:
-                "space-between",
-
-              alignItems: "center",
-
-              marginBottom: 24,
-
-              background:
-                "rgba(255,255,255,0.05)",
-
-              border:
-                "1px solid rgba(255,255,255,0.08)",
-
-              padding: 20,
-
-              borderRadius: 20,
-            }}
+            className={`dames-connection ${
+              connected
+                ? "dames-connection--online"
+                : "dames-connection--offline"
+            }`}
           >
-            <div>
-              <h1
-                style={{
-                  margin: 0,
-                  fontSize: MOBILE ? 24 : 36,
-                }}
-              >
-                ♟️ Dames
-              </h1>
+            <span />
 
-              <div
-                style={{
-                  marginTop: 8,
-                  color:
-                    "#9ca3af",
-                }}
-              >
-                Match #{matchId}
-              </div>
+            {connected
+              ? "Connecté"
+              : "Hors ligne"}
+          </div>
+
+          <div className="dames-ping">
+            ⚡ {ping}ms
+          </div>
+
+          <button
+            type="button"
+            className="dames-report-button"
+            onClick={
+              handleReport
+            }
+            disabled={
+              reporting
+            }
+          >
+            {reporting
+              ? "..."
+              : "🚨 Signaler"}
+          </button>
+        </div>
+      </header>
+
+      {/* ================================================
+          GAME AREA
+      ================================================ */}
+
+      <main className="dames-game-layout">
+
+        <section className="dames-board-section">
+
+          {/* TOP PLAYER */}
+
+          <PlayerAvatar
+            player={topPlayer}
+            name={
+              topPlayer ===
+              PLAYER_1
+                ? player1.name
+                : player2.name
+            }
+            avatar={
+              topPlayer ===
+              PLAYER_1
+                ? player1.avatar
+                : player2.avatar
+            }
+            active={
+              turn === topPlayer
+            }
+            isMe={
+              topPlayer ===
+              myPlayer
+            }
+          />
+
+          {/* STATUS */}
+
+          <div className="dames-turn-status">
+            <div
+              className={
+                isMyTurn
+                  ? "dames-turn-status--mine"
+                  : ""
+              }
+            >
+              {isMyTurn
+                ? "🟢 À vous de jouer"
+                : `⏳ Tour de ${
+                    topPlayer ===
+                    turn
+                      ? topPlayer ===
+                        PLAYER_1
+                        ? player1.name
+                        : player2.name
+                      : bottomPlayer ===
+                        PLAYER_1
+                      ? player1.name
+                      : player2.name
+                  }`}
             </div>
 
+            {sendingMove && (
+              <span>
+                Synchronisation...
+              </span>
+            )}
+          </div>
+
+          {/* BOARD */}
+
+          <div className="dames-board-frame">
             <div
+              ref={boardRef}
+              className="dames-board"
               style={{
-                display: "flex",
-                gap: 12,
+                width:
+                  cellSize * 10,
+                height:
+                  cellSize * 10,
               }}
             >
-              <div
-                style={{
-                  padding:
-                    "12px 18px",
-
-                  borderRadius: 14,
-
-                  background:
-                    "rgba(255,255,255,0.06)",
-                }}
-              >
-                {isMyTurn
-                  ? "🟢 Ton tour"
-                  : "⏳ Adversaire"}
-              </div>
-
-              <div
-                style={{
-                  padding:
-                    "12px 18px",
-
-                  borderRadius: 14,
-
-                  background:
-                    "rgba(255,255,255,0.06)",
-                }}
-              >
-                ⚡ {ping}ms
-              </div>
-
-              <button
-                onClick={
-                  handleReport
-                }
-                disabled={
-                  reporting
-                }
-                style={{
-                  padding:
-                    "12px 18px",
-
-                  border: "none",
-
-                  borderRadius: 14,
-
-                  cursor:
-                    "pointer",
-                }}
-              >
-                🚨 Report
-              </button>
-            </div>
-          </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                MOBILE
-                  ? "1fr 1fr"
-                  : "repeat(4,1fr)",
-              gap: 14,
-            }}
-          >
-            {[
-              {
-                label:
-                  "Tes pièces",
-                value:
-                  boardStats.my,
-              },
-
-              {
-                label:
-                  "Tes rois",
-                value:
-                  boardStats.myKings,
-              },
-
-              {
-                label:
-                  "Adversaire",
-                value:
-                  boardStats.enemy,
-              },
-
-              {
-                label:
-                  "Rois ennemis",
-                value:
-                  boardStats.enemyKings,
-              },
-            ].map((s) => (
-              <div
-                key={s.label}
-                style={{
-                  flex: 1,
-
-                  background:
-                    "rgba(255,255,255,0.05)",
-
-                  border:
-                    "1px solid rgba(255,255,255,0.08)",
-
-                  borderRadius: 18,
-
-                  padding: 18,
-                }}
-              >
-                <div
-                  style={{
-                    color:
-                      "#9ca3af",
-
-                    marginBottom: 8,
-                  }}
-                >
-                  {s.label}
-                </div>
-
-                <div
-                  style={{
-                    fontSize: 30,
-                    fontWeight: 700,
-                  }}
-                >
-                  {s.value}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div
-            style={{
-              display:
-                "inline-block",
-
-              padding: 18,
-
-              borderRadius: 24,
-
-              background:
-                "linear-gradient(145deg,#111827,#1f2937)",
-            }}
-          >
-            <div ref={boardRef}>
-              {board.map(
-                (row, r) => (
+              {displayBoard.map(
+                (
+                  row,
+                  displayR
+                ) => (
                   <div
-                    key={r}
-                    style={{
-                      display:
-                        "flex",
-                    }}
+                    key={displayR}
+                    className="dames-row"
                   >
                     {row.map(
                       (
                         cell,
-                        c
+                        displayC
                       ) => {
+                        const real =
+                          toRealCoordinates(
+                            displayR,
+                            displayC
+                          );
+
                         const key =
-                          `${r}-${c}`;
+                          `${displayR}-${displayC}`;
 
                         const isSelected =
                           selected?.r ===
-                            r &&
+                            real.r &&
                           selected?.c ===
-                            c;
+                            real.c;
 
                         const isMove =
                           targets.has(
@@ -1663,33 +2773,29 @@ export default function Dames({
                               lastMove
                                 .from
                                 ?.r ===
-                                r &&
+                                real.r &&
                               lastMove
                                 .from
                                 ?.c ===
-                                c
+                                real.c
                             ) ||
                             lastMove.path?.some(
                               (
-                                p
+                                point
                               ) =>
-                                p.r ===
-                                  r &&
-                                p.c ===
-                                  c
+                                point.r ===
+                                  real.r &&
+                                point.c ===
+                                  real.c
                             )
                           );
 
                         return (
                           <Cell
-                            key={
-                              key
-                            }
-                            cell={
-                              cell
-                            }
-                            r={r}
-                            c={c}
+                            key={key}
+                            cell={cell}
+                            r={displayR}
+                            c={displayC}
                             handleClick={
                               handleClick
                             }
@@ -1708,6 +2814,9 @@ export default function Dames({
                             isMyTurn={
                               isMyTurn
                             }
+                            cellSize={
+                              cellSize
+                            }
                           />
                         );
                       }
@@ -1717,142 +2826,149 @@ export default function Dames({
               )}
             </div>
           </div>
-        </div>
 
-        <div
-          style={{
-            width: MOBILE ? "100%" : 380,
-            height: MOBILE ? 300 : 820,
+          {/* BOTTOM PLAYER */}
 
-            background:
-              "linear-gradient(180deg,#0f172a,#111827)",
+          <PlayerAvatar
+            player={bottomPlayer}
+            name={
+              bottomPlayer ===
+              PLAYER_1
+                ? player1.name
+                : player2.name
+            }
+            avatar={
+              bottomPlayer ===
+              PLAYER_1
+                ? player1.avatar
+                : player2.avatar
+            }
+            active={
+              turn ===
+              bottomPlayer
+            }
+            isMe={
+              bottomPlayer ===
+              myPlayer
+            }
+          />
 
-            borderRadius: 24,
+          {/* STATS */}
 
-            padding: 18,
+          <div className="dames-stats">
+            <div>
+              <span>
+                Vos pièces
+              </span>
 
-            display: "flex",
+              <strong>
+                {boardStats.my}
+              </strong>
+            </div>
 
-            flexDirection:
-              "column",
-          }}
-        >
-          <div
-            ref={chatRef}
-            style={{
-              flex: 1,
-              overflowY: "auto",
-            }}
-          >
-            {messages.map(
-              (m, i) => (
-                <div
-                  key={i}
-                  style={{
-                    marginBottom: 12,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 12,
-                      opacity: 0.8,
-                    }}
-                  >
-                    {m.username}
-                  </div>
+            <div>
+              <span>
+                Vos rois
+              </span>
 
-                  <div>
-                    {m.text}
-                  </div>
-                </div>
-              )
-            )}
+              <strong>
+                {boardStats.myKings}
+              </strong>
+            </div>
 
-            {typingPlayer && (
-              <div
-                style={{
-                  color:
-                    "#9ca3af",
-                  fontSize: 13,
-                }}
-              >
-                ✍️{" "}
-                {
-                  typingPlayer
-                }{" "}
-                écrit...
-              </div>
-            )}
+            <div>
+              <span>
+                Adversaire
+              </span>
+
+              <strong>
+                {boardStats.enemy}
+              </strong>
+            </div>
+
+            <div>
+              <span>
+                Rois adverses
+              </span>
+
+              <strong>
+                {boardStats.enemyKings}
+              </strong>
+            </div>
           </div>
+        </section>
+      </main>
 
-          <div
-            style={{
-              display: "flex",
-              gap: 10,
-              marginTop: 14,
-            }}
-          >
-            <input
-              value={chatInput}
-              maxLength={
-                MAX_CHAT_LENGTH
-              }
-              onChange={
-                handleTyping
-              }
-              placeholder="Écrire..."
-              onKeyDown={(
-                e
-              ) => {
-                if (
-                  e.key ===
-                  "Enter"
-                ) {
-                  e.preventDefault();
+      {/* ================================================
+          CHAT BUTTON
+      ================================================ */}
 
-                  sendMessage();
-                }
-              }}
-              style={{
-                flex: 1,
+      <button
+        type="button"
+        className="dames-chat-fab"
+        onClick={() => {
+          setChatOpen(true);
+          setUnreadMessages(0);
+        }}
+        aria-label="Ouvrir la discussion"
+      >
+        💬
 
-                border: "none",
+        {unreadMessages >
+          0 && (
+          <span className="dames-chat-badge">
+            {unreadMessages >
+            9
+              ? "9+"
+              : unreadMessages}
+          </span>
+        )}
+      </button>
 
-                outline: "none",
+      {/* ================================================
+          CHAT
+      ================================================ */}
 
-                borderRadius: 14,
+      {chatOpen && (
+        <ChatPanel
+          messages={
+            messages
+          }
+          chatInput={
+            chatInput
+          }
+          typingPlayer={
+            typingPlayer
+          }
+          onChange={
+            handleTyping
+          }
+          onSend={
+            sendMessage
+          }
+          onClose={() =>
+            setChatOpen(
+              false
+            )
+          }
+          chatRef={
+            chatRef
+          }
+        />
+      )}
 
-                padding:
-                  "14px 16px",
+      {/* ================================================
+          CONDITIONS
+      ================================================ */}
 
-                background:
-                  "#0b1220",
-
-                color:
-                  "white",
-              }}
-            />
-
-            <button
-              onClick={
-                sendMessage
-              }
-              style={{
-                width: 54,
-
-                border: "none",
-
-                borderRadius: 14,
-
-                cursor:
-                  "pointer",
-              }}
-            >
-              ➤
-            </button>
-          </div>
-        </div>
-      </div>
+      {!conditionsAccepted && (
+        <ConditionsModal
+          mode={gameMode}
+          onAccept={
+            acceptConditions
+          }
+        />
+      )}
     </div>
   );
 }

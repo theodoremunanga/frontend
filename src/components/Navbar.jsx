@@ -11,157 +11,149 @@ import logo from "../assets/logo.png";
 // CONFIG
 // ======================================================
 
-const API_URL =
-  import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL;
 
 if (!API_URL) {
-  throw new Error(
-    "❌ VITE_API_URL is missing"
-  );
+  throw new Error("❌ VITE_API_URL is missing");
 }
 
-const REFRESH_INTERVAL =
-  60000; // 1 min
+const REFRESH_INTERVAL = 60000;
 
 // ======================================================
 // COMPONENT
 // ======================================================
 
-export default function Navbar({
-  setPage,
-}) {
+export default function Navbar({ setPage }) {
   // ====================================================
   // STATES
   // ====================================================
 
-  const [active, setActive] =
-    useState("accueil");
+  const [active, setActive] = useState("accueil");
 
-  const [balance, setBalance] =
-    useState(0);
+  const [balance, setBalance] = useState(0);
 
-  const [loading, setLoading] =
-    useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const [isOffline, setIsOffline] =
-    useState(false);
+  const [isOffline, setIsOffline] = useState(false);
 
   // ====================================================
   // REFS
   // ====================================================
 
-  const intervalRef =
-    useRef(null);
+  const intervalRef = useRef(null);
 
-  const mountedRef =
-    useRef(true);
+  const mountedRef = useRef(true);
 
-  const loadingRef =
-    useRef(false);
+  const loadingRef = useRef(false);
 
   // ====================================================
   // LOAD WALLET
   // ====================================================
 
-  const loadWallet =
-    useCallback(async () => {
-      try {
-        // already loading
-        if (loadingRef.current) {
-          return;
-        }
+  const loadWallet = useCallback(async () => {
+    try {
+      // ----------------------------------------------
+      // Already loading
+      // ----------------------------------------------
 
-        // offline
-        if (!navigator.onLine) {
-          setIsOffline(true);
-          return;
-        }
-
-        setIsOffline(false);
-
-        const token =
-          localStorage.getItem(
-            "token"
-          );
-
-        // not connected
-        if (!token) {
-          setBalance(0);
-          return;
-        }
-
-        loadingRef.current = true;
-        setLoading(true);
-
-        // ✅ CORRECTION ICI
-        const res = await fetch(
-          `${API_URL}/wallet/me`,
-          {
-            method: "GET",
-
-            headers: {
-              Authorization:
-                `Bearer ${token}`,
-
-              "Content-Type":
-                "application/json",
-            },
-          }
-        );
-
-        // unauthorized
-        if (res.status === 401) {
-          console.warn(
-            "⚠️ Session expirée"
-          );
-
-          localStorage.removeItem(
-            "token"
-          );
-
-          setBalance(0);
-
-          return;
-        }
-
-        // server error
-        if (!res.ok) {
-          console.error(
-            "❌ Wallet request failed:",
-            res.status
-          );
-
-          return;
-        }
-
-        const data =
-          await res.json();
-
-        if (
-          mountedRef.current
-        ) {
-          setBalance(
-            data?.balance || 0
-          );
-        }
-      } catch (err) {
-        console.error(
-          "❌ Wallet error:",
-          err.message
-        );
-
-        setIsOffline(true);
-      } finally {
-        loadingRef.current =
-          false;
-
-        if (
-          mountedRef.current
-        ) {
-          setLoading(false);
-        }
+      if (loadingRef.current) {
+        return;
       }
-    }, []);
+
+      // ----------------------------------------------
+      // Offline
+      // ----------------------------------------------
+
+      if (!navigator.onLine) {
+        setIsOffline(true);
+        return;
+      }
+
+      setIsOffline(false);
+
+      // ----------------------------------------------
+      // Token
+      // ----------------------------------------------
+
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        setBalance(0);
+        return;
+      }
+
+      // ----------------------------------------------
+      // Request
+      // ----------------------------------------------
+
+      loadingRef.current = true;
+
+      setLoading(true);
+
+      const res = await fetch(
+        `${API_URL}/wallet/me`,
+        {
+          method: "GET",
+
+          headers: {
+            Authorization: `Bearer ${token}`,
+
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      // ----------------------------------------------
+      // Unauthorized
+      // ----------------------------------------------
+
+      if (res.status === 401) {
+        console.warn("⚠️ Session expirée");
+
+        localStorage.removeItem("token");
+
+        setBalance(0);
+
+        return;
+      }
+
+      // ----------------------------------------------
+      // Server error
+      // ----------------------------------------------
+
+      if (!res.ok) {
+        console.error(
+          "❌ Wallet request failed:",
+          res.status
+        );
+
+        return;
+      }
+
+      // ----------------------------------------------
+      // Response
+      // ----------------------------------------------
+
+      const data = await res.json();
+
+      if (mountedRef.current) {
+        setBalance(data?.balance || 0);
+      }
+    } catch (err) {
+      console.error(
+        "❌ Wallet error:",
+        err?.message || err
+      );
+
+      setIsOffline(true);
+    } finally {
+      loadingRef.current = false;
+
+      if (mountedRef.current) {
+        setLoading(false);
+      }
+    }
+  }, []);
 
   // ====================================================
   // INITIAL LOAD
@@ -173,44 +165,36 @@ export default function Navbar({
     loadWallet();
 
     return () => {
-      mountedRef.current =
-        false;
+      mountedRef.current = false;
     };
   }, [loadWallet]);
 
   // ====================================================
-  // SMART AUTO REFRESH
+  // AUTO REFRESH
   // ====================================================
 
   useEffect(() => {
-    intervalRef.current =
-      setInterval(() => {
-        // tab hidden
-        if (
-          document.hidden
-        ) {
-          return;
-        }
+    intervalRef.current = setInterval(() => {
+      if (document.hidden) {
+        return;
+      }
 
-        loadWallet();
-      }, REFRESH_INTERVAL);
+      loadWallet();
+    }, REFRESH_INTERVAL);
 
     return () => {
-      clearInterval(
-        intervalRef.current
-      );
+      clearInterval(intervalRef.current);
     };
   }, [loadWallet]);
 
   // ====================================================
-  // WINDOW FOCUS REFRESH
+  // WINDOW FOCUS
   // ====================================================
 
   useEffect(() => {
-    const handleFocus =
-      () => {
-        loadWallet();
-      };
+    const handleFocus = () => {
+      loadWallet();
+    };
 
     window.addEventListener(
       "focus",
@@ -226,39 +210,39 @@ export default function Navbar({
   }, [loadWallet]);
 
   // ====================================================
-  // ONLINE/OFFLINE
+  // ONLINE / OFFLINE
   // ====================================================
 
   useEffect(() => {
-    const online = () => {
+    const handleOnline = () => {
       setIsOffline(false);
 
       loadWallet();
     };
 
-    const offline = () => {
+    const handleOffline = () => {
       setIsOffline(true);
     };
 
     window.addEventListener(
       "online",
-      online
+      handleOnline
     );
 
     window.addEventListener(
       "offline",
-      offline
+      handleOffline
     );
 
     return () => {
       window.removeEventListener(
         "online",
-        online
+        handleOnline
       );
 
       window.removeEventListener(
         "offline",
-        offline
+        handleOffline
       );
     };
   }, [loadWallet]);
@@ -267,54 +251,48 @@ export default function Navbar({
   // FORMAT BALANCE
   // ====================================================
 
-  const formatBalance = (
-    value
-  ) => {
-    return Number(
-      value || 0
-    ).toLocaleString(
+  const formatBalance = (value) => {
+    return Number(value || 0).toLocaleString(
       "fr-FR"
     );
   };
 
   // ====================================================
-  // NAV ITEMS
-  // ====================================================
-
-  const navItems = [
-    {
-      id: "accueil",
-      icon: "🏠",
-    },
-
-    {
-      id: "competition",
-      icon: "🏆",
-    },
-
-    {
-      id: "infos",
-      icon: "🔔",
-    },
-
-    {
-      id: "menu",
-      icon: "☰",
-    },
-
-    {
-      id: "profile",
-      icon: "👤",
-    },
-  ];
-
-  // ====================================================
   // NAVIGATION
   // ====================================================
 
-  const handleNav = (
-    page
-  ) => {
+  const navItems = [
+  {
+    id: "accueil",
+    icon: "🏠",
+  },
+
+  {
+    id: "competition",
+    icon: "🏆",
+  },
+
+  {
+    id: "infos",
+    icon: "🔔",
+  },
+
+  {
+    id: "menu",
+    icon: "☰",
+  },
+
+  {
+    id: "profile",
+    icon: "👤",
+  },
+];
+
+  // ====================================================
+  // HANDLE NAVIGATION
+  // ====================================================
+
+  const handleNav = (page) => {
     setActive(page);
 
     if (setPage) {
@@ -327,98 +305,147 @@ export default function Navbar({
   // ====================================================
 
   return (
-    <div style={navbar}>
-      {/* LOGO */}
+    <header style={navbar}>
+      {/* ==================================================
+          MAIN NAVBAR
+      ================================================== */}
 
-      <div
-        style={leftSection}
-        onClick={() =>
-          handleNav(
-            "accueil"
-          )
-        }
-      >
-        <img
-          src={logo}
-          alt="logo"
-          style={logoStyle}
-        />
+      <div style={navbarInner}>
 
-        <span
-          style={{
-            fontWeight:
-              "bold",
-          }}
-        >
-          6BetBall
-        </span>
-      </div>
-
-      {/* NAVIGATION */}
-
-      <div
-        style={
-          centerSection
-        }
-      >
-        {navItems.map(
-          (item) => (
-            <button
-              key={
-                item.id
-              }
-              onClick={() =>
-                handleNav(
-                  item.id
-                )
-              }
-              style={{
-                ...navButton,
-
-                ...(active ===
-                item.id
-                  ? activeStyle
-                  : {}),
-              }}
-            >
-              {item.icon}
-            </button>
-          )
-        )}
-      </div>
-
-      {/* DOWNLOAD APP */}
+        {/* ==================================================
+            LOGO
+        ================================================== */}
 
         <button
-          style={downloadButton}
+          type="button"
+          style={logoSection}
+          onClick={() => handleNav("accueil")}
+          aria-label="Accueil 6BetBall"
+        >
+          <img
+            src={logo}
+            alt="6BetBall"
+            style={logoStyle}
+          />
+
+          <span style={logoText}>
+            6BetBall
+          </span>
+        </button>
+
+        {/* ==================================================
+            HORIZONTAL NAVIGATION
+        ================================================== */}
+
+        <nav
+          style={navigationWrapper}
+          aria-label="Navigation principale"
+        >
+          <div style={navigation}>
+            {navItems.map((item) => {
+              const isActive =
+                active === item.id;
+
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() =>
+                    handleNav(item.id)
+                  }
+                  title={item.label}
+                  aria-label={item.label}
+                  aria-current={
+                    isActive
+                      ? "page"
+                      : undefined
+                  }
+                  style={{
+                    ...navButton,
+
+                    ...(isActive
+                      ? activeStyle
+                      : {}),
+                  }}
+                >
+                  <span
+                    style={navIcon}
+                  >
+                    {item.icon}
+                  </span>
+
+                  <span
+                    style={navLabel}
+                  >
+                    {item.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </nav>
+
+        {/* ==================================================
+            RIGHT SIDE
+        ================================================== */}
+
+        <div style={rightSection}>
+
+          {/* ==================================================
+              DOWNLOAD
+          ================================================== */}
+
+          <button
+            type="button"
+            style={downloadButton}
             onClick={() =>
               window.open(
                 "https://backend-ad3t.onrender.com/downloads/6BetBall.apk",
-                "_blank"
+                "_blank",
+                "noopener,noreferrer"
               )
             }
           >
-            📱⬇️ Télécharger 6BetBallApp
+            📱⬇️
+            <span>
+              Télécharger
+            </span>
           </button>
 
-          {/* WALLET */}
+          {/* ==================================================
+              WALLET
+          ================================================== */}
 
-          <div style={wallet}>
+          <div
+            style={wallet}
+            title="Solde du portefeuille"
+          >
             {isOffline ? (
-              <span style={{ color: "#ef4444" }}>
+              <span
+                style={{
+                  color: "#ef4444",
+                }}
+              >
                 🔴 Hors ligne
               </span>
             ) : loading ? (
               "⏳ ..."
             ) : (
               <>
-                💰 {formatBalance(balance)} CDF
+                💰{" "}
+                {formatBalance(
+                  balance
+                )}{" "}
+                CDF
               </>
             )}
           </div>
+
+        </div>
       </div>
-    );
-  }
+    </header>
+  );
+}
 
 // ======================================================
 // STYLES
@@ -431,63 +458,253 @@ const navbar = {
 
   left: 0,
 
+  right: 0,
+
   width: "100%",
 
   height: 70,
 
-  display: "flex",
-
-  alignItems: "center",
-
-  justifyContent:
-    "space-between",
-
-  padding: "0 30px",
-
   background:
-    "rgba(15, 23, 42, 0.85)",
+    "rgba(15, 23, 42, 0.92)",
 
   backdropFilter:
+    "blur(12px)",
+
+  WebkitBackdropFilter:
     "blur(12px)",
 
   borderBottom:
     "1px solid rgba(255,255,255,0.05)",
 
-  zIndex: 999,
+  zIndex: 9999,
 
   color: "white",
 
-  boxSizing:
-    "border-box",
+  boxSizing: "border-box",
+
+  overflow: "hidden",
 };
 
-const leftSection = {
+// ======================================================
+// INNER
+// ======================================================
+
+const navbarInner = {
+  width: "100%",
+
+  height: "100%",
+
+  display: "flex",
+
+  alignItems: "center",
+
+  gap: 12,
+
+  padding:
+    "0 16px",
+
+  boxSizing: "border-box",
+
+  minWidth: 0,
+};
+
+// ======================================================
+// LOGO
+// ======================================================
+
+const logoSection = {
+  flexShrink: 0,
+
   display: "flex",
 
   alignItems: "center",
 
   gap: 10,
 
+  border: "none",
+
+  background: "transparent",
+
+  color: "white",
+
   cursor: "pointer",
 
-  minWidth: 150,
+  padding: 0,
+
+  minWidth: 145,
 };
 
-const centerSection = {
+const logoStyle = {
+  width: 40,
+
+  height: 40,
+
+  borderRadius: 10,
+
+  objectFit: "cover",
+
+  flexShrink: 0,
+};
+
+const logoText = {
+  fontWeight: "bold",
+
+  fontSize: 17,
+
+  whiteSpace: "nowrap",
+};
+
+// ======================================================
+// NAVIGATION WRAPPER
+// ======================================================
+
+const navigationWrapper = {
+  flex: "1 1 auto",
+
+  minWidth: 0,
+
+  overflowX: "auto",
+
+  overflowY: "hidden",
+
+  WebkitOverflowScrolling:
+    "touch",
+
+  scrollbarWidth: "none",
+
+  msOverflowStyle: "none",
+};
+
+// ======================================================
+// NAVIGATION
+// ======================================================
+
+const navigation = {
   display: "flex",
 
-  gap: 15,
+  alignItems: "center",
+
+  gap: 10,
+
+  width: "max-content",
+
+  minWidth: "max-content",
+
+  padding:
+    "4px 2px",
+};
+
+// ======================================================
+// NAV BUTTON
+// ======================================================
+
+const navButton = {
+  flex: "0 0 auto",
+
+  minWidth: 48,
+
+  height: 46,
+
+  padding:
+    "0 12px",
+
+  borderRadius: 12,
+
+  border: "none",
+
+  background:
+    "#1e293b",
+
+  color: "white",
+
+  cursor: "pointer",
+
+  display: "flex",
+
+  alignItems: "center",
 
   justifyContent:
     "center",
 
-  flex: 1,
+  gap: 7,
+
+  fontSize: 18,
+
+  whiteSpace: "nowrap",
+
+  transition:
+    "all 0.2s ease",
+
+  boxSizing: "border-box",
 };
 
-const wallet = {
-  background: "#1e293b",
+// ======================================================
+// NAV ICON
+// ======================================================
 
-  padding: "8px 14px",
+const navIcon = {
+  display: "inline-flex",
+
+  alignItems: "center",
+
+  justifyContent: "center",
+
+  fontSize: 20,
+
+  lineHeight: 1,
+};
+
+// ======================================================
+// NAV LABEL
+// ======================================================
+
+const navLabel = {
+  fontSize: 13,
+
+  fontWeight: 600,
+
+  whiteSpace: "nowrap",
+};
+
+// ======================================================
+// ACTIVE
+// ======================================================
+
+const activeStyle = {
+  background:
+    "linear-gradient(90deg, #2563eb, #7c3aed)",
+
+  transform:
+    "scale(1.03)",
+
+  boxShadow:
+    "0 5px 15px rgba(0,0,0,0.4)",
+};
+
+// ======================================================
+// RIGHT SECTION
+// ======================================================
+
+const rightSection = {
+  flexShrink: 0,
+
+  display: "flex",
+
+  alignItems: "center",
+
+  gap: 10,
+};
+
+// ======================================================
+// WALLET
+// ======================================================
+
+const wallet = {
+  background:
+    "#1e293b",
+
+  padding:
+    "8px 14px",
 
   borderRadius: 10,
 
@@ -501,60 +718,37 @@ const wallet = {
   minWidth: 140,
 
   textAlign: "center",
+
+  whiteSpace: "nowrap",
+
+  flexShrink: 0,
 };
 
-const navButton = {
-  width: 45,
-
-  height: 45,
-
-  borderRadius: 12,
-
-  border: "none",
-
-  background: "#1e293b",
-
-  color: "white",
-
-  fontSize: 20,
-
-  cursor: "pointer",
-
-  transition:
-    "all 0.2s ease",
-};
-
-const activeStyle = {
-  background:
-    "linear-gradient(90deg, #2563eb, #7c3aed)",
-
-  transform:
-    "scale(1.1)",
-
-  boxShadow:
-    "0 5px 15px rgba(0,0,0,0.4)",
-};
-
-const logoStyle = {
-  width: 40,
-
-  height: 40,
-
-  borderRadius: 10,
-
-  objectFit: "cover",
-};
+// ======================================================
+// DOWNLOAD
+// ======================================================
 
 const downloadButton = {
   background:
     "linear-gradient(90deg,#22c55e,#16a34a)",
+
   color: "#fff",
+
   border: "none",
+
   borderRadius: 10,
-  padding: "10px 18px",
-  marginRight: 15,
+
+  padding:
+    "10px 16px",
+
   fontWeight: "bold",
+
   cursor: "pointer",
+
   whiteSpace: "nowrap",
-  transition: "0.2s",
+
+  transition:
+    "0.2s",
+
+  flexShrink: 0,
 };
