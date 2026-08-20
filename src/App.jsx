@@ -8,6 +8,7 @@ import Competition from "./pages/Competitions";
 import Infos from "./pages/Infos";
 import Menu from "./pages/Menu";
 import Dames from "./pages/Dames"; 
+import Avis from "./pages/Avis";
 
 import BravmanPage 
 from "./sac/games/bravman/Bravman";
@@ -369,6 +370,14 @@ export default function App() {
       {page ===
         "messages" && (
         <Messages />
+      )}
+
+      {/* =========================
+          ⭐ AVIS
+      ========================= */}
+
+      {page === "avis" && (
+        <Avis />
       )}
 
       {/* =========================

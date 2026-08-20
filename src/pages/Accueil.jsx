@@ -1113,6 +1113,13 @@ const handleCreateChallenge =
                     username,
                   }}
                />
+
+               <button
+                  type="button"
+                  onClick={() => setPage("avis")}
+                >
+                  ⭐ Avis des joueurs
+                </button>
                 </div>
               );
             }
