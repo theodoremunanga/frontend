@@ -935,13 +935,13 @@ const handleCreateChallenge =
           <div style={topBar}>
             <div>
               <h1 style={title}>
-                6BetBall 
+                6BetBall, ICI ON JOUE; ON NE PARIE PAS !
               </h1>
 
               <p style={subtitle}>
                 Le Système d'Arbitrage de Jeux Compétitifs en Ligne. 
-                6BetBall est une plateforme Authentique, Honnête et Sûre ; 
-                Ici on ne parie pas, mais on Joue !
+                6BetBall est une plateforme Authentique, Honnête et Sûre.
+              
               </p>
             </div>
 

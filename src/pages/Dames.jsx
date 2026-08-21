@@ -20,6 +20,8 @@ import {
   sendCheckersTyping,
 } from "../services/checkersSocket";
 
+import * as avisApi from "../services/avisApi";
+
 // ======================================================
 // CONFIG
 // ======================================================
@@ -825,6 +827,8 @@ function ConditionsModal({
 // ======================================================
 
 function FeedbackPanel({
+  game,
+  matchId,
   rating,
   setRating,
   impression,
@@ -832,10 +836,18 @@ function FeedbackPanel({
   onSubmit,
   onSkip,
   submitted,
+  submitting = false,
 }) {
+
+  // ======================================================
+  // AVIS DÉJÀ ENREGISTRÉ
+  // ======================================================
+
   if (submitted) {
+
     return (
       <div className="dames-feedback-card">
+
         <div className="dames-feedback-icon">
           💚
         </div>
@@ -856,23 +868,34 @@ function FeedbackPanel({
         >
           Continuer
         </button>
+
       </div>
     );
   }
 
+
+  // ======================================================
+  // FORMULAIRE
+  // ======================================================
+
   return (
     <div className="dames-feedback-card">
+
       <div className="dames-feedback-icon">
         ⭐
       </div>
+
 
       <div className="dames-conditions-kicker">
         SAJCL • VOTRE AVIS COMPTE
       </div>
 
+
       <h2>
-        Comment avez-vous trouvé 6BetBall ?
+        Comment avez-vous trouvé{" "}
+        {game || "ce jeu"} ?
       </h2>
+
 
       <p>
         Votre impression nous aidera à améliorer
@@ -880,17 +903,38 @@ function FeedbackPanel({
         l'expérience 6BetBall.
       </p>
 
+
+      {/* ==================================================
+          CONTEXTE DU MATCH
+      ================================================== */}
+
+      {matchId && (
+        <div className="dames-feedback-match">
+          Partie #{matchId}
+        </div>
+      )}
+
+
+      {/* ==================================================
+          NOTE
+      ================================================== */}
+
       <div className="dames-feedback-rating-title">
-        Combien d'étoiles mérite 6BetBall ?
+        Combien d'étoiles mérite ce jeu ?
       </div>
+
 
       <div
         className="dames-feedback-stars"
         role="radiogroup"
-        aria-label="Évaluation de 6BetBall"
+        aria-label={`Évaluation de ${
+          game || "ce jeu"
+        }`}
       >
+
         {[1, 2, 3, 4, 5].map(
           (star) => (
+
             <button
               key={star}
               type="button"
@@ -899,9 +943,11 @@ function FeedbackPanel({
                   ? "dames-feedback-star dames-feedback-star--active"
                   : "dames-feedback-star"
               }
-              onClick={() =>
-                setRating(star)
-              }
+              onClick={() => {
+                if (!submitting) {
+                  setRating(star);
+                }
+              }}
               aria-label={`${star} étoile${
                 star > 1
                   ? "s"
@@ -911,12 +957,20 @@ function FeedbackPanel({
                 rating === star
               }
               role="radio"
+              disabled={submitting}
             >
               ★
             </button>
+
           )
         )}
+
       </div>
+
+
+      {/* ==================================================
+          IMPRESSION
+      ================================================== */}
 
       <textarea
         className="dames-feedback-textarea"
@@ -929,31 +983,46 @@ function FeedbackPanel({
           )
         }
         maxLength={1000}
+        disabled={submitting}
         placeholder="Partagez votre impression sur le match, l'interface ou 6BetBall..."
       />
 
+
+      {/* ==================================================
+          ACTIONS
+      ================================================== */}
+
       <div className="dames-feedback-actions">
+
         <button
           type="button"
           className="dames-secondary-button"
           onClick={onSkip}
+          disabled={submitting}
         >
           Plus tard
         </button>
 
+
         <button
           type="button"
           className="dames-primary-button"
-          disabled={!rating}
+          disabled={
+            !rating ||
+            submitting
+          }
           onClick={onSubmit}
         >
-          Envoyer mon avis
+          {submitting
+            ? "Enregistrement..."
+            : "Envoyer mon avis"}
         </button>
+
       </div>
+
     </div>
   );
 }
-
 // ======================================================
 // MAIN
 // ======================================================
@@ -1057,6 +1126,9 @@ export default function Dames({
     useState("");
 
   const [feedbackSubmitted, setFeedbackSubmitted] =
+    useState(false);
+
+  const [feedbackSubmitting, setFeedbackSubmitting] =
     useState(false);
 
   const [playerInfo, setPlayerInfo] =
@@ -1185,6 +1257,64 @@ export default function Dames({
   // On ne modifie JAMAIS les coordonnées réelles
   // envoyées au backend.
   //
+
+  const handleFeedbackSubmit =
+    async () => {
+
+      if (feedbackSubmitting) {
+        return;
+      }
+
+      if (!feedbackRating) {
+        return;
+      }
+
+      if (!matchId) {
+        console.error(
+          "FEEDBACK : matchId absent."
+        );
+
+        return;
+      }
+
+      try {
+
+        setFeedbackSubmitting(true);
+
+        await avisApi.createAvis({
+
+          game:
+            "checkers",
+
+          matchId:
+            Number(matchId),
+
+          rating:
+            Number(feedbackRating),
+
+          comment:
+            feedbackImpression?.trim() || null,
+
+          context:
+            "match",
+
+        });
+
+        setFeedbackSubmitted(true);
+
+      } catch (error) {
+
+        console.error(
+          "FEEDBACK CREATE ERROR:",
+          error
+        );
+
+      } finally {
+
+        setFeedbackSubmitting(false);
+
+      }
+    };
 
   // ====================================================
   // ORIENTATION
@@ -3065,27 +3195,24 @@ export default function Dames({
         {feedbackOpen && (
           <div className="dames-modal-backdrop">
             <FeedbackPanel
-              rating={
-                feedbackRating
-              }
-              setRating={
-                setFeedbackRating
-              }
-              impression={
-                feedbackImpression
-              }
-              setImpression={
-                setFeedbackImpression
-              }
-              onSubmit={
-                submitFeedback
-              }
-              onSkip={
-                closeFeedback
-              }
-              submitted={
-                feedbackSubmitted
-              }
+              game="checkers"
+              matchId={matchId}
+
+              rating={feedbackRating}
+              setRating={setFeedbackRating}
+
+              impression={feedbackImpression}
+              setImpression={setFeedbackImpression}
+
+              onSubmit={handleFeedbackSubmit}
+
+              onSkip={() => {
+                setFeedbackOpen(false);
+              }}
+
+              submitted={feedbackSubmitted}
+
+              submitting={feedbackSubmitting}
             />
           </div>
         )}

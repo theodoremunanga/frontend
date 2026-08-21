@@ -3,7 +3,7 @@
 // Page centrale des avis 6BetBall
 //
 // Compatible avec :
-// Football / BraVMan / Ludo / Checkers / etc.
+// Football / BraVMan / Ludo /Dames / etc.
 // ==========================================================
 
 import React, {
@@ -13,7 +13,7 @@ import React, {
     useState,
 } from "react";
 
-import api from "../services/api";
+import avisApi from "../services/avisApi";
 
 import "./Avis.css";
 
@@ -40,8 +40,8 @@ const GAMES = [
         label: "Ludo",
     },
     {
-        value: "checkers",
-        label: "Checkers",
+        value: "Dames",
+        label: "Dames",
     },
 ];
 
@@ -77,7 +77,7 @@ function getGameLabel(game) {
     if (!normalized) {
         return "Jeu";
     }
-
+ 
     return normalized
         .replace(/[-_]/g, " ")
         .replace(/\b\w/g, (letter) =>
@@ -718,46 +718,26 @@ export default function Avis() {
 
                 setError("");
 
-                const params = {};
-
-                if (
-                    game &&
-                    game !== "all"
-                ) {
-                    params.game = game;
-                }
-
-                params.limit =
-                    PAGE_SIZE;
-
-                params.offset =
-                    (page - 1) *
-                    PAGE_SIZE;
-
-
                 const response =
-                    await api.get(
-                        "/avis",
-                        {
-                            params,
-                        }
-                    );
+                    await avisApi.getAvis({
+                        game:
+                            game !== "all"
+                                ? game
+                                : null,
 
+                        page,
 
-                const data =
-                    response?.data;
+                        limit:
+                            PAGE_SIZE,
+                    });
 
 
                 const receivedAvis =
-                    data?.avis ??
-                    data?.data ??
-                    [];
+                    response?.avis ?? [];
 
 
                 setAvis(
-                    Array.isArray(
-                        receivedAvis
-                    )
+                    Array.isArray(receivedAvis)
                         ? receivedAvis
                         : []
                 );
@@ -771,7 +751,7 @@ export default function Avis() {
 
                 setError(
                     err?.response?.data?.message ||
-                    err?.response?.data?.error ||
+                    err?.message ||
                     "Impossible de charger les avis."
                 );
 
@@ -822,19 +802,15 @@ export default function Avis() {
                         return;
                     }
 
+
                     const response =
-                        await api.get(
-                            `/avis/game/${encodeURIComponent(
-                                game
-                            )}/stats`
+                        await avisApi.getAvisStats(
+                            game
                         );
 
-                    const data =
-                        response?.data;
 
                     setStats(
-                        data?.stats ??
-                        data?.data ??
+                        response?.stats ??
                         null
                     );
 
@@ -860,18 +836,6 @@ export default function Avis() {
             },
             []
         );
-
-
-    useEffect(() => {
-
-        loadStats(
-            selectedGame
-        );
-
-    }, [
-        selectedGame,
-        loadStats,
-    ]);
 
 
     // ========================================================
@@ -928,109 +892,94 @@ export default function Avis() {
     // ========================================================
 
     const handleUseful =
-        async (item) => {
+    async (item) => {
 
-            if (!item?.id) {
-                return;
-            }
+        if (!item?.id) {
+            return;
+        }
 
-            if (!currentUserId) {
 
-                setError(
-                    "Connectez-vous pour indiquer qu'un avis est utile."
-                );
+        if (!currentUserId) {
 
-                return;
-            }
+            setError(
+                "Connectez-vous pour indiquer qu'un avis est utile."
+            );
 
-            try {
+            return;
+        }
 
-                setUsefulLoading(
+
+        try {
+
+            setUsefulLoading(
+                item.id
+            );
+
+            setError("");
+
+
+            const response =
+                await avisApi.toggleAvisUseful(
                     item.id
                 );
 
-                setError("");
 
+            setAvis(
+                (previous) =>
+                    previous.map(
+                        (current) => {
 
-                const response =
-                    await api.post(
-                        `/avis/${item.id}/useful`
-                    );
-
-
-                const data =
-                    response?.data;
-
-
-                const updated =
-                    data?.avis ??
-                    data?.data ??
-                    data;
-
-
-                setAvis(
-                    (previous) =>
-                        previous.map(
-                            (current) => {
-
-                                if (
-                                    String(
-                                        current.id
-                                    ) !==
-                                    String(
-                                        item.id
-                                    )
-                                ) {
-                                    return current;
-                                }
-
-                                return {
-                                    ...current,
-
-                                    ...(updated ||
-                                        {}),
-
-                                    useful_count:
-                                        updated?.useful_count ??
-                                        updated?.usefulCount ??
-                                        current.useful_count ??
-                                        current.usefulCount ??
-                                        0,
-
-                                    is_useful:
-                                        updated?.is_useful ??
-                                        updated?.isUseful ??
-                                        !getIsUseful(
-                                            current
-                                        ),
-                                };
-
+                            if (
+                                String(
+                                    current.id
+                                ) !==
+                                String(
+                                    item.id
+                                )
+                            ) {
+                                return current;
                             }
-                        )
-                );
 
-            } catch (err) {
 
-                console.error(
-                    "AVIS USEFUL ERROR:",
-                    err
-                );
+                            return {
+                                ...current,
 
-                setError(
-                    err?.response?.data?.message ||
-                    "Impossible d'enregistrer votre vote."
-                );
+                                useful_count:
+                                    response?.useful_count ??
+                                    current.useful_count ??
+                                    0,
 
-            } finally {
+                                is_useful:
+                                    response?.useful ??
+                                    false,
+                            };
 
-                setUsefulLoading(
-                    null
-                );
+                        }
+                    )
+            );
 
-            }
+        } catch (err) {
 
-        };
+            console.error(
+                "AVIS USEFUL ERROR:",
+                err
+            );
 
+            setError(
+                err?.response?.data?.message ||
+                err?.message ||
+                "Impossible d'enregistrer votre vote."
+            );
+
+        } finally {
+
+            setUsefulLoading(
+                null
+            );
+
+        }
+
+    };
 
     // ========================================================
     // SUPPRESSION
@@ -1067,8 +1016,8 @@ export default function Avis() {
                 setError("");
 
 
-                await api.delete(
-                    `/avis/${item.id}`
+                await avisApi.deleteAvis(
+                    item.id
                 );
 
 
@@ -1256,23 +1205,22 @@ export default function Avis() {
                 setError("");
 
 
-                await api.post(
-                    "/avis",
-                    {
-                        game:
-                            formGame,
+                await avisApi.createAvis({
 
-                        rating:
-                            formRating,
+                    game:
+                        formGame,
 
-                        comment:
-                            cleanComment ||
-                            null,
+                    rating:
+                        formRating,
 
-                        context:
-                            "general",
-                    }
-                );
+                    comment:
+                        cleanComment ||
+                        null,
+
+                    context:
+                        "general",
+
+                });
 
 
                 setShowForm(
