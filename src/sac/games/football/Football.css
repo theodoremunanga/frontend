@@ -1,0 +1,1958 @@
+/* ============================================================
+   FOOTBALL
+   ============================================================ */
+
+.football {
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 20px;
+  background:
+    radial-gradient(
+      circle at top,
+      #183a28 0%,
+      #08150e 55%,
+      #050908 100%
+    );
+  color: #ffffff;
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+
+.football__header {
+  width: min(1400px, 100%);
+  margin: 0 auto 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.football__title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.football__icon {
+  width: 48px;
+  height: 48px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 14px;
+
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+
+  font-size: 26px;
+}
+
+.football__title h1 {
+  margin: 0;
+
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.football__match-id {
+  display: block;
+  margin-top: 3px;
+
+  font-size: 12px;
+  opacity: 0.55;
+}
+
+.football__connection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 8px 12px;
+
+  border-radius: 999px;
+
+  background: rgba(0, 0, 0, 0.25);
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.football__connection-dot {
+  width: 8px;
+  height: 8px;
+
+  border-radius: 50%;
+
+  background: currentColor;
+}
+
+.football__connection.is-connected {
+  color: #6cff9b;
+}
+
+.football__connection.is-disconnected {
+  color: #ff7676;
+}
+
+/* ============================================================
+   ERROR
+   ============================================================ */
+
+.football__error {
+  width: min(1400px, 100%);
+  box-sizing: border-box;
+
+  margin: 0 auto 15px;
+  padding: 12px 15px;
+
+  border-radius: 10px;
+
+  background: rgba(255, 70, 70, 0.12);
+  border: 1px solid rgba(255, 70, 70, 0.3);
+
+  color: #ffb0b0;
+
+  font-size: 13px;
+}
+
+/* ============================================================
+   SCOREBOARD
+   ============================================================ */
+
+.football__scoreboard {
+  width: min(900px, 100%);
+  min-height: 105px;
+
+  box-sizing: border-box;
+
+  margin: 0 auto 20px;
+  padding: 18px 25px;
+
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 25px;
+
+  border-radius: 18px;
+
+  background: rgba(5, 14, 9, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+
+  box-shadow:
+    0 15px 50px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.football__team {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.football__team--home {
+  text-align: right;
+  align-items: flex-end;
+}
+
+.football__team--away {
+  text-align: left;
+  align-items: flex-start;
+}
+
+.football__team-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  opacity: 0.45;
+}
+
+.football__team strong {
+  font-size: 16px;
+}
+
+.football__score {
+  min-width: 150px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  column-gap: 10px;
+}
+
+.football__score-number {
+  font-size: 36px;
+  line-height: 1;
+
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.football__score-separator {
+  font-size: 27px;
+  opacity: 0.35;
+}
+
+.football__time,
+.football__phase {
+  width: 100%;
+
+  text-align: center;
+
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.football__time {
+  margin-top: 8px;
+}
+
+.football__phase {
+  margin-top: 2px;
+  opacity: 0.5;
+}
+
+/* ============================================================
+   MAIN
+   ============================================================ */
+
+.football__main {
+  width: min(1400px, 100%);
+  margin: 0 auto;
+}
+
+/* ============================================================
+   STADE
+   ============================================================ */
+
+.football__stadium {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* ============================================================
+   STADE ENVIRONMENT
+   ============================================================ */
+
+.football-stade {
+  position: relative;
+
+  width: min(1100px, 100%);
+  aspect-ratio: 16 / 9;
+
+  overflow: hidden;
+
+  border-radius: 24px;
+
+  background: #101b13;
+
+  box-shadow:
+    0 25px 70px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+
+  isolation: isolate;
+}
+
+.football-stade__environment {
+  position: absolute;
+  inset: 0;
+
+  background:
+    radial-gradient(
+      ellipse at center,
+      #303a32 0%,
+      #171d19 70%
+    );
+
+  z-index: 0;
+}
+
+/* ============================================================
+   TRIBUNES
+   ============================================================ */
+
+.football-stade__tribune {
+  position: absolute;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+
+  overflow: hidden;
+
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.035) 0 8px,
+      rgba(0, 0, 0, 0.08) 8px 16px
+    );
+}
+
+.football-stade__tribune span {
+  width: 7px;
+  height: 7px;
+
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.35);
+
+  box-shadow:
+    0 0 7px rgba(255, 255, 255, 0.18);
+}
+
+.football-stade__tribune--top,
+.football-stade__tribune--bottom {
+  left: 8%;
+  right: 8%;
+  height: 11%;
+}
+
+.football-stade__tribune--top {
+  top: 0;
+}
+
+.football-stade__tribune--bottom {
+  bottom: 0;
+}
+
+.football-stade__tribune--left,
+.football-stade__tribune--right {
+  top: 10%;
+  bottom: 10%;
+  width: 8%;
+  flex-direction: column;
+}
+
+.football-stade__tribune--left {
+  left: 0;
+}
+
+.football-stade__tribune--right {
+  right: 0;
+}
+
+/* ============================================================
+   PITCH
+   ============================================================ */
+
+.football-stade__pitch {
+  position: absolute;
+
+  left: 8%;
+  right: 8%;
+  top: 11%;
+  bottom: 11%;
+
+  display: flex;
+
+  z-index: 2;
+}
+
+.football-stade__field {
+  position: relative;
+
+  width: 100%;
+  height: 100%;
+
+  overflow: hidden;
+
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.035) 0 7.5%,
+      transparent 7.5% 15%
+    ),
+    linear-gradient(
+      90deg,
+      #287c43,
+      #30944e 50%,
+      #287c43
+    );
+
+  border: 2px solid rgba(255, 255, 255, 0.8);
+
+  box-shadow:
+    inset 0 0 50px rgba(0, 0, 0, 0.16),
+    0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================================
+   FIELD LINES
+   ============================================================ */
+
+.football-stade__center-line {
+  position: absolute;
+
+  top: 0;
+  bottom: 0;
+  left: 50%;
+
+  width: 2px;
+
+  transform: translateX(-50%);
+
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.football-stade__center-circle {
+  position: absolute;
+
+  left: 50%;
+  top: 50%;
+
+  width: 21%;
+  aspect-ratio: 1;
+
+  transform: translate(-50%, -50%);
+
+  border: 2px solid rgba(255, 255, 255, 0.8);
+
+  border-radius: 50%;
+}
+
+.football-stade__center-spot {
+  position: absolute;
+
+  left: 50%;
+  top: 50%;
+
+  width: 8px;
+  height: 8px;
+
+  transform: translate(-50%, -50%);
+
+  border-radius: 50%;
+
+  background: #ffffff;
+}
+
+/* ============================================================
+   PENALTY AREAS
+   ============================================================ */
+
+.football-stade__penalty-area {
+  position: absolute;
+
+  top: 25%;
+  bottom: 25%;
+
+  width: 16%;
+
+  border: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+.football-stade__penalty-area--left {
+  left: 0;
+  border-left: 0;
+}
+
+.football-stade__penalty-area--right {
+  right: 0;
+  border-right: 0;
+}
+
+.football-stade__goal-area {
+  position: absolute;
+
+  top: 27%;
+  bottom: 27%;
+
+  width: 50%;
+
+  border: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+.football-stade__goal-area--left {
+  left: 0;
+  border-left: 0;
+}
+
+.football-stade__goal-area--right {
+  right: 0;
+  border-right: 0;
+}
+
+/* ============================================================
+   PENALTY SPOTS
+   ============================================================ */
+
+.football-stade__penalty-spot {
+  position: absolute;
+
+  top: 50%;
+
+  width: 7px;
+  height: 7px;
+
+  transform: translateY(-50%);
+
+  border-radius: 50%;
+
+  background: #ffffff;
+}
+
+.football-stade__penalty-spot--left {
+  left: 62%;
+}
+
+.football-stade__penalty-spot--right {
+  right: 62%;
+}
+
+/* ============================================================
+   PENALTY ARC
+   ============================================================ */
+
+.football-stade__penalty-arc {
+  position: absolute;
+
+  top: 50%;
+
+  width: 18%;
+  aspect-ratio: 1;
+
+  border: 2px solid rgba(255, 255, 255, 0.8);
+
+  border-radius: 50%;
+
+  transform: translateY(-50%);
+}
+
+.football-stade__penalty-arc--left {
+  left: 48%;
+  clip-path: inset(0 0 0 50%);
+}
+
+.football-stade__penalty-arc--right {
+  right: 48%;
+  clip-path: inset(0 50% 0 0);
+}
+
+/* ============================================================
+   GOALS
+   ============================================================ */
+
+.football-stade__goal {
+  position: absolute;
+
+  top: 39%;
+
+  width: 3.5%;
+  height: 22%;
+
+  border: 3px solid #ffffff;
+
+  background:
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.13) 0 4px,
+      transparent 4px 8px
+    );
+
+  z-index: 3;
+}
+
+.football-stade__goal--left {
+  left: -3.5%;
+}
+
+.football-stade__goal--right {
+  right: -3.5%;
+}
+
+.football-stade__net {
+  position: absolute;
+  inset: 0;
+
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 5px,
+      rgba(255, 255, 255, 0.25) 5px 6px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 5px,
+      rgba(255, 255, 255, 0.25) 5px 6px
+    );
+}
+
+/* ============================================================
+   CORNERS
+   ============================================================ */
+
+.football-stade__corner {
+  position: absolute;
+
+  width: 5%;
+  height: 5%;
+
+  border: 2px solid rgba(255, 255, 255, 0.7);
+
+  border-radius: 50%;
+}
+
+.football-stade__corner--top-left {
+  left: -2.5%;
+  top: -2.5%;
+}
+
+.football-stade__corner--bottom-left {
+  left: -2.5%;
+  bottom: -2.5%;
+}
+
+.football-stade__corner--top-right {
+  right: -2.5%;
+  top: -2.5%;
+}
+
+.football-stade__corner--bottom-right {
+  right: -2.5%;
+  bottom: -2.5%;
+}
+
+/* ============================================================
+   OBJECTS
+   ============================================================ */
+
+.football-stade__objects {
+  position: absolute;
+  inset: 0;
+
+  z-index: 10;
+
+  pointer-events: none;
+}
+
+/* ============================================================
+   PLAYERS
+   ============================================================ */
+
+.football-players {
+  position: absolute;
+  inset: 0;
+
+  z-index: 20;
+
+  pointer-events: none;
+}
+
+.football-player {
+  position: absolute;
+
+  width: 50px;
+  height: 75px;
+
+  transform:
+    translate(-50%, -50%);
+
+  transition:
+    left 0.5s ease,
+    top 0.5s ease;
+
+  z-index: 5;
+}
+
+.football-player__body {
+  position: relative;
+
+  width: 100%;
+  height: 100%;
+}
+
+.football-player__head {
+  position: absolute;
+
+  left: 50%;
+  top: 4px;
+
+  width: 18px;
+  height: 18px;
+
+  transform: translateX(-50%);
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle at 35% 30%,
+      #ffe3c1,
+      #c88d62
+    );
+
+  border: 2px solid rgba(0, 0, 0, 0.35);
+
+  z-index: 4;
+}
+
+.football-player__torso {
+  position: absolute;
+
+  left: 50%;
+  top: 20px;
+
+  width: 27px;
+  height: 30px;
+
+  transform: translateX(-50%);
+
+  border-radius: 8px 8px 5px 5px;
+
+  border: 2px solid rgba(0, 0, 0, 0.3);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  box-sizing: border-box;
+}
+
+.football-player--home
+  .football-player__torso {
+  background:
+    linear-gradient(
+      135deg,
+      #ffffff,
+      #d9d9d9
+    );
+}
+
+.football-player--away
+  .football-player__torso {
+  background:
+    linear-gradient(
+      135deg,
+      #182bff,
+      #07148d
+    );
+}
+
+.football-player__number {
+  font-size: 10px;
+  font-weight: 900;
+
+  color: #111;
+}
+
+.football-player--away
+  .football-player__number {
+  color: #ffffff;
+}
+
+.football-player__legs {
+  position: absolute;
+
+  left: 50%;
+  top: 47px;
+
+  width: 28px;
+  height: 25px;
+
+  transform: translateX(-50%);
+
+  display: flex;
+  justify-content: space-between;
+}
+
+.football-player__legs span {
+  width: 9px;
+  height: 25px;
+
+  border-radius: 4px;
+
+  background: #111;
+
+  transform-origin: top center;
+}
+
+.football-player__shadow {
+  position: absolute;
+
+  left: 50%;
+  bottom: -3px;
+
+  width: 48px;
+  height: 10px;
+
+  transform: translateX(-50%);
+
+  border-radius: 50%;
+
+  background: rgba(0, 0, 0, 0.28);
+
+  filter: blur(2px);
+
+  z-index: -1;
+}
+
+.football-player__name {
+  position: absolute;
+
+  left: 50%;
+  top: -20px;
+
+  transform: translateX(-50%);
+
+  white-space: nowrap;
+
+  padding: 3px 7px;
+
+  border-radius: 5px;
+
+  background: rgba(0, 0, 0, 0.65);
+
+  font-size: 9px;
+  font-weight: 700;
+
+  opacity: 0;
+
+  transition: opacity 0.2s ease;
+}
+
+.football-player:hover
+  .football-player__name {
+  opacity: 1;
+}
+
+.football-player__side {
+  position: absolute;
+
+  left: 50%;
+  bottom: -17px;
+
+  transform: translateX(-50%);
+
+  font-size: 7px;
+  font-weight: 900;
+
+  opacity: 0.55;
+}
+
+/* ============================================================
+   BALLON
+   ============================================================ */
+
+.football-ball-container {
+  position: absolute;
+  inset: 0;
+
+  z-index: 30;
+
+  pointer-events: none;
+}
+
+.football-ball {
+  position: absolute;
+
+  width: 24px;
+  height: 24px;
+
+  transform:
+    translate(-50%, -50%);
+
+  transition:
+    left 0.65s cubic-bezier(
+      0.22,
+      0.61,
+      0.36,
+      1
+    ),
+    top 0.65s cubic-bezier(
+      0.22,
+      0.61,
+      0.36,
+      1
+    );
+
+  z-index: 40;
+}
+
+.football-ball__sphere {
+  position: absolute;
+
+  width: 100%;
+  height: 100%;
+
+  overflow: hidden;
+
+  border-radius: 50%;
+
+  background:
+    radial-gradient(
+      circle at 30% 25%,
+      #ffffff,
+      #d9d9d9 60%,
+      #898989 100%
+    );
+
+  border: 1px solid rgba(0, 0, 0, 0.35);
+
+  box-shadow:
+    0 4px 7px rgba(0, 0, 0, 0.35),
+    inset -3px -4px 6px rgba(0, 0, 0, 0.18),
+    inset 3px 3px 5px rgba(255, 255, 255, 0.6);
+}
+
+.football-ball__center {
+  position: absolute;
+
+  left: 50%;
+  top: 50%;
+
+  width: 8px;
+  height: 8px;
+
+  transform:
+    translate(-50%, -50%);
+
+  background: #151515;
+
+  clip-path: polygon(
+    50% 0%,
+    95% 35%,
+    78% 90%,
+    22% 90%,
+    5% 35%
+  );
+}
+
+.football-ball__patch {
+  position: absolute;
+
+  width: 5px;
+  height: 5px;
+
+  background: #202020;
+
+  border-radius: 2px;
+}
+
+.football-ball__patch--1 {
+  left: 4px;
+  top: 5px;
+}
+
+.football-ball__patch--2 {
+  right: 4px;
+  top: 4px;
+}
+
+.football-ball__patch--3 {
+  left: 4px;
+  bottom: 4px;
+}
+
+.football-ball__patch--4 {
+  right: 4px;
+  bottom: 5px;
+}
+
+.football-ball__patch--5 {
+  left: 9px;
+  bottom: 1px;
+}
+
+.football-ball__shadow {
+  position: absolute;
+
+  left: 50%;
+  top: calc(100% + 4px);
+
+  width: 25px;
+  height: 7px;
+
+  transform: translateX(-50%);
+
+  border-radius: 50%;
+
+  background: rgba(0, 0, 0, 0.35);
+
+  filter: blur(2px);
+}
+
+/* ============================================================
+   BALL NORMAL
+   ============================================================ */
+
+.football-ball--normal {
+  animation:
+    footballBallBounce
+    0.7s ease;
+}
+
+/* ============================================================
+   BALL ATTACK
+   ============================================================ */
+
+.football-ball--attack {
+  animation:
+    footballBallMove
+    0.65s ease;
+}
+
+/* ============================================================
+   BALL SHOT
+   ============================================================ */
+
+.football-ball--shot {
+  animation:
+    footballBallShot
+    0.65s cubic-bezier(
+      0.2,
+      0.8,
+      0.2,
+      1
+    );
+}
+
+/* ============================================================
+   BALL GOAL
+   ============================================================ */
+
+.football-ball--goal {
+  transition:
+    left 0.55s cubic-bezier(
+      0.1,
+      0.8,
+      0.1,
+      1
+    ),
+    top 0.55s cubic-bezier(
+      0.1,
+      0.8,
+      0.1,
+      1
+    );
+
+  animation:
+    footballBallGoal
+    0.75s ease-in;
+}
+
+/* ============================================================
+   BALL CORNER
+   ============================================================ */
+
+.football-ball--corner {
+  animation:
+    footballBallCorner
+    0.8s ease-out;
+}
+
+/* ============================================================
+   BALL GOAL EFFECT
+   ============================================================ */
+
+.football-ball__goal-effect {
+  position: absolute;
+
+  left: 50%;
+  top: 50%;
+
+  width: 120px;
+  height: 120px;
+
+  transform: translate(-50%, -50%);
+
+  z-index: 50;
+
+  pointer-events: none;
+}
+
+.football-ball__goal-effect span {
+  position: absolute;
+
+  left: 50%;
+  top: 50%;
+
+  transform:
+    translate(-50%, -50%);
+
+  font-size: 22px;
+
+  animation:
+    footballGoalSpark
+    1s ease-out forwards;
+}
+
+.football-ball__goal-effect span:nth-child(1) {
+  font-size: 28px;
+}
+
+.football-ball__goal-effect span:nth-child(2) {
+  animation-delay: 0.05s;
+  transform:
+    translate(-50%, -50%)
+    translate(-35px, -25px);
+}
+
+.football-ball__goal-effect span:nth-child(3) {
+  animation-delay: 0.1s;
+  transform:
+    translate(-50%, -50%)
+    translate(35px, -20px);
+}
+
+.football-ball__goal-effect span:nth-child(4) {
+  animation-delay: 0.15s;
+  transform:
+    translate(-50%, -50%)
+    translate(0, 35px);
+}
+
+/* ============================================================
+   FOOTBALL STATS
+   ============================================================ */
+
+.football__stats {
+  width: min(900px, 100%);
+
+  margin: 18px auto 0;
+
+  display: grid;
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap: 10px;
+}
+
+.football__stats > div {
+  padding: 13px;
+
+  border-radius: 12px;
+
+  background:
+    rgba(0, 0, 0, 0.25);
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.07);
+
+  text-align: center;
+}
+
+.football__stats span {
+  display: block;
+
+  margin-bottom: 5px;
+
+  font-size: 10px;
+  text-transform: uppercase;
+
+  opacity: 0.45;
+}
+
+.football__stats strong {
+  font-size: 14px;
+}
+
+/* ============================================================
+   EVENTS
+   ============================================================ */
+
+.football__events {
+  width: min(900px, 100%);
+
+  margin: 18px auto 0;
+
+  padding: 15px;
+
+  box-sizing: border-box;
+
+  border-radius: 15px;
+
+  background:
+    rgba(0, 0, 0, 0.25);
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.07);
+}
+
+.football__events h2 {
+  margin: 0 0 12px;
+
+  font-size: 14px;
+}
+
+.football__events-list {
+  display: flex;
+  flex-direction: column;
+
+  gap: 6px;
+
+  max-height: 240px;
+
+  overflow-y: auto;
+}
+
+.football__event {
+  display: grid;
+
+  grid-template-columns:
+    45px 70px 1fr;
+
+  align-items: center;
+
+  padding: 8px 10px;
+
+  border-radius: 8px;
+
+  background:
+    rgba(255, 255, 255, 0.035);
+
+  font-size: 11px;
+}
+
+.football__event > span:first-child {
+  opacity: 0.45;
+}
+
+.football__event strong {
+  font-size: 11px;
+}
+
+.football__events-empty {
+  padding: 20px;
+
+  text-align: center;
+
+  font-size: 12px;
+
+  opacity: 0.4;
+}
+
+/* ============================================================
+   GOAL ALERT
+   ============================================================ */
+
+.football__goal-alert {
+  width: fit-content;
+
+  margin: 15px auto;
+
+  padding: 10px 25px;
+
+  border-radius: 999px;
+
+  background:
+    rgba(255, 196, 0, 0.15);
+
+  border:
+    1px solid
+    rgba(255, 196, 0, 0.5);
+
+  color: #ffe28a;
+
+  font-size: 15px;
+  font-weight: 900;
+
+  animation:
+    footballGoalAlert
+    0.5s ease;
+}
+
+/* ============================================================
+   CARD ALERT
+   ============================================================ */
+
+.football__card-alert {
+  width: fit-content;
+
+  margin: 15px auto;
+
+  padding: 9px 20px;
+
+  border-radius: 999px;
+
+  background:
+    rgba(255, 200, 0, 0.1);
+
+  border:
+    1px solid
+    rgba(255, 200, 0, 0.35);
+
+  font-size: 13px;
+  font-weight: 800;
+
+  animation:
+    footballCardAlert
+    0.4s ease;
+}
+
+/* ============================================================
+   PENALTIES
+   ============================================================ */
+
+.football__penalties {
+  width: min(500px, 100%);
+
+  margin: 18px auto;
+
+  padding: 18px;
+
+  text-align: center;
+
+  border-radius: 15px;
+
+  background:
+    rgba(255, 255, 255, 0.06);
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.1);
+}
+
+.football__penalties h2 {
+  margin: 0 0 8px;
+
+  font-size: 15px;
+}
+
+/* ============================================================
+   FOOTBALL COMMAND
+   ============================================================ */
+
+.football-cmd {
+  width: min(700px, 100%);
+
+  margin: 20px auto 0;
+
+  padding: 15px;
+
+  box-sizing: border-box;
+
+  border-radius: 18px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(30, 35, 40, 0.95),
+      rgba(10, 13, 15, 0.95)
+    );
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.1);
+
+  box-shadow:
+    0 15px 40px
+    rgba(0, 0, 0, 0.35);
+}
+
+.football-cmd__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 12px;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.football-cmd__header small {
+  font-size: 10px;
+
+  opacity: 0.45;
+}
+
+.football-cmd__body {
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  gap: 10px;
+
+  flex-wrap: wrap;
+}
+
+.football-cmd__button {
+  min-width: 105px;
+
+  min-height: 48px;
+
+  padding: 9px 16px;
+
+  border: 1px solid
+    rgba(255, 255, 255, 0.1);
+
+  border-radius: 12px;
+
+  background:
+    rgba(255, 255, 255, 0.07);
+
+  color: #ffffff;
+
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  font-size: 13px;
+  font-weight: 800;
+
+  user-select: none;
+  -webkit-user-select: none;
+
+  transition:
+    transform 0.1s ease,
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.football-cmd__button:hover:not(:disabled) {
+  background:
+    rgba(255, 255, 255, 0.12);
+}
+
+.football-cmd__button:active,
+.football-cmd__button.is-active {
+  transform:
+    scale(0.94);
+
+  background:
+    rgba(255, 255, 255, 0.18);
+
+  border-color:
+    rgba(255, 255, 255, 0.3);
+}
+
+.football-cmd__button:disabled {
+  opacity: 0.35;
+
+  cursor: not-allowed;
+}
+
+.football-cmd__button--start {
+  border-color:
+    rgba(70, 255, 130, 0.3);
+}
+
+.football-cmd__button--pause {
+  border-color:
+    rgba(255, 210, 70, 0.3);
+}
+
+.football-cmd__button--resume {
+  border-color:
+    rgba(70, 180, 255, 0.3);
+}
+
+.football-cmd__button--leave {
+  border-color:
+    rgba(255, 80, 80, 0.3);
+}
+
+.football-cmd__active {
+  margin-top: 10px;
+
+  text-align: center;
+
+  font-size: 10px;
+
+  opacity: 0.4;
+}
+
+/* ============================================================
+   FINISHED
+   ============================================================ */
+
+.football__finished {
+  width: min(500px, 100%);
+
+  margin: 25px auto;
+
+  padding: 25px;
+
+  text-align: center;
+
+  border-radius: 20px;
+
+  background:
+    rgba(255, 255, 255, 0.06);
+
+  border:
+    1px solid
+    rgba(255, 255, 255, 0.1);
+
+  animation:
+    footballFinished
+    0.6s ease;
+}
+
+.football__finished-icon {
+  font-size: 35px;
+}
+
+.football__finished h2 {
+  margin: 8px 0;
+
+  font-size: 20px;
+}
+
+.football__finished-score {
+  font-size: 32px;
+  font-weight: 900;
+}
+
+/* ============================================================
+   ANIMATIONS BALLON
+   ============================================================ */
+
+@keyframes footballBallBounce {
+  0% {
+    transform:
+      translate(-50%, -50%)
+      scale(1);
+  }
+
+  40% {
+    transform:
+      translate(-50%, -65%)
+      scale(1.08);
+  }
+
+  70% {
+    transform:
+      translate(-50%, -45%)
+      scale(0.96);
+  }
+
+  100% {
+    transform:
+      translate(-50%, -50%)
+      scale(1);
+  }
+}
+
+@keyframes footballBallMove {
+  0% {
+    transform:
+      translate(-50%, -50%)
+      scale(1);
+  }
+
+  45% {
+    transform:
+      translate(-50%, -58%)
+      scale(1.1);
+  }
+
+  100% {
+    transform:
+      translate(-50%, -50%)
+      scale(1);
+  }
+}
+
+@keyframes footballBallShot {
+  0% {
+    transform:
+      translate(-50%, -50%)
+      scale(1);
+  }
+
+  20% {
+    transform:
+      translate(-50%, -50%)
+      scale(1.3);
+  }
+
+  100% {
+    transform:
+      translate(-50%, -50%)
+      scale(0.85);
+  }
+}
+
+@keyframes footballBallGoal {
+  0% {
+    transform:
+      translate(-50%, -50%)
+      scale(1);
+  }
+
+  25% {
+    transform:
+      translate(-50%, -50%)
+      scale(1.25)
+      rotate(120deg);
+  }
+
+  65% {
+    transform:
+      translate(-50%, -50%)
+      scale(0.85)
+      rotate(300deg);
+  }
+
+  100% {
+    transform:
+      translate(-50%, -50%)
+      scale(0.65)
+      rotate(540deg);
+  }
+}
+
+@keyframes footballBallCorner {
+  0% {
+    transform:
+      translate(-50%, -50%)
+      scale(1);
+  }
+
+  35% {
+    transform:
+      translate(-50%, -65%)
+      scale(1.1);
+  }
+
+  70% {
+    transform:
+      translate(-50%, -45%)
+      scale(0.95);
+  }
+
+  100% {
+    transform:
+      translate(-50%, -50%)
+      scale(1);
+  }
+}
+
+/* ============================================================
+   ANIMATION BUT
+   ============================================================ */
+
+@keyframes footballGoalSpark {
+  0% {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      scale(0.4);
+  }
+
+  30% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+
+    transform:
+      translate(-50%, -50%)
+      scale(1.8);
+  }
+}
+
+@keyframes footballGoalAlert {
+  0% {
+    opacity: 0;
+    transform:
+      scale(0.7)
+      translateY(-10px);
+  }
+
+  60% {
+    transform:
+      scale(1.08)
+      translateY(0);
+  }
+
+  100% {
+    opacity: 1;
+    transform:
+      scale(1);
+  }
+}
+
+@keyframes footballCardAlert {
+  0% {
+    opacity: 0;
+    transform:
+      translateX(-20px);
+  }
+
+  70% {
+    transform:
+      translateX(5px);
+  }
+
+  100% {
+    opacity: 1;
+    transform:
+      translateX(0);
+  }
+}
+
+@keyframes footballFinished {
+  0% {
+    opacity: 0;
+    transform:
+      translateY(20px)
+      scale(0.96);
+  }
+
+  100% {
+    opacity: 1;
+    transform:
+      translateY(0)
+      scale(1);
+  }
+}
+
+/* ============================================================
+   RESPONSIVE TABLETTE
+   ============================================================ */
+
+@media (max-width: 800px) {
+  .football {
+    padding: 12px;
+  }
+
+  .football__header {
+    margin-bottom: 12px;
+  }
+
+  .football__title h1 {
+    font-size: 20px;
+  }
+
+  .football__scoreboard {
+    padding: 14px;
+
+    gap: 10px;
+  }
+
+  .football__score-number {
+    font-size: 29px;
+  }
+
+  .football__team strong {
+    font-size: 13px;
+  }
+
+  .football-stade {
+    border-radius: 15px;
+  }
+
+  .football-player {
+    transform:
+      translate(-50%, -50%)
+      scale(0.8);
+  }
+
+  .football-ball {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE MOBILE
+   ============================================================ */
+
+@media (max-width: 550px) {
+  .football {
+    padding: 8px;
+  }
+
+  .football__header {
+    align-items: flex-start;
+  }
+
+  .football__icon {
+    width: 38px;
+    height: 38px;
+
+    font-size: 20px;
+  }
+
+  .football__title h1 {
+    font-size: 17px;
+  }
+
+  .football__connection {
+    padding: 6px 8px;
+
+    font-size: 9px;
+  }
+
+  .football__scoreboard {
+    min-height: 85px;
+
+    padding: 12px 8px;
+
+    border-radius: 13px;
+
+    gap: 5px;
+  }
+
+  .football__score {
+    min-width: 90px;
+  }
+
+  .football__score-number {
+    font-size: 24px;
+  }
+
+  .football__score-separator {
+    font-size: 19px;
+  }
+
+  .football__team strong {
+    max-width: 85px;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    font-size: 10px;
+  }
+
+  .football__team-label {
+    font-size: 8px;
+  }
+
+  .football__time,
+  .football__phase {
+    font-size: 9px;
+  }
+
+  .football-stade {
+    aspect-ratio: 16 / 10;
+
+    border-radius: 10px;
+  }
+
+  .football-stade__tribune span {
+    width: 4px;
+    height: 4px;
+  }
+
+  .football-player {
+    width: 34px;
+    height: 52px;
+
+    transform:
+      translate(-50%, -50%)
+      scale(0.8);
+  }
+
+  .football-player__name {
+    display: none;
+  }
+
+  .football-ball {
+    width: 16px;
+    height: 16px;
+  }
+
+  .football-ball__center {
+    width: 6px;
+    height: 6px;
+  }
+
+  .football-ball__patch {
+    width: 3px;
+    height: 3px;
+  }
+
+  .football__stats {
+    gap: 5px;
+  }
+
+  .football__stats > div {
+    padding: 9px 5px;
+  }
+
+  .football__stats span {
+    font-size: 8px;
+  }
+
+  .football__stats strong {
+    font-size: 11px;
+  }
+
+  .football__events {
+    padding: 10px;
+  }
+
+  .football__event {
+    grid-template-columns:
+      35px 55px 1fr;
+
+    padding: 7px;
+
+    font-size: 9px;
+  }
+
+  .football-cmd {
+    padding: 10px;
+
+    border-radius: 13px;
+  }
+
+  .football-cmd__button {
+    min-width: 85px;
+    min-height: 43px;
+
+    padding: 8px 10px;
+
+    font-size: 11px;
+  }
+}
+
+/* ============================================================
+   TOUCH DEVICES
+   ============================================================ */
+
+@media (hover: none) {
+  .football-player__name {
+    opacity: 1;
+
+    top: -17px;
+
+    font-size: 7px;
+  }
+
+  .football-cmd__button {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* ============================================================
+   REDUCED MOTION
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .football *,
+  .football *::before,
+  .football *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -22,10 +22,7 @@ import ProfileRadar from "./components/Profile/ProfileRadar";
 import AdsPage from "./pages/AdsPage";
 import SponsoredBanner from "./components/ads/SponsoredBanner";
 
-import FootballHome
-from "./football/pages/FootballHome";
-import FootballMatch
-from "./football/pages/FootballMatch";
+import FootballPage from "./sac/games/football/Football";
 
 // ✅ MESSAGE PAGE
 import Messages from "./pages/Messages";
@@ -438,29 +435,13 @@ export default function App() {
         </>
       )}
 
-      {
-      page === "football" && (
+      {/* =========================
+              ⚽ FOOTBALL
+          ========================= */}
 
-      <FootballHome
-
-      setPage={setPage}
-
-      setGameConfig={
-      (config)=>{
-
-      setGameConfig(config);
-
-      localStorage.setItem(
-      "gameConfig",
-      JSON.stringify(config)
-      );
-
-      }}
-
-      />
-
-      )
-      }
+          {page === "football" && (
+            <FootballPage />
+          )}
       
     {page === "bravman" && (
       <BravmanPage

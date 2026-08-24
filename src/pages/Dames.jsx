@@ -2316,7 +2316,27 @@ export default function Dames({
           error
         );
 
+        /*
+         * Un "Move interdit" signifie généralement que
+         * le client possède un état de plateau / coups
+         * légèrement en retard sur le serveur.
+         * On vide immédiatement la sélection puis on
+         * redemande l'état canonique du match.
+         */
+        setSelected(null);
+        setValidMoves([]);
+        setAllMoves([]);
         setSendingMove(false);
+
+        if (
+          matchId &&
+          socket.connected &&
+          !matchEndedRef.current
+        ) {
+          joinCheckersMatch(
+            matchId
+          );
+        }
       };
 
     socket.on(
@@ -2573,14 +2593,58 @@ export default function Dames({
           sendingMove ||
           !conditionsAccepted ||
           gameOver ||
-          !checkersSocket.connected
+          !checkersSocket.connected ||
+          !selected
         ) {
           return;
         }
 
+        /*
+         * IMPORTANT :
+         * On ne récupère plus le coup uniquement par sa destination.
+         * Plusieurs coups peuvent terminer sur la même case.
+         * Le coup doit obligatoirement appartenir à la pièce
+         * actuellement sélectionnée.
+         */
+        const {
+          r: targetR,
+          c: targetC,
+        } =
+          toRealCoordinates(
+            displayR,
+            displayC
+          );
+
         const move =
-          targets.get(
-            `${displayR}-${displayC}`
+          validMoves.find(
+            (candidate) => {
+              if (
+                !isValidMove(
+                  candidate
+                )
+              ) {
+                return false;
+              }
+
+              if (
+                candidate.from?.r !==
+                  selected.r ||
+                candidate.from?.c !==
+                  selected.c
+              ) {
+                return false;
+              }
+
+              const last =
+                candidate.path[
+                  candidate.path.length - 1
+                ];
+
+              return (
+                last?.r === targetR &&
+                last?.c === targetC
+              );
+            }
           );
 
         if (
@@ -2604,31 +2668,47 @@ export default function Dames({
             );
           }, MOVE_TIMEOUT);
 
+        /*
+         * Contrat réseau unique avec le moteur :
+         * from + path + captures + id.
+         * "to" est inutile pour l'identité du coup.
+         */
         const payloadMove =
           {
-            ...move,
-
             from: {
-              ...move.from,
+              r: Number(
+                move.from.r
+              ),
+              c: Number(
+                move.from.c
+              ),
             },
 
             path:
+              move.path.map(
+                (point) => ({
+                  r: Number(point.r),
+                  c: Number(point.c),
+                })
+              ),
+
+            captures:
               Array.isArray(
-                move.path
+                move.captures
               )
-                ? move.path.map(
-                    (point) => ({
-                      r: point.r,
-                      c: point.c,
+                ? move.captures.map(
+                    (capture) => ({
+                      r: Number(
+                        capture.r
+                      ),
+                      c: Number(
+                        capture.c
+                      ),
                     })
                   )
                 : [],
 
-            to:
-              move.path[
-                move.path.length -
-                  1
-              ],
+            id: move.id,
           };
 
         sendCheckersMove(
@@ -2643,7 +2723,9 @@ export default function Dames({
         sendingMove,
         conditionsAccepted,
         gameOver,
-        targets,
+        selected,
+        validMoves,
+        toRealCoordinates,
         matchId,
       ]
     );

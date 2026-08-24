@@ -49,7 +49,7 @@ const games = [
     name: "Football",
     icon: "⚽",
     id: "football",
-    available: false,
+    available: true,
     description:
       "Ici on joue, on ne parie pas.",
   },
