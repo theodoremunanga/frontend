@@ -14,6 +14,7 @@ import DashboardStats from "./admin/DashboardStats";
 import TransactionsList from "./admin/TransactionsList";
 import MatchesList from "./admin/MatchesList";
 import MessagesList from "./admin/MessagesList";
+import Ambassade from "./admin/Ambassade";
 import AIControlPanel from "./admin/AIControlPanel";
 
 import AdminUsers from "../components/admin/AdminUsers/AdminUsers";
@@ -118,6 +119,7 @@ const tabTitles = {
   matches: "Matches",
   messages: "Messages",
   ai: "Ai",
+  ambassade: "Ambassade",
   users: "Users",
   ads: "Ads",
   "ads-editor": "Ads Editor",
@@ -791,6 +793,12 @@ const isOffline = !connected;
     },
 
     {
+      key: "ambassade",
+      label: "Ambassade",
+      icon: "🤝",
+    },
+
+    {
       key: "users",
       label: "Users",
       icon: "👥",
@@ -1066,6 +1074,12 @@ const isOffline = !connected;
               actionLoading
             }
           />
+        )}
+
+        {/* AMBASSADE */}
+
+        {tab === "ambassade" && (
+          <Ambassade />
         )}
 
         {/* USERS */}
