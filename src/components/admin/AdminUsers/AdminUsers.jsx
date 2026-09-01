@@ -203,10 +203,9 @@ export default function AdminUsers({
 
                 case "role":
 
-                    await api.post(
-                        "/admin/users/change-role",
+                    await api.patch(
+                        `/admin/users/${user.id}/role`,
                         {
-                            userId: user.id,
                             role: form.role,
                         }
                     );

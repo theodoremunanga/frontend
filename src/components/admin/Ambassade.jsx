@@ -710,8 +710,7 @@ export default function Ambassade() {
             <DetailItem
               label="Transaction"
               value={
-                selectedTid.transaction_id ??
-                "Aucune"
+                selectedTid.ambassador_id ?? "Aucun"
               }
             />
 
@@ -732,9 +731,9 @@ export default function Ambassade() {
             <DetailItem
               label="Utilisé le"
               value={
-                selectedTid.used_at
+                selectedTid.recovered_at
                   ? formatDate(
-                      selectedTid.used_at
+                      selectedTid.recovered_at
                     )
                   : "Pas encore utilisé"
               }
