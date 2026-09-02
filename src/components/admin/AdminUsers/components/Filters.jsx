@@ -71,8 +71,8 @@ export default function Filters({
                     🟢 USER
                 </option>
 
-                <option value="JO">
-                    🔵 JO
+                <option value="AMBASSADOR">
+                    🔵 Ambassadeur
                 </option>
 
                 <option value="ADMIN">

@@ -14,20 +14,24 @@ const TITLES = {
 
 const ROLES = [
     {
-        value: "user",
+        value: "USER",
         label: "Utilisateur",
     },
     {
-        value: "ambassadeur",
+        value: "AMBASSADOR",
         label: "Ambassadeur",
     },
     {
-        value: "admin",
+        value: "IA",
+        label: "Intelligence artificielle",
+    },
+    {
+        value: "ADMIN",
         label: "Administrateur",
     },
     {
-        value: "superadmin",
-        label: "Super administrateur",
+        value: "PLATFORM",
+        label: "Plateforme",
     },
 ];
 
@@ -346,21 +350,9 @@ export default function ActionModal({
 ====================================================== */
 
 function normalizeRole(role) {
-    const value = String(
-        role || "user"
-    )
+    return String(role || "USER")
         .trim()
         .toLowerCase();
-
-    const aliases = {
-        USER: "user",
-        ADMIN: "admin",
-        SUPERADMIN: "superadmin",
-        AMBASSADOR: "ambassadeur",
-        AMBASSADEUR: "ambassadeur",
-    };
-
-    return aliases[role] || value;
 }
 
 function getRoleLabel(role) {

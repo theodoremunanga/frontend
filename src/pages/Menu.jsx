@@ -392,6 +392,19 @@ export default function Menu({
                       </Badge>
                     )}
 
+                    {role === "AMBASSADOR" && (
+                      <MenuButton
+                        icon="🤝"
+                        title="Paramètres Ambassadeur"
+                        subtitle="Récupérez les fonds de vos utilisateurs et gérez vos commissions"
+                        onClick={() =>
+                          setPage("ambassade")
+                        }
+                        color="from-emerald-600 via-teal-700 to-emerald-950"
+                        badge="AMBASSADEUR"
+                      />
+                    )}
+
                     {role ===
                       "ADMIN" && (
                       <Badge color="bg-red-500 text-white border-red-400">

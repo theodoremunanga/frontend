@@ -23,8 +23,8 @@ function roleColor(role) {
         case "ADMIN":
             return COLORS.admin;
 
-        case "JO":
-            return COLORS.jo;
+        case "AMBASSADOR":
+            return COLORS.ambassador;
 
         default:
             return COLORS.user;

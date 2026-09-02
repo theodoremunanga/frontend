@@ -75,9 +75,9 @@ export default function AdminHeader({
                 />
 
                 <StatCard
-                    label="JO"
-                    value={stats.jo}
-                    color={COLORS.jo}
+                    label="AMBASSADOR"
+                    value={stats.ambassador}
+                    color={COLORS.ambassador}
                 />
 
                 <StatCard

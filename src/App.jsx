@@ -21,6 +21,7 @@ import TermsOfUse from "./legal/TermsOfUse";
 import ProfileRadar from "./components/Profile/ProfileRadar";
 import AdsPage from "./pages/AdsPage";
 import SponsoredBanner from "./components/ads/SponsoredBanner";
+import Ambassade from "./components/ambassade/Ambassade";
 
 import FootballPage from "./sac/games/football/Football";
 
@@ -358,6 +359,14 @@ export default function App() {
         <Menu
           setPage={setPage}
         />
+      )}
+
+      {/* =========================
+          🤝 AMBASSADEUR
+      ========================= */}
+
+      {page === "ambassade" && (
+        <Ambassade />
       )}
 
       {/* =========================
