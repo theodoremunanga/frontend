@@ -1,5 +1,6 @@
 /* =========================================================
    AMBASSADEUR — SAJCL
+   Interface opérationnelle
    ========================================================= */
 
 .ambassade-page {
@@ -74,13 +75,12 @@
 
 
 /* =========================================================
-   STATISTIQUES
+   STATISTIQUES PERSONNELLES
    ========================================================= */
 
 .ambassade-stats {
   display: grid;
-  grid-template-columns:
-    repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
   margin-bottom: 20px;
 }
@@ -95,8 +95,15 @@
   background: #ffffff;
   border: 1px solid #e5e9f0;
   border-radius: 15px;
-  box-shadow:
-    0 7px 25px rgba(20, 30, 50, 0.04);
+  box-shadow: 0 7px 25px rgba(20, 30, 50, 0.04);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.ambassade-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 30px rgba(20, 30, 50, 0.07);
 }
 
 .stat-icon {
@@ -135,7 +142,7 @@
 
 
 /* =========================================================
-   CIRCUIT
+   CIRCUIT FINANCIER
    ========================================================= */
 
 .ambassade-flow {
@@ -146,8 +153,7 @@
   background: #ffffff;
   border: 1px solid #e5e9f0;
   border-radius: 15px;
-  box-shadow:
-    0 7px 25px rgba(20, 30, 50, 0.04);
+  box-shadow: 0 7px 25px rgba(20, 30, 50, 0.04);
 }
 
 .flow-step {
@@ -155,6 +161,7 @@
   align-items: center;
   gap: 11px;
   flex: 1;
+  min-width: 0;
 }
 
 .flow-number {
@@ -181,6 +188,7 @@
   display: block;
   color: #7a8699;
   font-size: 11px;
+  line-height: 1.4;
 }
 
 .flow-line {
@@ -215,8 +223,7 @@
   background: #ffffff;
   border: 1px solid #e5e9f0;
   border-radius: 17px;
-  box-shadow:
-    0 8px 30px rgba(20, 30, 50, 0.05);
+  box-shadow: 0 8px 30px rgba(20, 30, 50, 0.05);
 }
 
 .recovery-card {
@@ -248,6 +255,7 @@
   margin: 0;
   font-size: 21px;
   font-weight: 800;
+  letter-spacing: -0.2px;
 }
 
 .card-heading p {
@@ -303,13 +311,24 @@
   font-size: 13px;
   transition:
     border-color 0.18s ease,
-    box-shadow 0.18s ease;
+    box-shadow 0.18s ease,
+    background 0.18s ease,
+    opacity 0.18s ease;
+}
+
+.field-group input::placeholder {
+  color: #a2abb8;
 }
 
 .field-group input:focus {
   border-color: #7c8798;
-  box-shadow:
-    0 0 0 3px rgba(100, 115, 135, 0.09);
+  box-shadow: 0 0 0 3px rgba(100, 115, 135, 0.09);
+}
+
+.field-group input:disabled {
+  background: #f6f8fa;
+  color: #6f7b8d;
+  cursor: not-allowed;
 }
 
 .field-group small {
@@ -337,6 +356,7 @@
     Monaco,
     Consolas,
     monospace;
+  letter-spacing: 0.2px;
 }
 
 .lookup-button {
@@ -352,11 +372,17 @@
   cursor: pointer;
   transition:
     transform 0.15s ease,
-    opacity 0.15s ease;
+    opacity 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .lookup-button:hover:not(:disabled) {
   transform: translateY(-1px);
+  box-shadow: 0 5px 15px rgba(23, 32, 51, 0.15);
+}
+
+.lookup-button:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .lookup-button:disabled {
@@ -374,6 +400,19 @@
   border: 1px solid #dce6df;
   border-radius: 11px;
   background: #f7faf8;
+  animation: fundAppear 0.2s ease-out;
+}
+
+@keyframes fundAppear {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .preview-header {
@@ -392,8 +431,7 @@
 
 .preview-grid {
   display: grid;
-  grid-template-columns:
-    repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 15px;
 }
 
@@ -418,8 +456,7 @@
 
 .form-grid {
   display: grid;
-  grid-template-columns:
-    repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 15px;
 }
 
@@ -439,11 +476,12 @@
   color: #8a95a6;
   font-size: 11px;
   font-weight: 800;
+  pointer-events: none;
 }
 
 
 /* =========================================================
-   COMMISSION
+   COMMISSION / RÉCAPITULATIF
    ========================================================= */
 
 .commission-box {
@@ -479,6 +517,7 @@
 .commission-row strong {
   color: #172033;
   font-size: 15px;
+  white-space: nowrap;
 }
 
 .commission-value {
@@ -497,7 +536,8 @@
   gap: 8px;
 }
 
-.commission-info span {
+.commission-info > span {
+  flex: 0 0 auto;
   font-size: 13px;
 }
 
@@ -522,6 +562,24 @@
   font-size: 12px;
   line-height: 1.5;
   font-weight: 600;
+  animation: alertAppear 0.2s ease-out;
+}
+
+@keyframes alertAppear {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ambassade-alert > span {
+  flex: 0 0 auto;
+  font-weight: 900;
 }
 
 .ambassade-alert.error {
@@ -558,7 +616,8 @@
   cursor: pointer;
   transition:
     transform 0.15s ease,
-    opacity 0.15s ease;
+    opacity 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .clear-button {
@@ -568,15 +627,28 @@
 }
 
 .recover-button {
+  min-width: 205px;
   border: 0;
   background: #172033;
   color: #ffffff;
-  min-width: 205px;
 }
 
 .clear-button:hover:not(:disabled),
 .recover-button:hover:not(:disabled) {
   transform: translateY(-1px);
+}
+
+.clear-button:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(20, 30, 50, 0.07);
+}
+
+.recover-button:hover:not(:disabled) {
+  box-shadow: 0 6px 18px rgba(23, 32, 51, 0.16);
+}
+
+.clear-button:active:not(:disabled),
+.recover-button:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .clear-button:disabled,
@@ -587,7 +659,7 @@
 
 
 /* =========================================================
-   HISTORIQUE
+   HISTORIQUE PERSONNEL
    ========================================================= */
 
 .history-list {
@@ -632,6 +704,10 @@
   font-weight: 900;
 }
 
+.history-main > div:last-child {
+  min-width: 0;
+}
+
 .history-main strong {
   display: block;
   margin-bottom: 4px;
@@ -664,11 +740,12 @@
 .history-commission strong {
   color: #27844a;
   font-size: 12px;
+  white-space: nowrap;
 }
 
 
 /* =========================================================
-   EMPTY
+   EMPTY HISTORY
    ========================================================= */
 
 .empty-history {
@@ -698,7 +775,7 @@
 
 
 /* =========================================================
-   FOOTER
+   FOOTER / RESPONSABILITÉ
    ========================================================= */
 
 .ambassade-footer {
@@ -745,13 +822,26 @@
 
 
 /* =========================================================
-   RESPONSIVE
+   ÉTAT DE CHARGEMENT
+   ========================================================= */
+
+.recover-button:disabled {
+  position: relative;
+}
+
+.recover-button:disabled:not(:empty) {
+  transition: opacity 0.2s ease;
+}
+
+
+/* =========================================================
+   RESPONSIVE — TABLETTE
    ========================================================= */
 
 @media (max-width: 1100px) {
+
   .ambassade-stats {
-    grid-template-columns:
-      repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .ambassade-content {
@@ -759,7 +849,13 @@
   }
 }
 
+
+/* =========================================================
+   RESPONSIVE — MOBILE LARGE
+   ========================================================= */
+
 @media (max-width: 800px) {
+
   .ambassade-page {
     padding: 18px;
   }
@@ -802,7 +898,13 @@
   }
 }
 
+
+/* =========================================================
+   RESPONSIVE — MOBILE
+   ========================================================= */
+
 @media (max-width: 520px) {
+
   .ambassade-page {
     padding: 12px;
   }
@@ -848,5 +950,47 @@
   .history-commission {
     padding-left: 40px;
     text-align: left;
+  }
+
+  .commission-row {
+    align-items: flex-start;
+  }
+
+  .commission-row strong {
+    text-align: right;
+  }
+}
+
+
+/* =========================================================
+   TRÈS PETITS ÉCRANS
+   ========================================================= */
+
+@media (max-width: 360px) {
+
+  .ambassade-page {
+    padding: 9px;
+  }
+
+  .recovery-card,
+  .history-card {
+    padding: 15px;
+    border-radius: 14px;
+  }
+
+  .ambassade-header h1 {
+    font-size: 25px;
+  }
+
+  .card-heading h2 {
+    font-size: 19px;
+  }
+
+  .commission-box {
+    padding: 14px;
+  }
+
+  .ambassade-footer {
+    padding: 15px;
   }
 }
