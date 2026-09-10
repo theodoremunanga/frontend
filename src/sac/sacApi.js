@@ -2,91 +2,76 @@
 
 import api from "../services/api";
 
-
 // ==========================================================
 // CREATE MATCH SAC
 // ==========================================================
 
-export const createSacMatch = async ({
-    game,
-    stake
-}) => {
-
+export const createSacMatch = async ({ game, stake }) => {
     const response = await api.post(
         "/sac/matches",
         {
             game,
-            stake
+            stake,
         }
     );
 
-    return response.data;
+    return response.data?.match ?? response.data;
 };
-
 
 // ==========================================================
 // JOIN MATCH SAC
 // ==========================================================
 
-export const joinSacMatch = async ({
-    game,
-    matchId
-}) => {
-
+export const joinSacMatch = async ({ game, matchId }) => {
     const response = await api.post(
         `/sac/matches/${Number(matchId)}/join`,
         {
-            game
+            game,
         }
     );
 
-    return response.data;
+    return response.data?.match ?? response.data;
 };
-
 
 // ==========================================================
 // GET MATCH SAC
 // ==========================================================
 
-export const getSacMatch = async (
-    matchId
-) => {
-
+export const getSacMatch = async (matchId) => {
     const response = await api.get(
         `/sac/matches/${Number(matchId)}`
     );
 
-    return response.data;
-};
+    console.log(
+        "♟️ SAC GET MATCH RAW:",
+        response.data
+    );
 
+    return response.data?.match ?? response.data;
+};
 
 // ==========================================================
 // LIST MATCHES SAC
 // ==========================================================
 
-export const getSacMatches = async (
-    game
-) => {
-
+export const getSacMatches = async (game) => {
     const response = await api.get(
         "/sac/matches",
         {
             params: {
-                game
-            }
+                game,
+            },
         }
     );
 
     return response.data;
 };
-
 
 // ==========================================================
 // CLASSEMENT BRAVMAN
 // ==========================================================
 
 export const getBravmanRanking = async () => {
-
     const response = await api.get(
         "/bravman/ranking"
     );

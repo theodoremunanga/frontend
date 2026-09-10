@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useState,
 } from "react";
 
@@ -58,9 +59,23 @@ function ConditionsModal({
   const conditions =
     getConditions(mode);
 
+  const handleAccept = () => {
+    if (
+      typeof onAccept ===
+      "function"
+    ) {
+      onAccept();
+    }
+  };
+
   return (
     <div className="dames-modal-backdrop">
-      <div className="dames-conditions-modal">
+      <div
+        className="dames-conditions-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dames-conditions-title"
+      >
         <div className="dames-conditions-icon">
           {conditions.icon}
         </div>
@@ -69,7 +84,7 @@ function ConditionsModal({
           SAJCL • JEUX DE DAMES
         </div>
 
-        <h2>
+        <h2 id="dames-conditions-title">
           {conditions.title}
         </h2>
 
@@ -79,6 +94,7 @@ function ConditionsModal({
 
         <div className="dames-conditions-notice">
           <span>ℹ️</span>
+
           <p>
             {conditions.notice}
           </p>
@@ -114,7 +130,7 @@ function ConditionsModal({
         <button
           type="button"
           className="dames-primary-button"
-          onClick={onAccept}
+          onClick={handleAccept}
         >
           Commencer la partie
         </button>
@@ -131,21 +147,25 @@ function FeedbackPanel({
   matchId,
   onClose,
 }) {
-  const [rating, setRating] =
-    useState(0);
+  const [
+    rating,
+    setRating,
+  ] = useState(0);
 
-  const [comment, setComment] =
-    useState("");
+  const [
+    comment,
+    setComment,
+  ] = useState("");
 
-  const [submitting, setSubmitting] =
-    useState(false);
+  const [
+    submitting,
+    setSubmitting,
+  ] = useState(false);
 
-  const [submitted, setSubmitted] =
-    useState(false);
-
-  // ====================================================
-  // SAVE AVIS — UNIQUE SOURCE
-  // ====================================================
+  const [
+    submitted,
+    setSubmitted,
+  ] = useState(false);
 
   const submit =
     useCallback(
@@ -163,17 +183,13 @@ function FeedbackPanel({
 
           await avisApi.createAvis({
             game: "checkers",
-
             matchId:
               Number(matchId),
-
             rating:
               Number(rating),
-
             comment:
               comment.trim() ||
               null,
-
             context:
               "match",
           });
@@ -208,7 +224,11 @@ function FeedbackPanel({
 
   if (submitted) {
     return (
-      <div className="dames-feedback-card">
+      <div
+        className="dames-feedback-card"
+        role="dialog"
+        aria-modal="true"
+      >
         <div className="dames-feedback-icon">
           💚
         </div>
@@ -236,7 +256,12 @@ function FeedbackPanel({
   }
 
   return (
-    <div className="dames-feedback-card">
+    <div
+      className="dames-feedback-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="dames-feedback-title"
+    >
       <div className="dames-feedback-icon">
         ⭐
       </div>
@@ -245,7 +270,7 @@ function FeedbackPanel({
         SAJCL • VOTRE AVIS COMPTE
       </div>
 
-      <h2>
+      <h2 id="dames-feedback-title">
         Comment avez-vous trouvé
         les Jeux de Dames ?
       </h2>
@@ -282,11 +307,18 @@ function FeedbackPanel({
               onClick={() =>
                 setRating(star)
               }
+              role="radio"
+              aria-checked={
+                star === rating
+              }
               aria-label={`${star} étoile${
                 star > 1
                   ? "s"
                   : ""
               }`}
+              disabled={
+                submitting
+              }
             >
               ★
             </button>
@@ -304,6 +336,7 @@ function FeedbackPanel({
           )
         }
         placeholder="Votre impression..."
+        disabled={submitting}
       />
 
       <div className="dames-feedback-actions">
@@ -322,7 +355,8 @@ function FeedbackPanel({
           onClick={submit}
           disabled={
             submitting ||
-            !rating
+            !rating ||
+            !matchId
           }
         >
           {submitting
@@ -344,6 +378,7 @@ export default function DamesSettings({
   onAcceptConditions,
   feedbackVisible = false,
   feedbackMatchId = null,
+  onCloseFeedback,
 }) {
   const [
     feedbackOpen,
@@ -352,9 +387,30 @@ export default function DamesSettings({
     feedbackVisible
   );
 
+  useEffect(() => {
+    setFeedbackOpen(
+      feedbackVisible
+    );
+  }, [
+    feedbackVisible,
+  ]);
+
+  const closeFeedback =
+    useCallback(() => {
+      setFeedbackOpen(false);
+
+      if (
+        typeof onCloseFeedback ===
+        "function"
+      ) {
+        onCloseFeedback();
+      }
+    }, [
+      onCloseFeedback,
+    ]);
+
   if (
     !conditionsVisible &&
-    !feedbackVisible &&
     !feedbackOpen
   ) {
     return null;
@@ -371,21 +427,18 @@ export default function DamesSettings({
         />
       )}
 
-      {feedbackVisible &&
-        feedbackOpen && (
-          <div className="dames-modal-backdrop">
-            <FeedbackPanel
-              matchId={
-                feedbackMatchId
-              }
-              onClose={() =>
-                setFeedbackOpen(
-                  false
-                )
-              }
-            />
-          </div>
-        )}
+      {feedbackOpen && (
+        <div className="dames-modal-backdrop">
+          <FeedbackPanel
+            matchId={
+              feedbackMatchId
+            }
+            onClose={
+              closeFeedback
+            }
+          />
+        </div>
+      )}
     </>
   );
 }

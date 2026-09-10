@@ -43,11 +43,8 @@ export const checkersSocket = io(
     },
 
     reconnection: true,
-
     reconnectionAttempts: Infinity,
-
     reconnectionDelay: 1000,
-
     reconnectionDelayMax: 5000,
   }
 );
@@ -83,6 +80,10 @@ export function disconnectCheckers() {
 // ======================================================
 // JOIN MATCH
 // ======================================================
+//
+// Backend:
+// socket.on("match:join", ...)
+// ======================================================
 
 export function joinCheckersMatch(matchId) {
   if (!matchId) {
@@ -103,6 +104,10 @@ export function joinCheckersMatch(matchId) {
 
 // ======================================================
 // MOVE
+// ======================================================
+//
+// Backend:
+// socket.on("checkers:move", ...)
 // ======================================================
 
 export function sendCheckersMove(
@@ -127,21 +132,26 @@ export function sendCheckersMove(
 }
 
 // ======================================================
-// CHAT
+// CHAT MESSAGE
+// ======================================================
+//
+// Backend actuel:
+// socket.on("chat:message", ...)
 // ======================================================
 
 export function sendCheckersMessage(
   matchId,
   text
 ) {
-  const message = String(text || "").trim();
+  const message =
+    String(text || "").trim();
 
   if (!matchId || !message) {
     return;
   }
 
   checkersSocket.emit(
-    "chat:send",
+    "chat:message",
     {
       matchId: Number(matchId),
       text: message,
@@ -171,6 +181,13 @@ export function sendCheckersTyping(
 // ======================================================
 // CONDITIONS
 // ======================================================
+//
+// IMPORTANT:
+// Les conditions restent uniquement côté interface.
+//
+// Aucun événement backend n'est requis pour déterminer
+// le résultat de la partie.
+// ======================================================
 
 export function acceptCheckersConditions(
   matchId
@@ -191,11 +208,12 @@ export function acceptCheckersConditions(
 // FORFEIT
 // ======================================================
 //
-// IMPORTANT :
+// IMPORTANT:
+//
 // Ceci n'est PAS utilisé pour le timeout.
 //
-// Le timeout de 90 secondes est entièrement
-// géré par le serveur.
+// Le timeout de 90 secondes est entièrement géré
+// par le serveur.
 //
 // Cette fonction sert uniquement lorsque le joueur
 // décide volontairement d'abandonner.
@@ -219,6 +237,9 @@ export function forfeitCheckersMatch(
 // ======================================================
 // REPORT
 // ======================================================
+//
+// Le signalement ne modifie pas le résultat du match.
+// ======================================================
 
 export function reportCheckersMatch(
   matchId,
@@ -240,12 +261,9 @@ export function reportCheckersMatch(
 // ======================================================
 // SERVER EVENT HELPERS
 // ======================================================
-//
-// Ces fonctions ne créent PAS de nouveaux événements.
-//
-// Elles permettent simplement à Dames.jsx,
-// DamesModeration.jsx, etc. de s'abonner
-// proprement au contrat serveur.
+
+// ======================================================
+// MATCH INIT
 // ======================================================
 
 export function onCheckersMatchInit(
@@ -264,6 +282,10 @@ export function onCheckersMatchInit(
   };
 }
 
+// ======================================================
+// MATCH UPDATE
+// ======================================================
+
 export function onCheckersMatchUpdate(
   handler
 ) {
@@ -280,6 +302,10 @@ export function onCheckersMatchUpdate(
   };
 }
 
+// ======================================================
+// TURN TIMER
+// ======================================================
+
 export function onCheckersTurnTimer(
   handler
 ) {
@@ -295,6 +321,10 @@ export function onCheckersTurnTimer(
     );
   };
 }
+
+// ======================================================
+// MATCH END
+// ======================================================
 
 export function onCheckersMatchEnd(
   handler
@@ -316,6 +346,10 @@ export function onCheckersMatchEnd(
 // CHAT EVENTS
 // ======================================================
 
+// ======================================================
+// CHAT MESSAGE
+// ======================================================
+
 export function onCheckersChatMessage(
   handler
 ) {
@@ -331,6 +365,10 @@ export function onCheckersChatMessage(
     );
   };
 }
+
+// ======================================================
+// CHAT TYPING
+// ======================================================
 
 export function onCheckersChatTyping(
   handler
@@ -349,7 +387,31 @@ export function onCheckersChatTyping(
 }
 
 // ======================================================
+// CHAT ERROR
+// ======================================================
+
+export function onCheckersChatError(
+  handler
+) {
+  checkersSocket.on(
+    "chat:error",
+    handler
+  );
+
+  return () => {
+    checkersSocket.off(
+      "chat:error",
+      handler
+    );
+  };
+}
+
+// ======================================================
 // SOCKET ERRORS
+// ======================================================
+//
+// connect_error est émis notamment lorsque l'authentification
+// JWT ou la connexion Socket.IO échoue.
 // ======================================================
 
 export function onCheckersSocketError(
@@ -369,7 +431,35 @@ export function onCheckersSocketError(
 }
 
 // ======================================================
+// SERVER ERROR
+// ======================================================
+//
+// Le backend utilise également:
+// socket.emit("error", ...)
+// ======================================================
+
+export function onCheckersServerError(
+  handler
+) {
+  checkersSocket.on(
+    "error",
+    handler
+  );
+
+  return () => {
+    checkersSocket.off(
+      "error",
+      handler
+    );
+  };
+}
+
+// ======================================================
 // CONNECTION EVENTS
+// ======================================================
+
+// ======================================================
+// CONNECT
 // ======================================================
 
 export function onCheckersConnect(
@@ -387,6 +477,10 @@ export function onCheckersConnect(
     );
   };
 }
+
+// ======================================================
+// DISCONNECT
+// ======================================================
 
 export function onCheckersDisconnect(
   handler
@@ -409,3 +503,4 @@ export function onCheckersDisconnect(
 // ======================================================
 
 export default checkersSocket;
+

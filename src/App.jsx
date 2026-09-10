@@ -7,11 +7,14 @@ import Accueil from "./pages/Accueil";
 import Competition from "./pages/Competitions";
 import Infos from "./pages/Infos";
 import Menu from "./pages/Menu";
-import Dames from "./pages/Dames"; 
+ 
 import Avis from "./pages/Avis";
 
 import BravmanPage 
 from "./sac/games/bravman/Bravman";
+
+import Dames
+from "./sac/games/checkers/Dames";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -176,10 +179,7 @@ export default function App() {
   // =========================
 
   useEffect(() => {
-    const token =
-      localStorage.getItem(
-        "token"
-      );
+    const token = localStorage.getItem("token");
 
     if (
       token &&
@@ -188,21 +188,61 @@ export default function App() {
     ) {
       setIsAuth(true);
 
-      // ✅ reset auto game
-      localStorage.removeItem(
-        "gameConfig"
-      );
+      const savedGameConfig =
+        localStorage.getItem("gameConfig");
 
-      setGameConfig(null);
+      if (savedGameConfig) {
+        try {
+          const parsed =
+            JSON.parse(savedGameConfig);
 
-      setPage(
-        role === "ADMIN"
-          ? "admin"
-          : "accueil"
-      );
+          setGameConfig(parsed);
+
+          // Si un match est déjà actif,
+          // on peut le reprendre.
+          if (
+            parsed?.game &&
+            String(parsed.game)
+              .toLowerCase()
+              .trim() === "dames"
+          ) {
+            setPage("game");
+          } else {
+            setPage(
+              role === "ADMIN"
+                ? "admin"
+                : "accueil"
+            );
+          }
+        } catch (err) {
+          console.error(
+            "GAME CONFIG INVALID:",
+            err
+          );
+
+          localStorage.removeItem(
+            "gameConfig"
+          );
+
+          setGameConfig(null);
+
+          setPage(
+            role === "ADMIN"
+              ? "admin"
+              : "accueil"
+          );
+        }
+      } else {
+        setPage(
+          role === "ADMIN"
+            ? "admin"
+            : "accueil"
+        );
+      }
     } else {
       localStorage.clear();
 
+      setGameConfig(null);
       setPage("login");
     }
   }, [role]);
@@ -404,41 +444,27 @@ export default function App() {
           {!gameConfig ? (
             <div
               style={{
-                textAlign:
-                  "center",
+                textAlign: "center",
                 marginTop: 50,
               }}
             >
-              <h2>
-                ⚠️ Aucun match
-                actif
-              </h2>
+              <h2>⚠️ Aucun match actif</h2>
             </div>
           ) : safeGame === "dames" ? (
             <Dames
               gameConfig={gameConfig}
               setPage={setPage}
               resetGame={resetGame}
-           />
-
-
+            />
           ) : (
             <div
               style={{
-                textAlign:
-                  "center",
+                textAlign: "center",
                 marginTop: 50,
               }}
             >
-              <h2>
-                ⚠️ Jeu non
-                supporté
-              </h2>
-
-              <p>
-                Type:{" "}
-                {safeGame}
-              </p>
+              <h2>⚠️ Jeu non supporté</h2>
+              <p>Type: {safeGame}</p>
             </div>
           )}
         </>

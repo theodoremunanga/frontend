@@ -5,19 +5,15 @@ import {
   useState,
 } from "react";
 
-import html2canvas from "html2canvas";
-
 import {
   checkersSocket,
   sendCheckersMessage,
   sendCheckersTyping,
+  reportCheckersMatch,
 } from "../services/checkersSocket";
 
 const MAX_MESSAGES = 100;
 const MAX_CHAT_LENGTH = 300;
-
-const API =
-  import.meta.env.VITE_API_URL || "";
 
 // ======================================================
 // HELPERS
@@ -35,9 +31,7 @@ function sanitizeText(
     .slice(0, max);
 }
 
-function normalizePlayerId(
-  value
-) {
+function normalizePlayerId(value) {
   const id = Number(value);
 
   return id === 1 || id === 2
@@ -61,6 +55,8 @@ function ChatPanel({
   return (
     <div className="dames-chat-overlay">
       <div className="dames-chat-window">
+
+        {/* HEADER */}
         <div className="dames-chat-header">
           <div>
             <strong>
@@ -82,6 +78,7 @@ function ChatPanel({
           </button>
         </div>
 
+        {/* MESSAGES */}
         <div
           ref={chatRef}
           className="dames-chat-messages"
@@ -129,18 +126,16 @@ function ChatPanel({
           )}
         </div>
 
+        {/* COMPOSER */}
         <div className="dames-chat-composer">
           <input
             value={chatInput}
-            maxLength={
-              MAX_CHAT_LENGTH
-            }
+            maxLength={MAX_CHAT_LENGTH}
             onChange={onChange}
             placeholder="Écrire un message..."
             onKeyDown={(event) => {
               if (
-                event.key ===
-                "Enter"
+                event.key === "Enter"
               ) {
                 event.preventDefault();
                 onSend();
@@ -217,8 +212,12 @@ export default function DamesModeration({
       return;
     }
 
+    // --------------------------------------------------
+    // MESSAGE
+    // --------------------------------------------------
+
     const handleMessage =
-      (message) => {
+      (message = {}) => {
         if (
           !message ||
           !message.text
@@ -264,13 +263,20 @@ export default function DamesModeration({
         setUnreadMessages(
           (current) =>
             chatOpen
-              ? current
+              ? 0
               : current + 1
         );
       };
 
+    // --------------------------------------------------
+    // TYPING
+    // --------------------------------------------------
+
     const handleTyping =
-      ({ username } = {}) => {
+      (data = {}) => {
+        const username =
+          data.username;
+
         if (!username) {
           return;
         }
@@ -293,6 +299,10 @@ export default function DamesModeration({
             );
           }, 1200);
       };
+
+    // --------------------------------------------------
+    // CHAT ERROR
+    // --------------------------------------------------
 
     const handleChatError =
       ({ message } = {}) => {
@@ -369,7 +379,10 @@ export default function DamesModeration({
         }
       }
     );
-  }, [chatOpen]);
+  }, [
+    chatOpen,
+    messages,
+  ]);
 
   // ====================================================
   // SEND MESSAGE
@@ -438,164 +451,99 @@ export default function DamesModeration({
     );
 
   // ====================================================
-  // REPORT
+  // REPORT MATCH
   // ====================================================
   //
-  // Le signalement ne modifie jamais
-  // le résultat de la partie.
+  // IMPORTANT :
+  // - aucun changement du résultat
+  // - aucun abandon
+  // - aucun changement de tour
+  // - aucun règlement de match
   //
-  // Il transmet les éléments nécessaires
-  // à l'administration.
+  // Le signalement est simplement transmis
+  // au backend via le socket.
   // ====================================================
 
   const reportMatch =
-    useCallback(
-      async () => {
-        if (
-          reporting ||
-          !boardRef?.current ||
-          !matchId
-        ) {
-          return;
-        }
+    useCallback(async () => {
+      if (
+        reporting ||
+        !matchId ||
+        !checkersSocket.connected
+      ) {
+        return;
+      }
 
-        const reason =
-          window.prompt(
-            "Pourquoi souhaitez-vous signaler cette partie ?"
-          );
+      const reason =
+        window.prompt(
+          "Pourquoi souhaitez-vous signaler cette partie ?"
+        );
 
-        if (
-          !reason ||
-          !reason.trim()
-        ) {
-          return;
-        }
+      if (
+        !reason ||
+        !reason.trim()
+      ) {
+        return;
+      }
 
-        try {
-          setReporting(true);
+      try {
+        setReporting(true);
 
-          const canvas =
-            await html2canvas(
-              boardRef.current,
-              {
-                scale: 0.8,
-              }
-            );
+        const payload = {
+          matchId: Number(matchId),
 
-          const blob =
-            await new Promise(
-              (resolve) =>
-                canvas.toBlob(
-                  resolve,
-                  "image/jpeg",
-                  0.7
-                )
-            );
+          playerSide:
+            normalizePlayerId(
+              myPlayer
+            ),
 
-          if (!blob) {
-            throw new Error(
-              "REPORT_IMAGE_FAILED"
-            );
-          }
+          board:
+            board ?? [],
 
-          const formData =
-            new FormData();
-
-          formData.append(
-            "image",
-            blob,
-            "report.jpg"
-          );
-
-          formData.append(
-            "matchId",
-            String(matchId)
-          );
-
-          formData.append(
-            "playerSide",
-            String(
-              myPlayer ?? ""
-            )
-          );
-
-          formData.append(
-            "board",
-            JSON.stringify(
-              board ?? []
-            )
-          );
-
-          formData.append(
-            "description",
+          description:
             sanitizeText(
               reason.trim(),
               1000
-            )
-          );
+            ),
+        };
 
-          const response =
-            await fetch(
-              `${API}/match/report`,
-              {
-                method: "POST",
+        reportCheckersMatch(
+          payload
+        );
 
-                headers: {
-                  ...(token
-                    ? {
-                        Authorization:
-                          `Bearer ${token}`,
-                      }
-                    : {}),
-                },
+        window.dispatchEvent(
+          new CustomEvent(
+            "toast",
+            {
+              detail:
+                "✅ Signalement envoyé",
+            }
+          )
+        );
+      } catch (error) {
+        console.error(
+          "CHECKERS REPORT ERROR:",
+          error
+        );
 
-                body: formData,
-              }
-            );
-
-          if (!response.ok) {
-            throw new Error(
-              "REPORT_FAILED"
-            );
-          }
-
-          window.dispatchEvent(
-            new CustomEvent(
-              "toast",
-              {
-                detail:
-                  "✅ Signalement envoyé",
-              }
-            )
-          );
-        } catch (error) {
-          console.error(
-            "CHECKERS REPORT ERROR:",
-            error
-          );
-
-          window.dispatchEvent(
-            new CustomEvent(
-              "toast",
-              {
-                detail:
-                  "❌ Erreur lors du signalement",
-              }
-            )
-          );
-        } finally {
-          setReporting(false);
-        }
-      },
-      [
-        reporting,
-        boardRef,
-        matchId,
-        myPlayer,
-        board,
-        token,
-      ]
-    );
+        window.dispatchEvent(
+          new CustomEvent(
+            "toast",
+            {
+              detail:
+                "❌ Erreur lors du signalement",
+            }
+          )
+        );
+      } finally {
+        setReporting(false);
+      }
+    }, [
+      reporting,
+      matchId,
+      myPlayer,
+      board,
+    ]);
 
   // ====================================================
   // RENDER
@@ -603,20 +551,27 @@ export default function DamesModeration({
 
   return (
     <>
-      {/* REPORT */}
+      {/* ==================================================
+          REPORT
+          ================================================== */}
 
       <button
         type="button"
         className="dames-report-button"
         onClick={reportMatch}
-        disabled={reporting}
+        disabled={
+          reporting ||
+          !matchId
+        }
       >
         {reporting
           ? "..."
           : "🚨 Signaler"}
       </button>
 
-      {/* CHAT FAB */}
+      {/* ==================================================
+          CHAT FAB
+          ================================================== */}
 
       <button
         type="button"
@@ -638,7 +593,9 @@ export default function DamesModeration({
         )}
       </button>
 
-      {/* CHAT */}
+      {/* ==================================================
+          CHAT
+          ================================================== */}
 
       {chatOpen && (
         <ChatPanel
