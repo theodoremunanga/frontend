@@ -13,6 +13,8 @@ import {
     getSacMatch,
 } from "../../sacApi";
 
+import { createAvis } from "../../../services/avisApi";
+
 import {
     connectDamesSocket,
     joinDamesMatch,
@@ -42,9 +44,6 @@ const MAX_MESSAGES = 100;
 const MATCH_REFRESH = 1500;
 const MOVE_TIMEOUT = 7000;
 
-const TURN_TIME_LIMIT = 90;
-
-const GAME_ID = "checkers";
 
 // ==========================================================
 // HELPERS
@@ -486,35 +485,18 @@ function extractStake(config, data) {
     const match = normalizeSacPayload(data);
 
     const value =
+        match?.bet_amount ??
         match?.stake ??
         match?.amount ??
+        match?.match?.bet_amount ??
         match?.match?.stake ??
         match?.match?.amount ??
+        config?.bet_amount ??
         config?.stake ??
         config?.amount ??
         0;
 
     const number = Number(value);
-
-    return Number.isFinite(number)
-        ? number
-        : 0;
-}
-
-function extractStake(config, data) {
-
-    const match =
-        normalizeSacPayload(data);
-
-    const value =
-        match?.bet_amount ??
-        match?.stake ??
-        config?.bet_amount ??
-        config?.stake ??
-        0;
-
-    const number =
-        Number(value);
 
     return Number.isFinite(number)
         ? number
@@ -685,57 +667,6 @@ function hasOpponentFromSocket(data) {
         state?.opponent;
 
     if (opponent) {
-        return true;
-    }
-
-    /**
-     * Certains backends envoient un état personnalisé
-     * au joueur connecté sans renvoyer user2_id.
-     *
-     * Si le serveur nous donne déjà :
-     * - un plateau valide
-     * - notre joueur
-     * - un tour
-     *
-     * alors nous sommes nécessairement dans une partie
-     * déjà constituée.
-     */
-    const boardPerspectiveClass =
-        Number(myPlayer) === PLAYER_2
-            ? "dames-board-perspective-player2"
-            : "dames-board-perspective-player1";
-
-    const board =
-        data?.board ??
-        data?.state?.board ??
-        data?.game?.board ??
-        data?.match?.board;
-
-    const player =
-        data?.player ??
-        data?.myPlayer ??
-        data?.state?.player ??
-        data?.state?.myPlayer ??
-        data?.game?.player ??
-        data?.match?.player;
-
-    const turn =
-        data?.turn ??
-        data?.state?.turn ??
-        data?.game?.turn ??
-        data?.match?.turn;
-
-    if (
-        isValidBoard(board) &&
-        (
-            Number(player) === PLAYER_1 ||
-            Number(player) === PLAYER_2
-        ) &&
-        (
-            Number(turn) === PLAYER_1 ||
-            Number(turn) === PLAYER_2
-        )
-    ) {
         return true;
     }
 
@@ -1322,6 +1253,156 @@ function ResultPanel({
 }
 
 // ==========================================================
+// AVIS DE FIN DE MATCH
+// ==========================================================
+
+function AvisModal({
+    matchId,
+    onSkip,
+    onSubmitted,
+}) {
+    const [rating, setRating] = useState(0);
+    const [comment, setComment] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+    const [error, setError] = useState("");
+
+    const handleSubmit = async (event) => {
+        event.preventDefault();
+
+        if (!matchId || !Number.isFinite(Number(matchId))) {
+            setError("Identifiant de partie invalide.");
+            return;
+        }
+
+        if (!rating || rating < 1 || rating > 5) {
+            setError("Choisissez une note entre 1 et 5.");
+            return;
+        }
+
+        setSubmitting(true);
+        setError("");
+
+        try {
+            await createAvis({
+                game: "dames",
+                matchId: Number(matchId),
+                rating,
+                comment: comment.trim() || null,
+                context: "match",
+            });
+
+            onSubmitted?.();
+        } catch (submitError) {
+            console.error(
+                "❌ DAMES AVIS SUBMIT ERROR :",
+                submitError
+            );
+
+            setError(
+                submitError?.response?.data?.message ||
+                submitError?.response?.data?.error ||
+                "Impossible d'enregistrer votre avis."
+            );
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="dames-modal-layer">
+            <div className="dames-conditions-modal dames-review-modal">
+                <div className="dames-modal-icon">
+                    ★
+                </div>
+
+                <h2>
+                    Votre avis sur la partie
+                </h2>
+
+                <p className="dames-modal-subtitle">
+                    Votre retour nous aide à améliorer
+                    l'expérience Dames de 6BetBall.
+                </p>
+
+                <form onSubmit={handleSubmit}>
+                    <div
+                        className="dames-review-stars"
+                        role="radiogroup"
+                        aria-label="Note de la partie"
+                    >
+                        {[1, 2, 3, 4, 5].map((value) => (
+                            <button
+                                key={value}
+                                type="button"
+                                className={
+                                    value <= rating
+                                        ? "dames-review-star active"
+                                        : "dames-review-star"
+                                }
+                                onClick={() =>
+                                    setRating(value)
+                                }
+                                disabled={submitting}
+                                aria-label={`${value} étoile${value > 1 ? "s" : ""}`}
+                                aria-pressed={value === rating}
+                            >
+                                ★
+                            </button>
+                        ))}
+                    </div>
+
+                    <textarea
+                        value={comment}
+                        maxLength={500}
+                        onChange={(event) =>
+                            setComment(
+                                sanitizeText(
+                                    event.target.value,
+                                    500
+                                )
+                            )
+                        }
+                        placeholder="Votre commentaire (facultatif)"
+                        rows={4}
+                        disabled={submitting}
+                    />
+
+                    {error && (
+                        <div className="dames-review-error">
+                            {error}
+                        </div>
+                    )}
+
+                    <div className="dames-review-actions">
+                        <button
+                            type="button"
+                            className="dames-secondary-button"
+                            onClick={onSkip}
+                            disabled={submitting}
+                        >
+                            Plus tard
+                        </button>
+
+                        <button
+                            type="submit"
+                            className="dames-primary-button"
+                            disabled={
+                                submitting ||
+                                rating < 1
+                            }
+                        >
+                            {submitting
+                                ? "Enregistrement..."
+                                : "Envoyer mon avis"}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// ==========================================================
 // MAIN COMPONENT
 // ==========================================================
 
@@ -1405,7 +1486,7 @@ export default function Dames({
         waitingOpponent,
         setWaitingOpponent,
     ] = useState(
-        mode === "user"
+        mode === "USER"
     );
 
     const [gameOver, setGameOver] =
@@ -1490,6 +1571,9 @@ export default function Dames({
     const boardRef =
         useRef(null);
 
+    const sacMatchRef =
+        useRef(null);
+
     // ------------------------------------------------------
     // REF SYNCHRONISATION
     // ------------------------------------------------------
@@ -1507,6 +1591,10 @@ export default function Dames({
     useEffect(() => {
         boardRef.current = board;
     }, [board]);
+
+    useEffect(() => {
+        sacMatchRef.current = sacMatch;
+    }, [sacMatch]);
 
     // ======================================================
     // DERIVED
@@ -1662,6 +1750,11 @@ export default function Dames({
         Number(winnerSide) ===
             Number(myPlayer);
 
+    const boardPerspectiveClass =
+        Number(myPlayer) === PLAYER_2
+            ? "dames-board-perspective-player2"
+            : "dames-board-perspective-player1";
+
     // ======================================================
     // SAC REST
     // ======================================================
@@ -1732,7 +1825,7 @@ export default function Dames({
                      */
                     if (
                         !boardRef.current &&
-                        !sacMatch
+                        !sacMatchRef.current
                     ) {
                         setLoadingError(
                             false
@@ -1896,7 +1989,6 @@ export default function Dames({
             matchId,
             mode,
             gameConfig,
-            sacMatch,
         ]
     );
 
