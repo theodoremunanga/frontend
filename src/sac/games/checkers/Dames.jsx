@@ -504,47 +504,52 @@ function extractStake(config, data) {
 }
 
 function extractPot(config, data) {
+    const match = normalizeSacPayload(data);
 
-    const match =
-        normalizeSacPayload(data);
+    // La cagnotte SAC correspond à l'ensemble des mises.
+    // Si les deux mises sont connues, on les additionne.
+    // Si seul user_1 est présent (match en attente), on considère
+    // la seconde mise identique : 200 => cagnotte affichée 400.
+    const rawUser1 =
+        match?.bet_amount_user_1 ??
+        match?.betAmountUser1 ??
+        match?.match?.bet_amount_user_1 ??
+        match?.match?.betAmountUser1;
 
+    const rawUser2 =
+        match?.bet_amount_user_2 ??
+        match?.betAmountUser2 ??
+        match?.match?.bet_amount_user_2 ??
+        match?.match?.betAmountUser2;
+
+    const user1 = Number(rawUser1);
+    const user2 = Number(rawUser2);
+
+    if (Number.isFinite(user1) && user1 >= 0) {
+        if (Number.isFinite(user2) && user2 >= 0) {
+            return user1 + user2;
+        }
+
+        return user1 * 2;
+    }
+
+    if (Number.isFinite(user2) && user2 >= 0) {
+        return user2 * 2;
+    }
+
+    // Fallback uniquement si SAC fournit déjà une cagnotte calculée.
     const explicit =
         match?.total_bet_amount ??
         match?.pot ??
-        match?.prize;
+        match?.prize ??
+        match?.match?.total_bet_amount ??
+        match?.match?.pot ??
+        match?.match?.prize;
 
-    if (
-        explicit !== undefined &&
-        explicit !== null
-    ) {
-        const number =
-            Number(explicit);
-
-        if (
-            Number.isFinite(number)
-        ) {
-            return number;
-        }
-    }
-
-    const user1 =
-        Number(
-            match?.bet_amount_user_1
-        );
-
-    const user2 =
-        Number(
-            match?.bet_amount_user_2
-        );
-
-    if (
-        Number.isFinite(user1) &&
-        Number.isFinite(user2)
-    ) {
-        return user1 + user2;
-    }
-
-    return 0;
+    const number = Number(explicit);
+    return Number.isFinite(number) && number >= 0
+        ? number
+        : 0;
 }
 
 function formatFc(value) {
@@ -557,50 +562,50 @@ function formatFc(value) {
  * Détection robuste de la présence du deuxième joueur
  * côté REST/SAC.
  */
-function hasOpponentFromMatch(data) {
+function extractSacPlayerIds(data) {
     const match = normalizeSacPayload(data);
+    const players = match?.players;
 
-    if (!match) {
-        return false;
-    }
+    const user1 =
+        match?.user1_id ??
+        match?.user1Id ??
+        match?.player1_id ??
+        match?.player1Id ??
+        match?.creator_id ??
+        match?.creatorId ??
+        (typeof players === "object" && !Array.isArray(players)
+            ? players?.creator
+            : undefined);
 
-    const players =
-        normalizePlayersFromSac(match);
-
-    const opponentId =
+    const user2 =
         match?.user2_id ??
         match?.user2Id ??
         match?.player2_id ??
         match?.player2Id ??
         match?.opponent_id ??
         match?.opponentId ??
-        match?.away_player_id ??
-        match?.awayPlayerId;
+        (typeof players === "object" && !Array.isArray(players)
+            ? players?.opponent
+            : undefined);
 
-    if (
-        opponentId !== undefined &&
-        opponentId !== null &&
-        Number(opponentId) > 0
-    ) {
-        return true;
-    }
+    const normalizeId = (value) => {
+        const id = Number(
+            typeof value === "object"
+                ? value?.id ?? value?.userId ?? value?.user_id
+                : value
+        );
+        return Number.isFinite(id) && id > 0 ? id : null;
+    };
 
-    if (
-        Array.isArray(players) &&
-        players.length >= 2
-    ) {
-        return true;
-    }
+    return {
+        user1: normalizeId(user1),
+        user2: normalizeId(user2),
+    };
+}
 
-    const opponent =
-        match?.opponent ??
-        match?.opponentUser ??
-        match?.awayPlayer ??
-        match?.player2 ??
-        match?.player_2 ??
-        match?.away;
-
-    return Boolean(opponent);
+function hasOpponentFromMatch(data) {
+    const { user2 } = extractSacPlayerIds(data);
+    return user2 !== null;
 }
 
 /**
@@ -614,6 +619,12 @@ function hasOpponentFromMatch(data) {
 function hasOpponentFromSocket(data) {
     if (!data) {
         return false;
+    }
+
+    const { user2 } = extractSacPlayerIds(data);
+
+    if (user2 !== null) {
+        return true;
     }
 
     if (
@@ -1158,7 +1169,7 @@ function ChatPanel({
 }
 
 // ==========================================================
-// RESULT
+// RÉSULTATS DU MATCH
 // ==========================================================
 
 function ResultPanel({
@@ -1168,78 +1179,160 @@ function ResultPanel({
     stake,
     onBack,
 }) {
-    const reward = won ? pot : 0;
+    const reward = Number(pot) || 0;
+    const loss = Number(stake) || 0;
 
-    return (
-        <div className="dames-result-card">
-            <div
-                className={[
-                    "dames-result-icon",
-                    won
-                        ? "result-win"
-                        : draw
-                        ? "result-draw"
-                        : "result-loss",
-                ].join(" ")}
-            >
-                {won
-                    ? "🏆"
-                    : draw
-                    ? "🤝"
-                    : "♟"}
-            </div>
+    // ------------------------------------------------------
+    // VICTOIRE
+    // ------------------------------------------------------
 
-            <div className="dames-result-label">
-                {won
-                    ? "VICTOIRE"
-                    : draw
-                    ? "MATCH NUL"
-                    : "PARTIE TERMINÉE"}
-            </div>
+    if (won) {
+        return (
+            <div className="dames-result-card">
 
-            <h1>
-                {won
-                    ? "Félicitations !"
-                    : draw
-                    ? "Belle partie !"
-                    : "Partie terminée"}
-            </h1>
+                <div className="dames-result-icon result-win">
+                    🏆
+                </div>
 
-            <p>
-                {won
-                    ? `Vous avez gagné ${formatFc(
-                          reward
-                      )}.`
-                    : draw
-                    ? "La partie se termine par un match nul."
-                    : `Vous avez perdu ${formatFc(
-                          stake
-                      )}.`}
-            </p>
+                <div className="dames-result-label">
+                    VICTOIRE !
+                </div>
 
-            {won && (
+                <h1>
+                    Félicitations, vous avez gagné !
+                </h1>
+
+                <p>
+                    Vous avez gagné{" "}
+                    <strong>
+                        {formatFc(reward)}
+                    </strong>{" "}
+                    pour ce match.
+                </p>
+
                 <div className="dames-result-prize">
                     <span>
-                        Gain du match
+                        Cagnotte du match
                     </span>
 
                     <strong>
                         {formatFc(reward)}
                     </strong>
                 </div>
-            )}
 
-            {!won && !draw && (
+                <p className="dames-result-message">
+                    Jouez plus de jeux sur
+                    6BetBall et gagnez beaucoup plus.
+                </p>
+
+                <button
+                    type="button"
+                    className="dames-primary-button"
+                    onClick={onBack}
+                >
+                    Retour à l'Accueil
+                </button>
+
+            </div>
+        );
+    }
+
+    // ------------------------------------------------------
+    // MATCH NUL
+    // ------------------------------------------------------
+
+    if (draw) {
+        return (
+            <div className="dames-result-card">
+
+                <div className="dames-result-icon result-draw">
+                    🤝
+                </div>
+
+                <div className="dames-result-label">
+                    MATCH NUL
+                </div>
+
+                <h1>
+                    Partie terminée
+                </h1>
+
+                <p>
+                    La partie s'est terminée
+                    par un match nul.
+                </p>
+
                 <div className="dames-result-prize">
                     <span>
-                        Mise engagée
+                        Cagnotte du match
                     </span>
 
                     <strong>
-                        {formatFc(stake)}
+                        {formatFc(reward)}
                     </strong>
                 </div>
-            )}
+
+                <p className="dames-result-message">
+                    Merci d'avoir joué sur
+                    6BetBall. Jouez encore
+                    et améliorez votre expérience.
+                </p>
+
+                <button
+                    type="button"
+                    className="dames-primary-button"
+                    onClick={onBack}
+                >
+                    Retour à l'Accueil
+                </button>
+
+            </div>
+        );
+    }
+
+    // ------------------------------------------------------
+    // DÉFAITE
+    // ------------------------------------------------------
+
+    return (
+        <div className="dames-result-card">
+
+            <div className="dames-result-icon result-loss">
+                ♟
+            </div>
+
+            <div className="dames-result-label">
+                DÉFAITE
+            </div>
+
+            <h1>
+                Vous avez perdu
+            </h1>
+
+            <p>
+                Vous avez perdu{" "}
+                <strong>
+                    {formatFc(loss)}
+                </strong>{" "}
+                dans cette partie.
+            </p>
+
+            <div className="dames-result-prize">
+                <span>
+                    Votre mise
+                </span>
+
+                <strong>
+                    {formatFc(loss)}
+                </strong>
+            </div>
+
+            <p className="dames-result-message">
+                Cette partie est complètement
+                terminée. Jouez plus aux jeux
+                sur 6BetBall et accroissez
+                votre expérience.
+            </p>
 
             <button
                 type="button"
@@ -1248,6 +1341,7 @@ function ResultPanel({
             >
                 Retour à l'Accueil
             </button>
+
         </div>
     );
 }
@@ -1259,23 +1353,35 @@ function ResultPanel({
 function AvisModal({
     matchId,
     onSkip,
-    onSubmitted,
+    onResults,
 }) {
     const [rating, setRating] = useState(0);
     const [comment, setComment] = useState("");
     const [submitting, setSubmitting] = useState(false);
+    const [submitted, setSubmitted] = useState(false);
     const [error, setError] = useState("");
 
     const handleSubmit = async (event) => {
         event.preventDefault();
 
-        if (!matchId || !Number.isFinite(Number(matchId))) {
-            setError("Identifiant de partie invalide.");
+        if (
+            !matchId ||
+            !Number.isFinite(Number(matchId))
+        ) {
+            setError(
+                "Identifiant de partie invalide."
+            );
             return;
         }
 
-        if (!rating || rating < 1 || rating > 5) {
-            setError("Choisissez une note entre 1 et 5.");
+        if (
+            !rating ||
+            rating < 1 ||
+            rating > 5
+        ) {
+            setError(
+                "Choisissez une note entre 1 et 5."
+            );
             return;
         }
 
@@ -1286,12 +1392,16 @@ function AvisModal({
             await createAvis({
                 game: "dames",
                 matchId: Number(matchId),
-                rating,
-                comment: comment.trim() || null,
+                rating: Number(rating),
+                comment:
+                    comment.trim() || null,
                 context: "match",
             });
 
-            onSubmitted?.();
+            // L'avis a bien été enregistré
+            // par l'API centrale.
+            setSubmitted(true);
+
         } catch (submitError) {
             console.error(
                 "❌ DAMES AVIS SUBMIT ERROR :",
@@ -1307,6 +1417,56 @@ function AvisModal({
             setSubmitting(false);
         }
     };
+
+    // ------------------------------------------------------
+    // AVIS ENREGISTRÉ
+    // ------------------------------------------------------
+
+    if (submitted) {
+        return (
+            <div className="dames-modal-layer">
+                <div className="dames-conditions-modal dames-review-modal">
+                    <div className="dames-modal-icon">
+                        ✓
+                    </div>
+
+                    <h2>
+                        Merci pour votre avis !
+                    </h2>
+
+                    <p className="dames-modal-subtitle">
+                        Merci pour vos commentaires,
+                        ça nous aide à améliorer
+                        6BetBall.
+                    </p>
+
+                    <div className="dames-review-success">
+                        <div className="dames-review-success-stars">
+                            {"★".repeat(rating)}
+                            {"☆".repeat(5 - rating)}
+                        </div>
+
+                        <p>
+                            Votre avis a bien été
+                            enregistré.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        className="dames-primary-button"
+                        onClick={onResults}
+                    >
+                        Voir les résultats du match
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    // ------------------------------------------------------
+    // FORMULAIRE AVIS
+    // ------------------------------------------------------
 
     return (
         <div className="dames-modal-layer">
@@ -1325,31 +1485,52 @@ function AvisModal({
                 </p>
 
                 <form onSubmit={handleSubmit}>
+
+                    {/* ---------------------------------- */}
+                    {/* ÉTOILES */}
+                    {/* ---------------------------------- */}
+
                     <div
                         className="dames-review-stars"
                         role="radiogroup"
                         aria-label="Note de la partie"
                     >
-                        {[1, 2, 3, 4, 5].map((value) => (
-                            <button
-                                key={value}
-                                type="button"
-                                className={
-                                    value <= rating
-                                        ? "dames-review-star active"
-                                        : "dames-review-star"
-                                }
-                                onClick={() =>
-                                    setRating(value)
-                                }
-                                disabled={submitting}
-                                aria-label={`${value} étoile${value > 1 ? "s" : ""}`}
-                                aria-pressed={value === rating}
-                            >
-                                ★
-                            </button>
-                        ))}
+                        {[1, 2, 3, 4, 5].map(
+                            (value) => (
+                                <button
+                                    key={value}
+                                    type="button"
+                                    className={
+                                        value <= rating
+                                            ? "dames-review-star active"
+                                            : "dames-review-star"
+                                    }
+                                    onClick={() =>
+                                        setRating(
+                                            value
+                                        )
+                                    }
+                                    disabled={
+                                        submitting
+                                    }
+                                    aria-label={`${value} étoile${
+                                        value > 1
+                                            ? "s"
+                                            : ""
+                                    }`}
+                                    aria-pressed={
+                                        value === rating
+                                    }
+                                >
+                                    ★
+                                </button>
+                            )
+                        )}
                     </div>
+
+                    {/* ---------------------------------- */}
+                    {/* COMMENTAIRE */}
+                    {/* ---------------------------------- */}
 
                     <textarea
                         value={comment}
@@ -1373,7 +1554,12 @@ function AvisModal({
                         </div>
                     )}
 
+                    {/* ---------------------------------- */}
+                    {/* ACTIONS */}
+                    {/* ---------------------------------- */}
+
                     <div className="dames-review-actions">
+
                         <button
                             type="button"
                             className="dames-secondary-button"
@@ -1395,6 +1581,7 @@ function AvisModal({
                                 ? "Enregistrement..."
                                 : "Envoyer mon avis"}
                         </button>
+
                     </div>
                 </form>
             </div>
@@ -1755,6 +1942,119 @@ export default function Dames({
             ? "dames-board-perspective-player2"
             : "dames-board-perspective-player1";
 
+
+    // ==========================================================
+    // SORTIE DES RÉSULTATS — NETTOYAGE COMPLET DE L'INTERFACE
+    // ==========================================================
+
+    const handleResultsBack = useCallback(() => {
+        console.log(
+            "🧹 DAMES — Nettoyage complet de la partie :",
+            matchId
+        );
+
+        // ------------------------------------------------------
+        // ARRÊT DES TIMERS LOCAUX
+        // ------------------------------------------------------
+
+        if (presenceTimer.current) {
+            clearInterval(
+                presenceTimer.current
+            );
+
+            presenceTimer.current = null;
+        }
+
+        if (moveTimeout.current) {
+            clearTimeout(
+                moveTimeout.current
+            );
+
+            moveTimeout.current = null;
+        }
+
+        if (animationTimeout.current) {
+            clearTimeout(
+                animationTimeout.current
+            );
+
+            animationTimeout.current = null;
+        }
+
+        if (typingTimeout.current) {
+            clearTimeout(
+                typingTimeout.current
+            );
+
+            typingTimeout.current = null;
+        }
+
+        if (chatTypingTimeout.current) {
+            clearTimeout(
+                chatTypingTimeout.current
+            );
+
+            chatTypingTimeout.current = null;
+        }
+
+        // ------------------------------------------------------
+        // RÉINITIALISATION DES REFS
+        // ------------------------------------------------------
+
+        gameOverRef.current = false;
+        conditionsAcceptedRef.current = false;
+
+        // ------------------------------------------------------
+        // NETTOYAGE DE L'ÉTAT DE LA PARTIE
+        // ------------------------------------------------------
+
+        setBoard(
+            createInitialBoard()
+        );
+
+        setWinnerSide(null);
+        setDraw(false);
+
+        setGameOver(false);
+        setResultReady(false);
+        setReviewOpen(false);
+
+        setWaitingOpponent(false);
+        setSendingMove(false);
+        setConditionsOpen(false);
+
+        setTurnSeconds(null);
+
+        setAnimatedMove(null);
+
+        // ------------------------------------------------------
+        // NETTOYAGE CHAT / ÉVÉNEMENTS
+        // ------------------------------------------------------
+
+        setMessages([]);
+        setEvents([]);
+        setLastEvent(null);
+
+        // ------------------------------------------------------
+        // LE SOCKET EST NETTOYÉ PAR L'EFFECT DE CONNEXION.
+        // Le backend reste responsable du statut du match,
+        // du règlement et des comptes.
+        // ------------------------------------------------------
+
+        console.log(
+            "✅ DAMES — Interface nettoyée."
+        );
+
+        // ------------------------------------------------------
+        // RETOUR À L'ACCUEIL SAC
+        // ------------------------------------------------------
+
+        resetGame?.();
+    }, [
+        matchId,
+        resetGame,
+    ]);
+
     // ======================================================
     // SAC REST
     // ======================================================
@@ -1911,11 +2211,9 @@ export default function Dames({
                             matchId,
                             hasOpponent,
                             user1:
-                                data?.user1_id ??
-                                data?.user1Id,
+                                extractSacPlayerIds(data).user1,
                             user2:
-                                data?.user2_id ??
-                                data?.user2Id,
+                                extractSacPlayerIds(data).user2,
                             players:
                                 data?.players,
                             board:
@@ -1975,7 +2273,7 @@ export default function Dames({
                  */
                 if (
                     !boardRef.current &&
-                    !sacMatch
+                    !sacMatchRef.current
                 ) {
                     setLoadingError(
                         true
@@ -2630,25 +2928,33 @@ export default function Dames({
         };
 
         // ==================================================
-        // FIN DU MATCH
+        // FIN DU MATCH — RÉSULTAT OFFICIEL SAC
         // ==================================================
 
         const handleMatchEnd = (data) => {
-
             console.log(
-                "🏁 DAMES MATCH END :",
+                "🏁 DAMES MATCH END — RÉSULTAT OFFICIEL SAC :",
                 data
             );
+
+            // --------------------------------------------------
+            // 1. DERNIER TABLEAU OFFICIEL
+            // --------------------------------------------------
 
             const finalBoard =
                 data?.board ??
                 data?.state?.board ??
                 data?.game?.board ??
-                data?.match?.board;
+                data?.match?.board ??
+                null;
 
             if (isValidBoard(finalBoard)) {
                 setBoard(finalBoard);
             }
+
+            // --------------------------------------------------
+            // 2. RÉSULTAT OFFICIEL
+            // --------------------------------------------------
 
             const winner =
                 data?.winner ??
@@ -2657,45 +2963,116 @@ export default function Dames({
                 data?.state?.winnerSide ??
                 data?.game?.winner ??
                 data?.game?.winnerSide ??
-                data?.result?.winnerSide;
+                data?.result?.winner ??
+                data?.result?.winnerSide ??
+                data?.match?.winnerSide ??
+                null;
 
-            const numericWinner =
-                Number(winner);
+            const numericWinner = Number(winner);
 
             if (
                 numericWinner === PLAYER_1 ||
                 numericWinner === PLAYER_2
             ) {
-                setWinnerSide(
-                    numericWinner
-                );
+                setWinnerSide(numericWinner);
             } else {
                 setWinnerSide(null);
             }
 
-            const isDraw =
-                Boolean(
-                    data?.draw ??
-                    data?.state?.draw ??
-                    data?.game?.draw ??
-                    data?.result?.draw
-                );
+            // --------------------------------------------------
+            // 3. MATCH NUL
+            // --------------------------------------------------
+
+            const isDraw = Boolean(
+                data?.draw ??
+                data?.state?.draw ??
+                data?.game?.draw ??
+                data?.result?.draw ??
+                data?.match?.draw ??
+                false
+            );
 
             setDraw(isDraw);
+
+            // --------------------------------------------------
+            // 4. DERNIÈRE MISE / CAGNOTTE
+            //
+            // Le montant affiché reste celui fourni/calculé
+            // à partir des mises SAC.
+            // --------------------------------------------------
+
+            const finalStake = extractStake(
+                gameConfig,
+                data
+            );
+
+            const finalPot = extractPot(
+                gameConfig,
+                data
+            );
+
+            if (
+                Number.isFinite(finalStake) &&
+                finalStake >= 0
+            ) {
+                setStake(finalStake);
+            }
+
+            if (
+                Number.isFinite(finalPot) &&
+                finalPot >= 0
+            ) {
+                setPot(finalPot);
+            }
+
+            // --------------------------------------------------
+            // 5. PARTIE OFFICIELLEMENT TERMINÉE
+            // --------------------------------------------------
 
             setGameOver(true);
 
             gameOverRef.current = true;
 
+            // --------------------------------------------------
+            // 6. ARRÊT COMPLET DE L'INTERFACE DE JEU
+            // --------------------------------------------------
+
             setConditionsOpen(false);
             setWaitingOpponent(false);
             setSendingMove(false);
             setTurnSeconds(0);
-
             setResultReady(true);
 
-            // Avis facultatif après la fin du match
+            // Aucun nouveau coup ne doit pouvoir partir.
+            setAnimatedMove(null);
+
+            // --------------------------------------------------
+            // 7. AVIS FACULTATIF
+            //
+            // Le résultat n'est PAS affiché immédiatement.
+            // Le joueur peut :
+            //   - cliquer "Plus tard"
+            //   - noter de 1 à 5 étoiles
+            //   - écrire un commentaire
+            //   - envoyer son avis
+            // --------------------------------------------------
+
             setReviewOpen(true);
+
+            console.log(
+                "✅ DAMES — Partie terminée, résultat SAC figé.",
+                {
+                    matchId,
+                    winnerSide:
+                        numericWinner === PLAYER_1 ||
+                        numericWinner === PLAYER_2
+                            ? numericWinner
+                            : null,
+                    draw: isDraw,
+                    stake: finalStake,
+                    pot: finalPot,
+                }
+            );
         };
 
         // ==================================================
@@ -3455,39 +3832,62 @@ export default function Dames({
     }
 
     // ======================================================
-    // RESULT
+    // FIN DE MATCH
     // ======================================================
 
     if (gameOver) {
 
-    if (reviewOpen) {
-        return (
-            <div className="dames-screen">
-                <AvisModal
-                    matchId={matchId}
-                    onSkip={() => {
-                        setReviewOpen(false);
-                    }}
-                    onSubmitted={() => {
-                        setReviewOpen(false);
-                    }}
-                />
-            </div>
-        );
-    }
+        // --------------------------------------------------
+        // ÉTAPE 1 — AVIS FACULTATIF
+        // --------------------------------------------------
 
-    return (
-        <div className="dames-screen">
-            <ResultPanel
-                won={amWinner}
-                draw={draw}
-                pot={pot}
-                stake={stake}
-                onBack={resetGame}
-            />
-        </div>
-    );
-}
+        if (reviewOpen) {
+            return (
+                <div className="dames-screen">
+
+                    <AvisModal
+                        matchId={matchId}
+
+                        // "Plus tard" :
+                        // aucun avis n'est obligatoire.
+                        onSkip={() => {
+                            setReviewOpen(false);
+                        }}
+
+                        // Après enregistrement de l'avis :
+                        // le joueur doit explicitement demander
+                        // à voir les résultats.
+                        onResults={() => {
+                            setReviewOpen(false);
+                        }}
+                    />
+
+                </div>
+            );
+        }
+
+        // --------------------------------------------------
+        // ÉTAPE 2 — RÉSULTAT OFFICIEL
+        // --------------------------------------------------
+
+        if (resultReady) {
+            return (
+                <div className="dames-screen">
+
+                    <ResultPanel
+                        won={amWinner}
+                        draw={draw}
+                        pot={pot}
+                        stake={stake}
+                        onBack={
+                            handleResultsBack
+                        }
+                    />
+
+                </div>
+            );
+        }
+    }
 
     // ======================================================
     // BOARD
