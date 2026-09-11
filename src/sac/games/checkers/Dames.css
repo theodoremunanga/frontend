@@ -771,6 +771,37 @@ textarea:focus-visible {
   animation: damesTurnGlow 1.5s infinite;
 }
 
+/* ======================================================
+   PERSPECTIVE DAMES
+   ====================================================== */
+
+.dames-board-perspective-player1 {
+    transform: rotate(0deg);
+}
+
+.dames-board-perspective-player2 {
+    transform: rotate(180deg);
+}
+
+/*
+ * Lorsque le plateau est retourné, on retourne également
+ * le contenu des cases afin que les pions restent droits.
+ */
+
+.dames-board-perspective-player2
+.dames-cell > * {
+    transform: rotate(180deg);
+}
+
+.dames-board-perspective-player2
+.dames-cell
+.dames-playable-dot,
+.dames-board-perspective-player2
+.dames-cell
+.dames-target-dot {
+    transform: rotate(180deg);
+}
+
 /* =========================================================
    BOARD SECTION
 ========================================================= */
