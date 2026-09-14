@@ -1,19 +1,24 @@
-/* =========================================================
-   DAMES — ULTRA PREMIUM GAME UI
-   Compatible avec Dames.jsx
-   Design : Dark / Gold / Glass / 3D Board
-========================================================= */
+/* ============================================================
+   6BetBall — DAMES
+   Dames.css
+   Aligné sur Dames.jsx fourni
+   Design : Dark / Gold / Glass / Board premium
+   ============================================================ */
+
+/* ============================================================
+   1. VARIABLES / RESET
+   ============================================================ */
 
 :root {
-  --dames-bg: #060a12;
+  --dames-bg: #05080e;
   --dames-bg-soft: #0b1220;
-  --dames-panel: rgba(14, 22, 37, 0.9);
-  --dames-panel-2: rgba(21, 31, 49, 0.92);
-
+  --dames-panel: rgba(14, 22, 37, 0.94);
+  --dames-panel-2: rgba(22, 32, 50, 0.96);
   --dames-border: rgba(255, 255, 255, 0.09);
 
   --dames-text: #f8fafc;
   --dames-muted: #8b98aa;
+  --dames-muted-2: #667386;
 
   --dames-gold: #f4bf45;
   --dames-gold-light: #ffe39a;
@@ -28,7 +33,6 @@
 
   --board-light: #f0d7ad;
   --board-light-2: #e5c18d;
-
   --board-dark: #51331f;
   --board-dark-2: #2e1b11;
 
@@ -36,10 +40,6 @@
 
   color-scheme: dark;
 }
-
-/* =========================================================
-   RESET
-========================================================= */
 
 *,
 *::before,
@@ -76,69 +76,151 @@ textarea:focus-visible {
   outline-offset: 2px;
 }
 
-/* =========================================================
-   APP
-========================================================= */
+/* ============================================================
+   2. APP
+   ============================================================ */
 
 .dames-app {
   position: relative;
-
   width: 100%;
   min-height: 100vh;
-
   overflow-x: hidden;
-
   color: var(--dames-text);
 
   background:
-    radial-gradient(
-      circle at 50% -10%,
-      rgba(45, 74, 120, 0.34),
-      transparent 34%
-    ),
-    radial-gradient(
-      circle at 0% 100%,
-      rgba(244, 191, 69, 0.08),
-      transparent 30%
-    ),
-    linear-gradient(
-      180deg,
-      #0a101b 0%,
-      #05080e 48%,
-      #03050a 100%
-    );
+    radial-gradient(circle at 50% -10%, rgba(45, 74, 120, 0.34), transparent 34%),
+    radial-gradient(circle at 0% 100%, rgba(244, 191, 69, 0.08), transparent 30%),
+    linear-gradient(180deg, #0a101b 0%, #05080e 48%, #03050a 100%);
 
   padding-bottom: 40px;
 }
 
 .dames-app::before {
   content: "";
-
   position: fixed;
   inset: 0;
-
   pointer-events: none;
   z-index: 0;
-
-  opacity: 0.35;
+  opacity: 0.28;
 
   background-image:
-    linear-gradient(
-      rgba(255, 255, 255, 0.015) 1px,
-      transparent 1px
-    ),
-    linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0.012) 1px,
-      transparent 1px
-    );
+    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
 
   background-size: 42px 42px;
 }
 
-/* =========================================================
-   TOPBAR
-========================================================= */
+/* ============================================================
+   3. GLOBAL SCREEN / LOADING / ERROR
+   ============================================================ */
+
+.dames-screen {
+  position: relative;
+  z-index: 20;
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: var(--dames-text);
+
+  background:
+    radial-gradient(circle at 50% 15%, rgba(45,74,120,0.28), transparent 38%),
+    linear-gradient(180deg, #080d16, #03050a);
+}
+
+.dames-loading-card,
+.dames-error-card,
+.dames-waiting-card {
+  width: min(500px, 100%);
+  text-align: center;
+  padding: 34px 30px;
+  border: 1px solid var(--dames-border);
+  border-radius: 28px;
+
+  background:
+    linear-gradient(145deg, rgba(24,36,54,0.98), rgba(7,12,20,0.98));
+
+  box-shadow:
+    0 35px 100px rgba(0,0,0,0.58),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+
+  animation: damesModalUp 0.3s ease;
+}
+
+.dames-loading-card h2,
+.dames-error-card h2,
+.dames-waiting-card h2 {
+  margin: 16px 0 8px;
+  font-size: 21px;
+  line-height: 1.2;
+}
+
+.dames-loading-card p,
+.dames-error-card p,
+.dames-waiting-card p {
+  margin: 0;
+  color: var(--dames-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.dames-loading-piece {
+  width: 76px;
+  height: 76px;
+  margin: 0 auto;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 50%;
+  color: #dce5ef;
+  font-size: 40px;
+
+  background:
+    radial-gradient(circle at 30% 25%, #596579, #111722 60%, #05080d);
+
+  box-shadow:
+    inset 0 3px 5px rgba(255,255,255,0.12),
+    0 12px 25px rgba(0,0,0,0.42);
+
+  animation: damesLoadingPiece 1.5s infinite ease-in-out;
+}
+
+.dames-loading-spinner {
+  width: 32px;
+  height: 32px;
+  margin: 18px auto 0;
+
+  border: 3px solid rgba(255,255,255,0.09);
+  border-top-color: var(--dames-gold);
+  border-radius: 50%;
+
+  animation: damesSpin 0.8s linear infinite;
+}
+
+.dames-error-icon {
+  width: 66px;
+  height: 66px;
+  margin: 0 auto;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 20px;
+  color: #fff;
+  font-size: 32px;
+  font-weight: 900;
+
+  background: rgba(239,68,68,0.12);
+  border: 1px solid rgba(239,68,68,0.25);
+  box-shadow: 0 0 35px rgba(239,68,68,0.08);
+}
+
+/* ============================================================
+   4. TOPBAR
+   ============================================================ */
 
 .dames-topbar {
   position: relative;
@@ -146,78 +228,59 @@ textarea:focus-visible {
 
   width: min(1480px, calc(100% - 32px));
   min-height: 78px;
-
   margin: 0 auto;
 
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-
   gap: 20px;
+
   padding: 12px 18px;
 
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255,255,255,0.08);
   border-top: 0;
-
   border-radius: 0 0 22px 22px;
 
   background:
-    linear-gradient(
-      180deg,
-      rgba(21, 31, 49, 0.97),
-      rgba(8, 13, 23, 0.94)
-    );
+    linear-gradient(180deg, rgba(21,31,49,0.97), rgba(8,13,23,0.94));
 
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 
-  box-shadow:
-    0 14px 45px rgba(0, 0, 0, 0.34);
+  box-shadow: 0 14px 45px rgba(0,0,0,0.34);
 }
 
 .dames-brand {
   min-width: 0;
-
   display: flex;
   align-items: center;
-
   gap: 12px;
 }
 
 .dames-brand-mark {
   width: 48px;
   height: 48px;
-
   flex: 0 0 48px;
 
   display: grid;
   place-items: center;
 
+  color: #2c1a0e;
   font-size: 26px;
 
-  color: #2c1a0e;
-
   border-radius: 15px;
+  border: 1px solid rgba(255,239,181,0.7);
 
-  background:
-    linear-gradient(
-      145deg,
-      #ffe9a8,
-      #e3a82e 54%,
-      #9f6110
-    );
-
-  border: 1px solid rgba(255, 239, 181, 0.7);
+  background: linear-gradient(145deg, #ffe9a8, #e3a82e 54%, #9f6110);
 
   box-shadow:
-    inset 0 2px 2px rgba(255, 255, 255, 0.6),
-    inset 0 -5px 8px rgba(91, 46, 3, 0.24),
-    0 7px 20px rgba(244, 191, 69, 0.2);
+    inset 0 2px 2px rgba(255,255,255,0.6),
+    inset 0 -5px 8px rgba(91,46,3,0.24),
+    0 7px 20px rgba(244,191,69,0.2);
 }
 
 .dames-brand > div:last-child {
   min-width: 0;
-
   display: flex;
   flex-direction: column;
 }
@@ -225,27 +288,22 @@ textarea:focus-visible {
 .dames-brand strong {
   font-size: 14px;
   line-height: 1;
-
   letter-spacing: 0.22em;
   font-weight: 900;
 }
 
 .dames-brand span {
   margin-top: 6px;
-
   color: var(--dames-muted);
-
   font-size: 11px;
   font-weight: 700;
 }
 
 .dames-matchup {
   max-width: min(560px, 45vw);
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   gap: 14px;
 
   font-size: 15px;
@@ -254,94 +312,70 @@ textarea:focus-visible {
 
 .dames-matchup span {
   min-width: 0;
-
   overflow: hidden;
-
   text-overflow: ellipsis;
   white-space: nowrap;
-
   color: #dce5f2;
 }
 
 .dames-matchup b {
   width: 35px;
   height: 35px;
-
   flex: 0 0 35px;
 
   display: grid;
   place-items: center;
 
   border-radius: 50%;
-
   color: #1b1306;
-
   font-size: 10px;
   letter-spacing: 0.05em;
 
-  background:
-    linear-gradient(
-      145deg,
-      #ffe7a1,
-      #d99a20
-    );
-
-  box-shadow:
-    0 0 22px rgba(244, 191, 69, 0.16);
+  background: linear-gradient(145deg, #ffe7a1, #d99a20);
+  box-shadow: 0 0 22px rgba(244,191,69,0.16);
 }
 
 .dames-top-actions {
   justify-self: end;
-
   display: flex;
   align-items: center;
-
   gap: 12px;
 }
 
 .dames-connection {
   display: flex;
   align-items: center;
-
   gap: 8px;
 
   padding: 9px 12px;
 
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255,255,255,0.06);
   border-radius: 999px;
 
   color: var(--dames-muted);
-
   font-size: 11px;
   font-weight: 800;
-
-  background: rgba(255, 255, 255, 0.025);
+  background: rgba(255,255,255,0.025);
 }
 
 .dames-connection > span {
   width: 8px;
   height: 8px;
-
   flex: 0 0 8px;
-
   border-radius: 50%;
 }
 
 .dames-connection > .online {
   background: var(--dames-green);
-
   box-shadow:
-    0 0 0 4px rgba(34, 197, 94, 0.12),
-    0 0 12px rgba(34, 197, 94, 0.9);
-
+    0 0 0 4px rgba(34,197,94,0.12),
+    0 0 12px rgba(34,197,94,0.9);
   animation: damesOnlinePulse 2s infinite;
 }
 
 .dames-connection > .offline {
   background: var(--dames-red);
-
-  box-shadow:
-    0 0 10px rgba(239, 68, 68, 0.65);
+  box-shadow: 0 0 10px rgba(239,68,68,0.65);
 }
 
 .dames-chat-button {
@@ -355,39 +389,29 @@ textarea:focus-visible {
 
   border: 0;
   border-radius: 14px;
-
   cursor: pointer;
 
   color: white;
   font-size: 19px;
 
-  background:
-    linear-gradient(
-      145deg,
-      #1c2a41,
-      #0d1625
-    );
+  background: linear-gradient(145deg, #1c2a41, #0d1625);
 
   box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.09),
-    0 7px 20px rgba(0, 0, 0, 0.25);
+    inset 0 1px 1px rgba(255,255,255,0.09),
+    0 7px 20px rgba(0,0,0,0.25);
 
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .dames-chat-button:hover {
   transform: translateY(-2px);
-
   box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.12),
-    0 10px 28px rgba(0, 0, 0, 0.34);
+    inset 0 1px 1px rgba(255,255,255,0.12),
+    0 10px 28px rgba(0,0,0,0.34);
 }
 
 .dames-chat-button b {
   position: absolute;
-
   top: -5px;
   right: -5px;
 
@@ -403,91 +427,65 @@ textarea:focus-visible {
   border-radius: 999px;
 
   color: #201403;
-
   font-size: 9px;
 
-  background:
-    linear-gradient(
-      145deg,
-      #ffe59c,
-      #e4a72b
-    );
+  background: linear-gradient(145deg, #ffe59c, #e4a72b);
 }
 
-/* =========================================================
-   MAIN
-========================================================= */
+/* ============================================================
+   5. MAIN / PRIZE
+   ============================================================ */
 
 .dames-main {
   position: relative;
   z-index: 2;
-
   width: min(1480px, calc(100% - 32px));
-
   margin: 0 auto;
 }
 
 .dames-game-column {
   width: 100%;
-
   padding-top: 28px;
 }
-
-/* =========================================================
-   PRIZE BAR
-========================================================= */
 
 .dames-prize-bar {
   width: min(980px, 100%);
   min-height: 88px;
-
   margin: 0 auto 28px;
 
   display: flex;
   align-items: center;
   justify-content: center;
-
   gap: 20px;
 
   padding: 14px 20px;
 
-  border: 1px solid rgba(244, 191, 69, 0.18);
+  border: 1px solid rgba(244,191,69,0.18);
   border-radius: 22px;
 
   background:
-    linear-gradient(
-      105deg,
-      rgba(30, 27, 17, 0.96),
-      rgba(17, 22, 31, 0.96)
-    );
+    linear-gradient(105deg, rgba(30,27,17,0.96), rgba(17,22,31,0.96));
 
   box-shadow:
-    inset 0 1px 0 rgba(255, 236, 170, 0.05),
-    0 15px 45px rgba(0, 0, 0, 0.22);
+    inset 0 1px 0 rgba(255,236,170,0.05),
+    0 15px 45px rgba(0,0,0,0.22);
 }
 
 .dames-prize-icon {
   width: 53px;
   height: 53px;
-
   flex: 0 0 53px;
 
   display: grid;
   place-items: center;
 
   border-radius: 17px;
-
   font-size: 24px;
 
   background:
-    linear-gradient(
-      145deg,
-      rgba(244, 191, 69, 0.26),
-      rgba(145, 91, 8, 0.14)
-    );
+    linear-gradient(145deg, rgba(244,191,69,0.26), rgba(145,91,8,0.14));
 
-  box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.12);
 }
 
 .dames-prize-bar > div:not(
@@ -497,23 +495,19 @@ textarea:focus-visible {
 ) {
   display: flex;
   flex-direction: column;
-
   gap: 4px;
 }
 
 .dames-prize-bar > div span {
   color: var(--dames-muted);
-
   font-size: 10px;
   font-weight: 800;
-
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 
 .dames-prize-bar > div strong {
   color: var(--dames-gold-light);
-
   font-size: 19px;
   font-weight: 900;
 }
@@ -521,15 +515,12 @@ textarea:focus-visible {
 .dames-prize-separator {
   width: 1px;
   height: 42px;
-
   flex: 0 0 1px;
-
-  background:
-    linear-gradient(
-      transparent,
-      rgba(255, 255, 255, 0.14),
-      transparent
-    );
+  background: linear-gradient(
+    transparent,
+    rgba(255,255,255,0.14),
+    transparent
+  );
 }
 
 .dames-prize-status {
@@ -537,20 +528,19 @@ textarea:focus-visible {
 
   padding: 9px 13px;
 
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255,255,255,0.07);
   border-radius: 999px;
 
   color: #b9c5d5;
-
   font-size: 11px;
   font-weight: 800;
 
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(255,255,255,0.035);
 }
 
-/* =========================================================
-   PLAYERS
-========================================================= */
+/* ============================================================
+   6. PLAYERS
+   ============================================================ */
 
 .dames-players-mobile {
   display: none;
@@ -558,7 +548,6 @@ textarea:focus-visible {
 
 .dames-board-layout {
   display: grid;
-
   grid-template-columns:
     minmax(190px, 240px)
     minmax(300px, 1fr)
@@ -576,30 +565,22 @@ textarea:focus-visible {
 
 .dames-player-card {
   position: relative;
-
   width: 100%;
 
   display: flex;
   align-items: center;
-
   gap: 12px;
 
   padding: 14px;
-
   overflow: hidden;
 
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 20px;
 
   background:
-    linear-gradient(
-      145deg,
-      rgba(25, 36, 56, 0.92),
-      rgba(10, 15, 25, 0.96)
-    );
+    linear-gradient(145deg, rgba(25,36,56,0.92), rgba(10,15,25,0.96));
 
-  box-shadow:
-    0 15px 40px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 15px 40px rgba(0,0,0,0.18);
 
   transition:
     border-color 0.25s ease,
@@ -609,91 +590,67 @@ textarea:focus-visible {
 
 .dames-player-card::before {
   content: "";
-
   position: absolute;
   inset: 0 auto 0 0;
-
   width: 3px;
 
-  background:
-    linear-gradient(
-      transparent,
-      rgba(255, 255, 255, 0.3),
-      transparent
-    );
+  background: linear-gradient(
+    transparent,
+    rgba(255,255,255,0.3),
+    transparent
+  );
 }
 
-.dames-player-card.is-me {
-  border-color: rgba(244, 191, 69, 0.28);
+.dames-player-card.me {
+  border-color: rgba(244,191,69,0.28);
 }
 
-.dames-player-card.is-active {
+.dames-player-card.active {
   transform: translateY(-2px);
-
-  border-color: rgba(34, 197, 94, 0.55);
+  border-color: rgba(34,197,94,0.55);
 
   box-shadow:
-    0 0 0 1px rgba(34, 197, 94, 0.08),
-    0 18px 45px rgba(0, 0, 0, 0.28),
-    0 0 30px rgba(34, 197, 94, 0.08);
+    0 0 0 1px rgba(34,197,94,0.08),
+    0 18px 45px rgba(0,0,0,0.28),
+    0 0 30px rgba(34,197,94,0.08);
 }
 
-.dames-player-card.is-active::before {
-  background:
-    linear-gradient(
-      transparent,
-      var(--dames-green),
-      transparent
-    );
+.dames-player-card.active::before {
+  background: linear-gradient(
+    transparent,
+    var(--dames-green),
+    transparent
+  );
 }
 
 .dames-player-avatar {
   width: 49px;
   height: 49px;
-
   flex: 0 0 49px;
 
   display: grid;
   place-items: center;
 
   border-radius: 50%;
-
   font-size: 27px;
   line-height: 1;
 
   box-shadow:
-    inset 0 3px 4px rgba(255, 255, 255, 0.25),
-    inset 0 -7px 10px rgba(0, 0, 0, 0.28),
-    0 8px 20px rgba(0, 0, 0, 0.25);
+    inset 0 3px 4px rgba(255,255,255,0.25),
+    inset 0 -7px 10px rgba(0,0,0,0.28),
+    0 8px 20px rgba(0,0,0,0.25);
 }
 
-.avatar-white {
+.dames-player-card:first-child .dames-player-avatar {
+  background: radial-gradient(
+    circle at 34% 27%,
+    #ffffff,
+    #e3e7eb 40%,
+    #a6adb6 76%,
+    #747b85
+  );
   color: #6e747c;
-
-  border: 2px solid rgba(255, 255, 255, 0.7);
-
-  background:
-    radial-gradient(
-      circle at 34% 27%,
-      #ffffff,
-      #e3e7eb 40%,
-      #a6adb6 76%,
-      #747b85
-    );
-}
-
-.avatar-black {
-  color: #d8dee7;
-
-  border: 2px solid #536174;
-
-  background:
-    radial-gradient(
-      circle at 34% 27%,
-      #566174,
-      #1b2432 42%,
-      #070b12 78%
-    );
+  border: 2px solid rgba(255,255,255,0.7);
 }
 
 .dames-player-info {
@@ -701,114 +658,73 @@ textarea:focus-visible {
   flex: 1;
 }
 
-.dames-player-name {
-  display: flex;
-  align-items: center;
-
-  gap: 7px;
-
+.dames-player-info strong {
+  display: block;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 
   color: #f2f5f9;
-
   font-size: 14px;
   font-weight: 900;
-
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
-.dames-me-label {
-  padding: 3px 6px;
-
-  border-radius: 6px;
-
-  color: #2d2107;
-
-  font-size: 7px;
-  letter-spacing: 0.08em;
-
-  background:
-    linear-gradient(
-      145deg,
-      #ffe7a0,
-      #dfa326
-    );
-}
-
-.dames-player-stats {
-  display: flex;
-  align-items: center;
-
-  gap: 5px;
-
-  margin-top: 6px;
+.dames-player-info > span {
+  display: block;
+  margin-top: 4px;
 
   color: var(--dames-muted);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
 
+.dames-player-info small {
+  display: block;
+  margin-top: 6px;
+  color: var(--dames-muted);
   font-size: 9px;
   font-weight: 700;
 }
 
-.dames-turn-indicator {
+.dames-player-active {
   position: absolute;
-
+  top: 10px;
   right: 11px;
-  top: 9px;
 
-  color: #758194;
+  color: var(--dames-green);
+  font-size: 10px;
+  line-height: 1;
 
-  font-size: 8px;
-  font-weight: 900;
-
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  text-shadow: 0 0 10px rgba(34,197,94,0.7);
+  animation: damesOnlinePulse 1.5s infinite;
 }
 
-.dames-turn-indicator.active {
-  color: var(--dames-green-light);
+/* ============================================================
+   7. BOARD PERSPECTIVE
+   ============================================================ */
 
-  animation: damesTurnGlow 1.5s infinite;
+.dames-board-frame.rotate-180 {
+  transform: rotate(180deg);
 }
 
-/* ======================================================
-   PERSPECTIVE DAMES
-   ====================================================== */
-
-.dames-board-perspective-player1 {
-    transform: rotate(0deg);
+.dames-board-frame.rotate-180 .dames-board-coordinates,
+.dames-board-frame.rotate-180 .dames-cell > * {
+  transform: rotate(180deg);
 }
 
-.dames-board-perspective-player2 {
-    transform: rotate(180deg);
+/* The moving overlay is already positioned in board coordinates.
+   Keep its internal piece upright after the board rotation. */
+.dames-board-frame.rotate-180 .dames-moving-piece span {
+  transform: rotate(180deg);
 }
 
-/*
- * Lorsque le plateau est retourné, on retourne également
- * le contenu des cases afin que les pions restent droits.
- */
-
-.dames-board-perspective-player2
-.dames-cell > * {
-    transform: rotate(180deg);
-}
-
-.dames-board-perspective-player2
-.dames-cell
-.dames-playable-dot,
-.dames-board-perspective-player2
-.dames-cell
-.dames-target-dot {
-    transform: rotate(180deg);
-}
-
-/* =========================================================
-   BOARD SECTION
-========================================================= */
+/* ============================================================
+   8. TURN BANNER
+   ============================================================ */
 
 .dames-board-section {
   width: 100%;
-
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -817,49 +733,39 @@ textarea:focus-visible {
 .dames-turn-banner {
   width: min(100%, var(--board-size));
   min-height: 48px;
-
   margin-bottom: 12px;
 
   display: flex;
   align-items: center;
-
   gap: 10px;
 
   padding: 10px 15px;
 
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 15px;
 
-  background: rgba(13, 20, 32, 0.88);
-
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  background: rgba(13,20,32,0.88);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
 }
 
 .dames-turn-dot {
   width: 9px;
   height: 9px;
-
   flex: 0 0 9px;
-
   border-radius: 50%;
 }
 
 .dames-turn-dot.mine {
   background: var(--dames-green);
-
   box-shadow:
-    0 0 0 5px rgba(34, 197, 94, 0.09),
-    0 0 15px rgba(34, 197, 94, 0.8);
-
+    0 0 0 5px rgba(34,197,94,0.09),
+    0 0 15px rgba(34,197,94,0.8);
   animation: damesOnlinePulse 1.5s infinite;
 }
 
 .dames-turn-dot.enemy {
   background: var(--dames-gold);
-
-  box-shadow:
-    0 0 0 5px rgba(244, 191, 69, 0.08);
+  box-shadow: 0 0 0 5px rgba(244,191,69,0.08);
 }
 
 .dames-turn-banner strong {
@@ -869,51 +775,39 @@ textarea:focus-visible {
 
 .dames-timer {
   margin-left: auto;
-
   min-width: 45px;
-
   padding: 6px 10px;
 
   border-radius: 9px;
 
   color: var(--dames-gold-light);
-
   font-size: 11px;
   font-weight: 900;
-
   text-align: center;
 
-  background:
-    rgba(244, 191, 69, 0.08);
+  background: rgba(244,191,69,0.08);
 }
 
-/* =========================================================
-   BOARD FRAME
-========================================================= */
+/* ============================================================
+   9. BOARD FRAME / COORDINATES
+   ============================================================ */
 
 .dames-board-frame {
   width: calc(var(--board-size) + 42px);
-
   max-width: 100%;
-
   padding: 8px;
 
   border-radius: 25px;
 
   background:
-    linear-gradient(
-      145deg,
-      #293547,
-      #101722 40%,
-      #080c13
-    );
+    linear-gradient(145deg, #293547, #101722 40%, #080c13);
 
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255,255,255,0.12);
 
   box-shadow:
-    inset 0 2px 2px rgba(255, 255, 255, 0.12),
-    inset 0 -4px 8px rgba(0, 0, 0, 0.5),
-    0 25px 65px rgba(0, 0, 0, 0.42);
+    inset 0 2px 2px rgba(255,255,255,0.12),
+    inset 0 -4px 8px rgba(0,0,0,0.5),
+    0 25px 65px rgba(0,0,0,0.42);
 }
 
 .dames-board-row-wrap {
@@ -926,35 +820,26 @@ textarea:focus-visible {
 
   width: var(--board-size);
   max-width: calc(100vw - 70px);
-
   aspect-ratio: 1 / 1;
 
   display: grid;
-
   grid-template-columns: repeat(10, 1fr);
   grid-template-rows: repeat(10, 1fr);
 
   overflow: hidden;
 
   border-radius: 7px;
-  border: 2px solid rgba(5, 8, 13, 0.9);
+  border: 2px solid rgba(5,8,13,0.9);
 
   background: #3b2518;
 
-  box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.06);
 }
-
-/* =========================================================
-   COORDINATES
-========================================================= */
 
 .dames-board-coordinates {
   color: #778497;
-
   font-size: 9px;
   font-weight: 900;
-
   user-select: none;
 }
 
@@ -963,7 +848,6 @@ textarea:focus-visible {
   height: 19px;
 
   display: grid;
-
   grid-template-columns: repeat(10, 1fr);
 
   padding-left: 19px;
@@ -979,7 +863,6 @@ textarea:focus-visible {
   width: 19px;
 
   display: grid;
-
   grid-template-rows: repeat(10, 1fr);
 }
 
@@ -988,9 +871,11 @@ textarea:focus-visible {
   place-items: center;
 }
 
-/* =========================================================
-   CELLS
-========================================================= */
+/* ============================================================
+   10. CELLS — IMPORTANT : classes exactes de Dames.jsx
+   JSX produit :
+   dames-cell dark/light selected possible playable last
+   ============================================================ */
 
 .dames-cell {
   position: relative;
@@ -1002,681 +887,470 @@ textarea:focus-visible {
   place-items: center;
 
   padding: 0;
-
   border: 0;
-
   overflow: hidden;
 
   cursor: default;
 
   transition:
     filter 0.16s ease,
-    box-shadow 0.16s ease;
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
 }
 
 .dames-cell:disabled {
   cursor: default;
 }
 
-.dames-cell-dark:not(:disabled) {
-  cursor: pointer;
+.dames-cell.dark {
+  background: linear-gradient(
+    135deg,
+    var(--board-dark),
+    var(--board-dark-2)
+  );
 }
 
-.dames-cell-light {
-  background:
-    linear-gradient(
-      135deg,
-      var(--board-light),
-      var(--board-light-2)
-    );
+.dames-cell.light {
+  background: linear-gradient(
+    135deg,
+    var(--board-light),
+    var(--board-light-2)
+  );
 }
 
-.dames-cell-dark {
-  background:
-    linear-gradient(
-      135deg,
-      var(--board-dark),
-      var(--board-dark-2)
-    );
-}
-
-.dames-cell-dark::after {
+.dames-cell.dark::after {
   content: "";
-
   position: absolute;
   inset: 0;
-
   pointer-events: none;
-
   opacity: 0.18;
 
   background:
     linear-gradient(
       135deg,
-      rgba(255, 255, 255, 0.13),
+      rgba(255,255,255,0.13),
       transparent 45%,
-      rgba(0, 0, 0, 0.18)
+      rgba(0,0,0,0.18)
     );
 }
 
-.dames-cell-dark:not(:disabled):hover {
+.dames-cell.dark:not(:disabled) {
+  cursor: pointer;
+}
+
+.dames-cell.dark:not(:disabled):hover {
   filter: brightness(1.08);
 }
 
-/* =========================================================
-   LAST MOVE
-========================================================= */
-
-.dames-cell-last {
-  box-shadow:
-    inset 0 0 0 2px rgba(56, 189, 248, 0.72);
-}
-
-.dames-cell-last::before {
-  content: "";
-
-  position: absolute;
-  inset: 4px;
-
-  border: 1px solid rgba(125, 211, 252, 0.45);
-  border-radius: 6px;
-
-  pointer-events: none;
-}
-
-/* =========================================================
-   SELECTED
-========================================================= */
-
-.dames-cell-selected {
+.dames-cell.selected {
   z-index: 2;
 
   box-shadow:
     inset 0 0 0 3px var(--dames-gold),
-    inset 0 0 25px rgba(244, 191, 69, 0.32);
+    inset 0 0 25px rgba(244,191,69,0.32);
 }
 
-.dames-cell-selected .dames-piece {
+.dames-cell.selected .dames-piece {
   animation: damesSelectedPiece 0.95s ease-in-out infinite;
 }
 
-/* =========================================================
-   PLAYABLE
-========================================================= */
+.dames-cell.possible {
+  cursor: pointer;
+}
 
-.dames-playable-dot {
+.dames-cell.playable:not(:disabled)::before {
+  content: "";
   position: absolute;
-
-  right: 7px;
   top: 7px;
+  right: 7px;
 
   width: 8px;
   height: 8px;
 
   z-index: 8;
-
   border-radius: 50%;
 
   background: var(--dames-gold);
 
   box-shadow:
-    0 0 0 4px rgba(244, 191, 69, 0.12),
-    0 0 12px rgba(244, 191, 69, 0.9);
+    0 0 0 4px rgba(244,191,69,0.12),
+    0 0 12px rgba(244,191,69,0.9);
 
   animation: damesPlayablePulse 1.5s infinite;
 }
 
-/* =========================================================
-   TARGET
-========================================================= */
-
-.dames-cell-target {
-  cursor: pointer !important;
-
+.dames-cell.last {
   box-shadow:
-    inset 0 0 0 2px rgba(34, 197, 94, 0.75),
-    inset 0 0 22px rgba(34, 197, 94, 0.18);
+    inset 0 0 0 2px rgba(56,189,248,0.72);
 }
 
-.dames-target-dot {
-  position: relative;
+.dames-cell.last::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
 
-  z-index: 9;
+  border: 1px solid rgba(125,211,252,0.45);
+  border-radius: 6px;
 
-  width: 20%;
+  pointer-events: none;
+}
+
+/* ============================================================
+   11. TARGET DOT
+   ============================================================ */
+
+.dames-cell-target {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+
+  width: 22%;
   aspect-ratio: 1;
 
+  transform: translate(-50%, -50%);
+
+  z-index: 9;
+  pointer-events: none;
+
   border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.82);
 
-  background: rgba(134, 239, 172, 0.85);
-
-  border: 2px solid rgba(255, 255, 255, 0.78);
+  background: rgba(34,197,94,0.30);
 
   box-shadow:
-    0 0 0 5px rgba(34, 197, 94, 0.13),
-    0 0 18px rgba(34, 197, 94, 0.65);
+    0 0 0 5px rgba(34,197,94,0.08),
+    0 0 18px rgba(34,197,94,0.65);
 
   animation: damesTargetPulse 1.1s infinite;
 }
 
-/* =========================================================
-   3D PIECES
-========================================================= */
+/* ============================================================
+   12. PIECES — IMPORTANT : classes exactes de Dames.jsx
+   JSX produit :
+   dames-piece white/black king
+   ============================================================ */
 
 .dames-piece {
   position: relative;
-
   z-index: 5;
 
-  width: 74%;
-  height: 74%;
+  width: 78%;
+  height: 78%;
 
   display: grid;
   place-items: center;
 
   border-radius: 50%;
-
-  transform: translateY(-2%);
-
-  transition:
-    transform 0.18s ease,
-    filter 0.18s ease;
-
-  will-change: transform;
-}
-
-.dames-piece::before {
-  content: "";
-
-  position: absolute;
-
-  left: 7%;
-  right: 7%;
-  bottom: -10%;
-
-  height: 30%;
-
-  z-index: -1;
-
-  border-radius: 50%;
-
-  filter: blur(1px);
-}
-
-.dames-piece::after {
-  content: "";
-
-  position: absolute;
-
-  left: 12%;
-  top: 9%;
-
-  width: 31%;
-  height: 22%;
-
-  border-radius: 50%;
-
-  transform: rotate(-24deg);
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(255, 255, 255, 0.78),
-      rgba(255, 255, 255, 0.03)
-    );
-
-  pointer-events: none;
-}
-
-.dames-piece-inner {
-  position: relative;
-
-  z-index: 2;
-
-  display: grid;
-  place-items: center;
-
-  width: 66%;
-  height: 66%;
-
-  border-radius: 50%;
-
-  font-size: clamp(13px, 2vw, 27px);
 
   line-height: 1;
+  font-size: clamp(13px, 2vw, 24px);
 
-  text-shadow:
-    0 2px 3px rgba(0, 0, 0, 0.35);
+  box-shadow:
+    inset 0 3px 4px rgba(255,255,255,0.22),
+    inset 0 -7px 10px rgba(0,0,0,0.32),
+    0 8px 18px rgba(0,0,0,0.34);
+
+  transition: transform 0.18s ease;
 }
 
-/* =========================================================
-   WHITE PIECE
-========================================================= */
-
-.dames-piece-white {
+.dames-piece.white {
   color: #5e6670;
 
-  border:
-    clamp(2px, 0.35vw, 4px)
-    solid
-    #f7f8fa;
-
-  background:
-    radial-gradient(
-      circle at 30% 24%,
-      #ffffff 0%,
-      #f4f5f6 17%,
-      #d4d8dd 45%,
-      #a4abb4 73%,
-      #747b85 100%
-    );
-
-  box-shadow:
-    inset 0 4px 5px rgba(255, 255, 255, 0.85),
-    inset 0 -8px 9px rgba(62, 70, 80, 0.32),
-    inset 5px 0 8px rgba(255, 255, 255, 0.18),
-    0 5px 0 #7e8791,
-    0 9px 11px rgba(0, 0, 0, 0.4),
-    0 14px 20px rgba(0, 0, 0, 0.2);
-}
-
-.dames-piece-white::before {
-  background: rgba(0, 0, 0, 0.35);
-}
-
-.dames-piece-white .dames-piece-inner {
-  border: 1px solid rgba(81, 89, 99, 0.17);
-
-  background:
-    radial-gradient(
-      circle at 35% 30%,
-      rgba(255, 255, 255, 0.9),
-      rgba(192, 199, 207, 0.4)
-    );
-}
-
-/* =========================================================
-   BLACK PIECE
-========================================================= */
-
-.dames-piece-black {
-  color: #d7dde6;
-
-  border:
-    clamp(2px, 0.35vw, 4px)
-    solid
-    #485568;
-
-  background:
-    radial-gradient(
-      circle at 30% 23%,
-      #657185 0%,
-      #303b4c 25%,
-      #141b27 56%,
-      #05080e 88%
-    );
-
-  box-shadow:
-    inset 0 4px 5px rgba(179, 198, 220, 0.2),
-    inset 0 -8px 10px rgba(0, 0, 0, 0.72),
-    0 5px 0 #05070c,
-    0 9px 12px rgba(0, 0, 0, 0.62),
-    0 14px 21px rgba(0, 0, 0, 0.3);
-}
-
-.dames-piece-black::before {
-  background: rgba(0, 0, 0, 0.65);
-}
-
-.dames-piece-black .dames-piece-inner {
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255,255,255,0.82);
 
   background:
     radial-gradient(
       circle at 32% 25%,
-      rgba(126, 143, 164, 0.18),
-      rgba(0, 0, 0, 0.18)
+      #ffffff 0%,
+      #edf0f3 38%,
+      #bcc2c9 70%,
+      #777f89 100%
     );
 }
 
-/* =========================================================
-   KING
-========================================================= */
+.dames-piece.black {
+  color: #d8dee7;
 
-.dames-piece-king {
-  box-shadow:
-    inset 0 4px 5px rgba(255, 255, 255, 0.25),
-    inset 0 -8px 10px rgba(0, 0, 0, 0.35),
-    0 0 0 2px rgba(244, 191, 69, 0.3),
-    0 0 14px rgba(244, 191, 69, 0.25),
-    0 5px 0 rgba(0, 0, 0, 0.4),
-    0 10px 14px rgba(0, 0, 0, 0.38);
+  border: 2px solid #536174;
+
+  background:
+    radial-gradient(
+      circle at 32% 25%,
+      #5b6678 0%,
+      #1c2635 43%,
+      #070b12 82%
+    );
 }
 
-.dames-piece-king .dames-piece-inner {
-  color: var(--dames-gold-light);
+.dames-piece.king {
+  font-size: clamp(18px, 2.8vw, 31px);
 
   text-shadow:
-    0 1px 0 #6c4305,
-    0 0 10px rgba(244, 191, 69, 0.8);
+    0 1px 2px rgba(0,0,0,0.45),
+    0 0 10px rgba(244,191,69,0.24);
+
+  box-shadow:
+    inset 0 3px 4px rgba(255,255,255,0.25),
+    inset 0 -7px 10px rgba(0,0,0,0.32),
+    0 0 0 2px rgba(244,191,69,0.18),
+    0 9px 20px rgba(0,0,0,0.34);
 }
 
-/* =========================================================
-   MOVING PIECE
-========================================================= */
+/* ============================================================
+   13. MOVING PIECE
+   ============================================================ */
 
 .dames-moving-piece {
   position: absolute;
-
-  z-index: 30;
-
-  width: 7.4%;
-  height: 7.4%;
-
   left: 0;
   top: 0;
+
+  width: 7.8%;
+  height: 7.8%;
+
+  z-index: 20;
+  pointer-events: none;
 
   display: grid;
   place-items: center;
 
   border-radius: 50%;
 
-  pointer-events: none;
-
-  animation:
-    damesPieceTravel
-    0.65s
-    cubic-bezier(0.2, 0.75, 0.25, 1)
-    forwards;
-}
-
-.dames-moving-piece::before {
-  content: "";
-
-  position: absolute;
-  inset: 0;
-
-  border-radius: 50%;
+  transform-origin: center;
+  animation: damesPieceTravel 0.62s cubic-bezier(0.2,0.8,0.2,1) both;
 }
 
 .dames-moving-piece span {
-  position: relative;
+  width: 100%;
+  height: 100%;
 
-  z-index: 2;
+  display: grid;
+  place-items: center;
 
-  font-size: clamp(12px, 2vw, 27px);
+  border-radius: 50%;
+  font-size: clamp(14px, 2.5vw, 28px);
+  line-height: 1;
 
-  color: var(--dames-gold-light);
-
-  text-shadow:
-    0 0 10px rgba(244, 191, 69, 0.8);
+  box-shadow:
+    inset 0 3px 4px rgba(255,255,255,0.2),
+    inset 0 -7px 10px rgba(0,0,0,0.3),
+    0 10px 24px rgba(0,0,0,0.38);
 }
 
-.dames-moving-piece.moving-white::before {
-  border: 3px solid #ffffff;
+.dames-moving-piece.moving-white span {
+  color: #5e6670;
+  border: 2px solid rgba(255,255,255,0.82);
 
   background:
     radial-gradient(
-      circle at 30% 24%,
+      circle at 32% 25%,
       #ffffff,
-      #d9dde2 45%,
-      #8d959e
+      #e3e7eb 40%,
+      #a6adb6 76%,
+      #747b85
     );
-
-  box-shadow:
-    inset 0 4px 5px rgba(255, 255, 255, 0.8),
-    inset 0 -8px 9px rgba(54, 61, 69, 0.28),
-    0 6px 0 #7e8791,
-    0 12px 18px rgba(0, 0, 0, 0.45);
 }
 
-.dames-moving-piece.moving-black::before {
-  border: 3px solid #485568;
+.dames-moving-piece.moving-black span {
+  color: #d8dee7;
+  border: 2px solid #536174;
 
   background:
     radial-gradient(
-      circle at 30% 24%,
-      #687588,
-      #252f3e 47%,
-      #05080d
+      circle at 32% 25%,
+      #566174,
+      #1b2432 42%,
+      #070b12 78%
     );
-
-  box-shadow:
-    inset 0 4px 5px rgba(255, 255, 255, 0.16),
-    inset 0 -8px 9px rgba(0, 0, 0, 0.7),
-    0 6px 0 #05070c,
-    0 12px 18px rgba(0, 0, 0, 0.58);
 }
 
-/* =========================================================
-   BOARD HELP
-========================================================= */
+/* The JSX sets --from-x/--from-y/--to-x/--to-y.
+   Grid-cell coordinates are converted to percentages. */
+.dames-moving-piece {
+  left: calc(var(--from-x) * 10%);
+  top: calc(var(--from-y) * 10%);
+
+  animation-name: damesPieceTravel;
+}
+
+@keyframes damesPieceTravel {
+  0% {
+    left: calc(var(--from-x) * 10%);
+    top: calc(var(--from-y) * 10%);
+    transform: scale(0.92);
+    opacity: 0.88;
+  }
+
+  20% {
+    transform: scale(1.12) translateY(-8%);
+    opacity: 1;
+  }
+
+  55% {
+    transform:
+      translate(
+        calc((var(--to-x) - var(--from-x)) * 10%),
+        calc((var(--to-y) - var(--from-y)) * 10%)
+      )
+      scale(1.06)
+      translateY(-5%);
+  }
+
+  100% {
+    transform:
+      translate(
+        calc((var(--to-x) - var(--from-x)) * 10%),
+        calc((var(--to-y) - var(--from-y)) * 10%)
+      )
+      scale(1)
+      translateY(0);
+
+    opacity: 1;
+  }
+}
+
+/* ============================================================
+   14. BOARD HELP / TOOLBAR
+   ============================================================ */
 
 .dames-board-help {
   width: min(100%, var(--board-size));
+  min-height: 38px;
 
   margin-top: 12px;
 
-  text-align: center;
-}
-
-.dames-board-help span {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
 
-  min-height: 34px;
-
-  padding: 7px 13px;
-
-  border-radius: 999px;
-
-  color: #9aa8bb;
-
+  color: var(--dames-muted);
   font-size: 10px;
   font-weight: 700;
-
-  background: rgba(255, 255, 255, 0.035);
-
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  text-align: center;
 }
 
-/* =========================================================
-   BOTTOM TOOLBAR
-========================================================= */
-
 .dames-bottom-toolbar {
-  width: min(850px, 100%);
-
-  margin: 25px auto 0;
+  width: min(100%, var(--board-size));
+  margin: 18px auto 0;
 
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
 
-  gap: 15px;
+  padding: 10px 12px;
 
-  padding: 11px 13px;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 15px;
 
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 18px;
-
-  background: rgba(13, 20, 32, 0.82);
-
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  background: rgba(11,17,28,0.82);
 }
 
 .dames-toolbar-info {
+  min-width: 0;
+
   display: flex;
   align-items: center;
-
   flex-wrap: wrap;
-
   gap: 7px;
 
   color: var(--dames-muted);
-
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .dames-toolbar-actions {
   display: flex;
   align-items: center;
-
   gap: 8px;
 }
 
 .dames-toolbar-actions button {
-  min-height: 37px;
-
+  min-height: 36px;
   padding: 0 13px;
 
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 11px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
 
   cursor: pointer;
 
-  color: #dce5ef;
-
+  color: #e8edf5;
   font-size: 10px;
   font-weight: 800;
 
-  background:
-    linear-gradient(
-      145deg,
-      #1a2638,
-      #101722
-    );
+  background: rgba(255,255,255,0.045);
 
   transition:
     transform 0.18s ease,
-    border-color 0.18s ease,
-    background 0.18s ease;
+    background 0.18s ease,
+    border-color 0.18s ease;
 }
 
 .dames-toolbar-actions button:hover:not(:disabled) {
   transform: translateY(-1px);
-
-  border-color:
-    rgba(244, 191, 69, 0.35);
-
-  background:
-    linear-gradient(
-      145deg,
-      #25354c,
-      #111a27
-    );
+  border-color: rgba(244,191,69,0.28);
+  background: rgba(244,191,69,0.08);
 }
 
-.dames-toolbar-actions button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-
-/* =========================================================
-   GENERAL BUTTONS
-========================================================= */
+/* ============================================================
+   15. BUTTONS
+   ============================================================ */
 
 .dames-primary-button,
-.dames-secondary-button,
-.dames-link-button {
-  border: 0;
+.dames-secondary-button {
+  min-height: 44px;
+  padding: 0 18px;
+
+  border-radius: 12px;
   cursor: pointer;
-}
 
-.dames-primary-button {
-  min-height: 48px;
-
-  padding: 0 22px;
-
-  border-radius: 14px;
-
-  color: #211604;
-
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
-
-  background:
-    linear-gradient(
-      145deg,
-      #ffe8a4,
-      #e9af35 55%,
-      #c77b12
-    );
-
-  box-shadow:
-    inset 0 2px 1px rgba(255, 255, 255, 0.65),
-    0 9px 22px rgba(198, 123, 18, 0.2);
 
   transition:
     transform 0.18s ease,
-    filter 0.18s ease;
+    filter 0.18s ease,
+    opacity 0.18s ease;
 }
 
-.dames-primary-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  filter: brightness(1.06);
-}
+.dames-primary-button {
+  border: 1px solid rgba(255,239,181,0.45);
+  color: #241704;
 
-.dames-primary-button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
+  background: linear-gradient(145deg, #ffe9a4, #dca029);
+
+  box-shadow:
+    0 8px 22px rgba(244,191,69,0.16),
+    inset 0 1px 1px rgba(255,255,255,0.48);
 }
 
 .dames-secondary-button {
-  min-height: 46px;
-
-  padding: 0 20px;
-
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
-
-  color: #d7e0eb;
-
-  font-size: 11px;
-  font-weight: 800;
-
-  background: rgba(255, 255, 255, 0.045);
-
-  transition:
-    background 0.18s ease,
-    transform 0.18s ease;
+  border: 1px solid rgba(255,255,255,0.09);
+  color: #dce4ef;
+  background: rgba(255,255,255,0.045);
 }
 
-.dames-secondary-button:hover {
+.dames-primary-button:hover:not(:disabled),
+.dames-secondary-button:hover:not(:disabled) {
   transform: translateY(-1px);
-
-  background:
-    rgba(255, 255, 255, 0.08);
+  filter: brightness(1.06);
 }
 
-.dames-link-button {
-  padding: 10px;
-
-  color: var(--dames-muted);
-
-  font-size: 11px;
-  font-weight: 800;
-
-  background: transparent;
+.dames-primary-button:disabled,
+.dames-secondary-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.dames-link-button:hover {
-  color: #dce5ef;
-}
+/* ============================================================
+   16. CONDITIONS MODAL
+   ============================================================ */
 
-/* =========================================================
-   MODAL LAYER
-========================================================= */
-
-.dames-modal-layer,
+.dames-modal-overlay,
 .dames-chat-overlay {
   position: fixed;
   inset: 0;
-
-  z-index: 1000;
+  z-index: 100;
 
   display: flex;
   align-items: center;
@@ -1684,377 +1358,160 @@ textarea:focus-visible {
 
   padding: 20px;
 
-  overflow-y: auto;
-
-  background: rgba(2, 5, 10, 0.74);
-
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(0,0,0,0.66);
+  backdrop-filter: blur(7px);
+  -webkit-backdrop-filter: blur(7px);
 
   animation: damesFadeIn 0.2s ease;
 }
 
-/* =========================================================
-   CONDITIONS
-========================================================= */
-
 .dames-conditions-modal {
-  width: min(550px, 100%);
+  width: min(520px, 100%);
 
   padding: 30px;
 
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 28px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 27px;
 
   text-align: center;
 
   background:
-    linear-gradient(
-      145deg,
-      #182334,
-      #0a101a 68%
-    );
+    linear-gradient(145deg, #182436, #090e16 72%);
 
-  box-shadow:
-    0 35px 100px rgba(0, 0, 0, 0.58);
+  box-shadow: 0 35px 100px rgba(0,0,0,0.62);
 
   animation: damesModalUp 0.3s ease;
 }
 
 .dames-modal-icon {
-  width: 66px;
-  height: 66px;
-
-  margin: 0 auto 17px;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 15px;
 
   display: grid;
   place-items: center;
 
   border-radius: 21px;
+  color: #2d2107;
+  font-size: 30px;
 
-  color: #2a1b06;
+  background: linear-gradient(145deg, #ffe7a0, #dfa326);
 
-  font-size: 34px;
-
-  background:
-    linear-gradient(
-      145deg,
-      #ffe9a8,
-      #dda128
-    );
-
-  box-shadow:
-    inset 0 2px 2px rgba(255, 255, 255, 0.6),
-    0 10px 30px rgba(244, 191, 69, 0.16);
+  box-shadow: 0 0 35px rgba(244,191,69,0.15);
 }
 
-.dames-modal-title {
-  font-size: 23px;
-  font-weight: 950;
+.dames-conditions-modal h2 {
+  margin: 0;
+  font-size: 21px;
 }
 
-.dames-modal-subtitle {
-  max-width: 340px;
-
-  margin: 9px auto 22px;
+.dames-conditions-modal > p {
+  margin: 10px auto 20px;
+  max-width: 410px;
 
   color: var(--dames-muted);
-
-  font-size: 12px;
-  line-height: 1.6;
+  font-size: 11px;
+  line-height: 1.65;
 }
 
-.dames-conditions-list {
-  display: flex;
-  flex-direction: column;
-
-  gap: 9px;
+.dames-conditions-modal ul {
+  margin: 0 0 22px;
+  padding-left: 18px;
 
   text-align: left;
 }
 
-.dames-conditions-list > div {
-  display: grid;
-
-  grid-template-columns: 23px 1fr;
-
-  align-items: center;
-
-  gap: 8px;
-
-  padding: 10px 11px;
-
-  border: 1px solid rgba(255, 255, 255, 0.045);
-  border-radius: 12px;
-
-  background:
-    rgba(255, 255, 255, 0.025);
-}
-
-.dames-conditions-list > div > span {
-  width: 19px;
-  height: 19px;
-
-  display: grid;
-  place-items: center;
-
-  border-radius: 50%;
-
-  color: #062610;
-
-  font-size: 10px;
-  font-weight: 900;
-
-  background: var(--dames-green-light);
-}
-
-.dames-conditions-list p {
-  margin: 0;
-
-  color: #c2cbd7;
-
+.dames-conditions-modal li {
+  margin: 9px 0;
+  color: #c4cfdd;
   font-size: 11px;
-  line-height: 1.45;
+  line-height: 1.55;
 }
 
-.dames-condition-warning {
-  margin-top: 16px;
-
-  padding: 11px 13px;
-
-  border: 1px solid rgba(239, 68, 68, 0.18);
-  border-radius: 12px;
-
-  color: #f8c0c0;
-
-  font-size: 10px;
-  line-height: 1.5;
-
-  background:
-    rgba(239, 68, 68, 0.07);
-}
-
-.dames-modal-actions {
-  display: flex;
-  justify-content: center;
-
-  gap: 10px;
-
-  margin-top: 22px;
-}
-
-/* =========================================================
-   WAITING / LOADING / FINISH
-========================================================= */
-
-.dames-waiting-screen,
-.dames-loading,
-.dames-finish-screen {
+.dames-conditions-modal .dames-primary-button {
   width: 100%;
-  min-height: 100vh;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  padding: 24px;
-
-  color: var(--dames-text);
-
-  background:
-    radial-gradient(
-      circle at top,
-      rgba(42, 69, 112, 0.24),
-      transparent 35%
-    ),
-    linear-gradient(
-      160deg,
-      #0a101b,
-      #03060b
-    );
 }
+
+/* ============================================================
+   17. WAITING
+   ============================================================ */
 
 .dames-waiting-card {
-  width: min(530px, 100%);
-
-  padding: 36px;
-
-  text-align: center;
-
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 30px;
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(24, 35, 52, 0.96),
-      rgba(7, 11, 18, 0.98)
-    );
-
-  box-shadow:
-    0 35px 100px rgba(0, 0, 0, 0.48);
+  max-width: 520px;
 }
 
-.dames-waiting-logo {
-  width: 78px;
-  height: 78px;
-
-  margin: 0 auto 18px;
-
-  display: grid;
-  place-items: center;
-
-  border-radius: 24px;
-
-  color: #291a05;
-
-  font-size: 41px;
-
-  background:
-    linear-gradient(
-      145deg,
-      #ffe6a0,
-      #d89b1f
-    );
-
-  animation:
-    damesWaitingFloat
-    2.8s
-    ease-in-out
-    infinite;
-}
-
-.dames-live-pill {
-  display: inline-flex;
-  align-items: center;
-
-  gap: 8px;
-
-  padding: 8px 11px;
-
-  border-radius: 999px;
-
-  color: #a8f0bd;
-
-  font-size: 10px;
-  font-weight: 800;
-
-  background:
-    rgba(34, 197, 94, 0.08);
-}
-
-.dames-live-dot {
-  width: 7px;
-  height: 7px;
-
-  border-radius: 50%;
-
-  background: var(--dames-green);
-
-  box-shadow:
-    0 0 10px var(--dames-green);
-}
-
-.dames-waiting-card h1 {
-  margin: 20px 0 9px;
-
-  font-size: 24px;
+.dames-waiting-card h2 {
+  margin-top: 18px;
 }
 
 .dames-waiting-card > p {
-  margin: 0;
-
-  color: var(--dames-muted);
-
-  font-size: 12px;
-  line-height: 1.65;
+  margin-bottom: 22px;
 }
 
-.dames-waiting-match {
+.dames-waiting-stats {
   display: grid;
-
-  grid-template-columns: repeat(3, 1fr);
-
-  gap: 9px;
-
-  margin: 24px 0;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 22px 0 15px;
 }
 
-.dames-waiting-match > div {
-  padding: 13px 8px;
+.dames-waiting-stats > span {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 
-  border: 1px solid rgba(255, 255, 255, 0.055);
+  padding: 13px 10px;
+
+  border: 1px solid rgba(255,255,255,0.055);
   border-radius: 14px;
 
-  background:
-    rgba(255, 255, 255, 0.025);
-}
-
-.dames-waiting-match span,
-.dames-waiting-match strong {
-  display: block;
-}
-
-.dames-waiting-match span {
-  margin-bottom: 6px;
-
   color: var(--dames-muted);
-
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
-
   text-transform: uppercase;
 }
 
-.dames-waiting-match strong {
+.dames-waiting-stats strong {
   color: var(--dames-gold-light);
-
-  font-size: 11px;
+  font-size: 14px;
 }
 
-.dames-waiting-loader {
+.dames-waiting-status {
   display: flex;
+  align-items: center;
   justify-content: center;
-
   gap: 8px;
 
-  margin: 5px 0 24px;
+  margin: 12px 0 20px;
+
+  color: var(--dames-muted);
+  font-size: 10px;
+  font-weight: 800;
 }
 
-.dames-waiting-loader span {
+.dames-waiting-status > span {
   width: 8px;
   height: 8px;
-
   border-radius: 50%;
-
-  background: var(--dames-gold);
-
-  animation:
-    damesLoader
-    1.1s
-    infinite
-    ease-in-out;
 }
 
-.dames-waiting-loader span:nth-child(2) {
-  animation-delay: 0.14s;
+.dames-waiting-status .online {
+  background: var(--dames-green);
+  box-shadow: 0 0 12px rgba(34,197,94,0.8);
 }
 
-.dames-waiting-loader span:nth-child(3) {
-  animation-delay: 0.28s;
+.dames-waiting-status .offline {
+  background: var(--dames-red);
 }
 
-/* =========================================================
-   CHAT
-========================================================= */
+/* ============================================================
+   18. CHAT
+   ============================================================ */
 
 .dames-chat-overlay {
   justify-content: flex-end;
-
+  align-items: stretch;
   padding: 14px;
-
-  background:
-    rgba(0, 0, 0, 0.56);
 }
 
 .dames-chat-panel {
@@ -2066,23 +1523,14 @@ textarea:focus-visible {
 
   overflow: hidden;
 
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255,255,255,0.1);
   border-radius: 26px;
 
-  background:
-    linear-gradient(
-      180deg,
-      #172235,
-      #080d15
-    );
+  background: linear-gradient(180deg, #172235, #080d15);
 
-  box-shadow:
-    0 30px 100px rgba(0, 0, 0, 0.62);
+  box-shadow: 0 30px 100px rgba(0,0,0,0.62);
 
-  animation:
-    damesChatSlide
-    0.28s
-    ease;
+  animation: damesChatSlide 0.28s ease;
 }
 
 .dames-chat-header {
@@ -2092,35 +1540,21 @@ textarea:focus-visible {
 
   padding: 18px;
 
-  border-bottom:
-    1px solid rgba(255, 255, 255, 0.06);
-}
-
-.dames-chat-header > div {
-  display: flex;
-  flex-direction: column;
-
-  gap: 4px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
 .dames-chat-header strong {
   font-size: 15px;
 }
 
-.dames-chat-header span {
-  color: var(--dames-muted);
-
-  font-size: 10px;
-}
-
-.dames-icon-button {
+.dames-chat-header button {
   width: 36px;
   height: 36px;
 
   display: grid;
   place-items: center;
 
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255,255,255,0.08);
   border-radius: 11px;
 
   cursor: pointer;
@@ -2128,146 +1562,77 @@ textarea:focus-visible {
   color: white;
   font-size: 22px;
 
-  background:
-    rgba(255, 255, 255, 0.04);
+  background: rgba(255,255,255,0.04);
 }
 
 .dames-chat-messages {
   flex: 1;
-
   min-height: 0;
 
   overflow-y: auto;
-
   padding: 18px;
 
   scrollbar-width: thin;
-
-  scrollbar-color:
-    rgba(244, 191, 69, 0.4)
-    transparent;
+  scrollbar-color: rgba(244,191,69,0.4) transparent;
 }
 
 .dames-chat-message {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+
   margin-bottom: 15px;
 }
 
-.dames-chat-author {
-  margin-bottom: 5px;
-
+.dames-chat-message strong {
   color: var(--dames-gold-light);
-
   font-size: 9px;
   font-weight: 900;
 }
 
-.dames-chat-bubble {
-  width: fit-content;
+.dames-chat-message span {
   max-width: 88%;
 
   padding: 11px 13px;
 
-  border-radius:
-    4px 14px 14px 14px;
+  border-radius: 4px 14px 14px 14px;
+  border: 1px solid rgba(255,255,255,0.045);
 
   color: #dbe3ed;
-
   font-size: 12px;
   line-height: 1.5;
 
   background: #172234;
-
-  border: 1px solid rgba(255, 255, 255, 0.045);
+  overflow-wrap: anywhere;
 }
 
 .dames-chat-empty {
   min-height: 100%;
 
   display: flex;
-  flex-direction: column;
-
   align-items: center;
   justify-content: center;
 
-  text-align: center;
-}
-
-.dames-chat-empty-icon {
-  width: 56px;
-  height: 56px;
-
-  margin-bottom: 13px;
-
-  display: grid;
-  place-items: center;
-
-  border-radius: 19px;
-
-  font-size: 24px;
-
-  background:
-    rgba(255, 255, 255, 0.045);
-}
-
-.dames-chat-empty strong {
-  font-size: 14px;
-}
-
-.dames-chat-empty span {
-  max-width: 230px;
-
-  margin-top: 7px;
-
   color: var(--dames-muted);
-
+  text-align: center;
   font-size: 11px;
-  line-height: 1.6;
 }
 
 .dames-chat-typing {
-  display: flex;
-  align-items: center;
-
-  gap: 4px;
-
   margin-top: 8px;
-
   color: var(--dames-muted);
-
   font-size: 10px;
-}
-
-.dames-chat-typing span {
-  width: 5px;
-  height: 5px;
-
-  border-radius: 50%;
-
-  background: var(--dames-gold);
-
-  animation:
-    damesTyping
-    1s
-    infinite;
-}
-
-.dames-chat-typing span:nth-child(2) {
-  animation-delay: 0.15s;
-}
-
-.dames-chat-typing span:nth-child(3) {
-  animation-delay: 0.3s;
+  font-style: italic;
 }
 
 .dames-chat-form {
   display: flex;
-
   gap: 9px;
 
   padding: 13px;
 
-  border-top:
-    1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(255,255,255,0.06);
 }
 
 .dames-chat-form input {
@@ -2275,16 +1640,14 @@ textarea:focus-visible {
   flex: 1;
 
   height: 46px;
-
   padding: 0 14px;
 
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255,255,255,0.07);
   border-radius: 14px;
 
   outline: none;
 
   color: white;
-
   font-size: 12px;
 
   background: #0b111b;
@@ -2295,18 +1658,15 @@ textarea:focus-visible {
 }
 
 .dames-chat-form input:focus {
-  border-color:
-    rgba(244, 191, 69, 0.42);
-
-  box-shadow:
-    0 0 0 3px rgba(244, 191, 69, 0.06);
+  border-color: rgba(244,191,69,0.42);
+  box-shadow: 0 0 0 3px rgba(244,191,69,0.06);
 }
 
 .dames-chat-form button {
-  width: 46px;
+  min-width: 76px;
   height: 46px;
 
-  flex: 0 0 46px;
+  padding: 0 12px;
 
   border: 0;
   border-radius: 14px;
@@ -2314,103 +1674,165 @@ textarea:focus-visible {
   cursor: pointer;
 
   color: #211604;
+  font-size: 10px;
+  font-weight: 900;
 
-  background:
-    linear-gradient(
-      145deg,
-      #ffe9a4,
-      #dca029
-    );
+  background: linear-gradient(145deg, #ffe9a4, #dca029);
 }
 
 .dames-chat-form button:disabled {
   opacity: 0.4;
-
   cursor: not-allowed;
 }
 
-/* =========================================================
-   REVIEW
-========================================================= */
+/* ============================================================
+   19. RESULT
+   ============================================================ */
 
-.dames-review-card,
 .dames-result-card {
   width: min(500px, 100%);
-
   padding: 31px;
 
   text-align: center;
 
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255,255,255,0.1);
   border-radius: 29px;
 
-  background:
-    linear-gradient(
-      145deg,
-      #182436,
-      #090e16 72%
-    );
+  background: linear-gradient(145deg, #182436, #090e16 72%);
 
-  box-shadow:
-    0 35px 100px rgba(0, 0, 0, 0.58);
+  box-shadow: 0 35px 100px rgba(0,0,0,0.58);
 
-  animation:
-    damesModalUp
-    0.3s
-    ease;
+  animation: damesModalUp 0.3s ease;
 }
 
-.dames-review-icon {
-  width: 64px;
-  height: 64px;
-
+.dames-result-icon {
+  width: 82px;
+  height: 82px;
   margin: 0 auto 15px;
 
   display: grid;
   place-items: center;
 
-  border-radius: 21px;
+  border-radius: 28px;
+  font-size: 39px;
 
-  font-size: 30px;
-
-  background:
-    rgba(244, 191, 69, 0.12);
+  background: rgba(244,191,69,0.12);
 }
 
-.dames-review-card h2 {
+.dames-result-card h1 {
   margin: 0;
+  font-size: 27px;
+  font-weight: 950;
+}
 
+.dames-result-card > p {
+  max-width: 390px;
+  margin: 13px auto 21px;
+
+  color: #b7c1cf;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.dames-result-money {
+  margin: 0 auto 12px;
+  padding: 15px;
+
+  border: 1px solid rgba(244,191,69,0.16);
+  border-radius: 16px;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(244,191,69,0.1),
+      rgba(244,191,69,0.025)
+    );
+}
+
+.dames-result-money span,
+.dames-result-money strong {
+  display: block;
+}
+
+.dames-result-money span,
+.dames-result-stake {
+  color: var(--dames-muted);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.dames-result-money strong {
+  margin-top: 5px;
+  color: var(--dames-gold-light);
+  font-size: 24px;
+  font-weight: 950;
+}
+
+.dames-result-stake {
+  margin: 0 0 21px;
+}
+
+.dames-result-card .dames-primary-button {
+  min-width: 180px;
+}
+
+/* ============================================================
+   20. AVIS
+   ============================================================ */
+
+.dames-avis-modal {
+  width: min(500px, 100%);
+  padding: 20px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dames-avis-card {
+  width: 100%;
+  padding: 30px;
+
+  text-align: center;
+
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 27px;
+
+  background: linear-gradient(145deg, #182436, #090e16 72%);
+  box-shadow: 0 35px 100px rgba(0,0,0,0.58);
+
+  animation: damesModalUp 0.3s ease;
+}
+
+.dames-avis-card h2 {
+  margin: 0 0 9px;
   font-size: 21px;
 }
 
-.dames-review-card > p {
-  margin: 10px auto 20px;
-
+.dames-avis-card > p {
+  margin: 0 0 20px;
   color: var(--dames-muted);
-
   font-size: 11px;
   line-height: 1.6;
 }
 
-.dames-stars {
+.dames-rating {
   display: flex;
   justify-content: center;
-
   gap: 8px;
-
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
-.dames-stars button {
+.dames-rating button {
   padding: 0;
 
   border: 0;
-
   cursor: pointer;
 
   color: #3d4654;
-
   font-size: 32px;
+  line-height: 1;
 
   background: transparent;
 
@@ -2419,547 +1841,64 @@ textarea:focus-visible {
     color 0.15s ease;
 }
 
-.dames-stars button:hover,
-.dames-stars button.selected {
+.dames-rating button.active,
+.dames-rating button:hover {
   color: var(--dames-gold);
-
   transform: scale(1.12);
 }
 
-.dames-review-card textarea {
+.dames-avis-card textarea {
   width: 100%;
-
   min-height: 110px;
 
   resize: vertical;
-
   padding: 14px;
 
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255,255,255,0.07);
   border-radius: 16px;
 
   outline: none;
 
   color: #e9eef5;
-
   font-size: 12px;
   line-height: 1.55;
 
-  background:
-    rgba(4, 8, 14, 0.56);
+  background: rgba(4,8,14,0.56);
 }
 
-.dames-review-card textarea:focus {
-  border-color:
-    rgba(244, 191, 69, 0.35);
+.dames-avis-card textarea:focus {
+  border-color: rgba(244,191,69,0.35);
 }
 
-.dames-review-actions {
+.dames-avis-error {
+  margin: 12px 0;
+  padding: 10px;
+
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 10px;
+
+  color: var(--dames-red-light);
+  background: rgba(239,68,68,0.06);
+
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.dames-avis-actions {
   display: flex;
   justify-content: center;
-
   gap: 9px;
-
   margin-top: 17px;
 }
 
-/* =========================================================
-   RESULT
-========================================================= */
-
-.dames-finish-screen {
-  padding: 20px;
+.dames-avis-actions .dames-primary-button,
+.dames-avis-actions .dames-secondary-button {
+  min-width: 150px;
 }
 
-.dames-result-icon {
-  width: 82px;
-  height: 82px;
-
-  margin: 0 auto 15px;
-
-  display: grid;
-  place-items: center;
-
-  border-radius: 28px;
-
-  font-size: 39px;
-}
-
-.dames-result-icon.result-win {
-  background:
-    radial-gradient(
-      circle at 30% 25%,
-      #ffeab0,
-      #df9f20
-    );
-
-  box-shadow:
-    0 0 45px rgba(244, 191, 69, 0.24);
-
-  animation:
-    damesResultWin
-    2s
-    infinite;
-}
-
-.dames-result-icon.result-draw {
-  background:
-    rgba(56, 189, 248, 0.15);
-}
-
-.dames-result-icon.result-loss {
-  background:
-    rgba(239, 68, 68, 0.11);
-}
-
-.dames-result-label {
-  margin-bottom: 9px;
-
-  color: var(--dames-gold);
-
-  font-size: 10px;
-  font-weight: 950;
-
-  letter-spacing: 0.18em;
-}
-
-.dames-result-card h1 {
-  margin: 0;
-
-  font-size: 27px;
-}
-
-.dames-result-message {
-  max-width: 390px;
-
-  margin: 13px auto 21px;
-
-  color: #b7c1cf;
-
-  font-size: 13px;
-  line-height: 1.65;
-}
-
-.dames-result-prize {
-  margin: 0 auto 21px;
-
-  padding: 15px;
-
-  border: 1px solid rgba(244, 191, 69, 0.16);
-  border-radius: 16px;
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(244, 191, 69, 0.1),
-      rgba(244, 191, 69, 0.025)
-    );
-}
-
-.dames-result-prize span,
-.dames-result-prize strong {
-  display: block;
-}
-
-.dames-result-prize span {
-  margin-bottom: 5px;
-
-  color: var(--dames-muted);
-
-  font-size: 9px;
-  font-weight: 800;
-
-  text-transform: uppercase;
-}
-
-.dames-result-prize strong {
-  color: var(--dames-gold-light);
-
-  font-size: 24px;
-  font-weight: 950;
-}
-
-/* =========================================================
-   LOADING
-========================================================= */
-
-.dames-loading {
-  flex-direction: column;
-
-  gap: 10px;
-}
-
-.dames-loading-piece {
-  width: 72px;
-  height: 72px;
-
-  display: grid;
-  place-items: center;
-
-  border-radius: 50%;
-
-  color: #dce5ef;
-
-  font-size: 39px;
-
-  background:
-    radial-gradient(
-      circle at 30% 25%,
-      #4e5a6d,
-      #111722 60%,
-      #05080d
-    );
-
-  box-shadow:
-    inset 0 3px 5px rgba(255, 255, 255, 0.12),
-    0 12px 25px rgba(0, 0, 0, 0.42);
-
-  animation:
-    damesLoadingPiece
-    1.5s
-    infinite
-    ease-in-out;
-}
-
-.dames-loading-spinner {
-  width: 32px;
-  height: 32px;
-
-  margin-top: 10px;
-
-  border: 3px solid rgba(255, 255, 255, 0.09);
-
-  border-top-color:
-    var(--dames-gold);
-
-  border-radius: 50%;
-
-  animation:
-    damesSpin
-    0.8s
-    linear
-    infinite;
-}
-
-.dames-loading h2 {
-  margin: 5px 0 0;
-
-  font-size: 20px;
-}
-
-.dames-loading > p {
-  margin: 0;
-
-  color: var(--dames-muted);
-
-  font-size: 12px;
-}
-
-.dames-error-box {
-  margin-top: 15px;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-
-  gap: 12px;
-
-  padding: 16px;
-
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  border-radius: 16px;
-
-  color: var(--dames-red-light);
-
-  background:
-    rgba(239, 68, 68, 0.06);
-}
-
-.dames-error-box button {
-  min-height: 40px;
-
-  padding: 0 15px;
-
-  border: 0;
-  border-radius: 11px;
-
-  cursor: pointer;
-
-  color: white;
-
-  font-size: 11px;
-  font-weight: 800;
-
-  background:
-    var(--dames-red);
-}
-
-/* =========================================================
-   ANIMATIONS
-========================================================= */
-
-@keyframes damesOnlinePulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-
-  50% {
-    transform: scale(1.18);
-    opacity: 0.72;
-  }
-}
-
-@keyframes damesTurnGlow {
-  0%,
-  100% {
-    opacity: 0.65;
-  }
-
-  50% {
-    opacity: 1;
-
-    text-shadow:
-      0 0 12px rgba(134, 239, 172, 0.6);
-  }
-}
-
-@keyframes damesPlayablePulse {
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.8;
-  }
-
-  50% {
-    transform: scale(1.28);
-    opacity: 1;
-  }
-}
-
-@keyframes damesTargetPulse {
-  0%,
-  100% {
-    transform: scale(0.9);
-    opacity: 0.7;
-  }
-
-  50% {
-    transform: scale(1.15);
-    opacity: 1;
-  }
-}
-
-@keyframes damesSelectedPiece {
-  0%,
-  100% {
-    transform:
-      translateY(-2%)
-      scale(1);
-  }
-
-  50% {
-    transform:
-      translateY(-9%)
-      scale(1.06);
-  }
-}
-
-/* =========================================================
-   PIECE TRAVEL
-========================================================= */
-
-@keyframes damesPieceTravel {
-  0% {
-    transform:
-      translate(
-        0,
-        0
-      )
-      scale(0.92);
-
-    opacity: 0.9;
-  }
-
-  20% {
-    transform:
-      translate(
-        calc(
-          (var(--to-x) - var(--from-x)) * 100%
-        ),
-        calc(
-          (var(--to-y) - var(--from-y)) * 100%
-        )
-      )
-      scale(1.12)
-      translateY(-12%);
-
-    opacity: 1;
-  }
-
-  55% {
-    transform:
-      translate(
-        calc(
-          (var(--to-x) - var(--from-x)) * 100%
-        ),
-        calc(
-          (var(--to-y) - var(--from-y)) * 100%
-        )
-      )
-      scale(1.06)
-      translateY(-6%);
-  }
-
-  100% {
-    transform:
-      translate(
-        calc(
-          (var(--to-x) - var(--from-x)) * 100%
-        ),
-        calc(
-          (var(--to-y) - var(--from-y)) * 100%
-        )
-      )
-      scale(1)
-      translateY(0);
-
-    opacity: 1;
-  }
-}
-
-@keyframes damesFadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes damesModalUp {
-  from {
-    opacity: 0;
-
-    transform:
-      translateY(18px)
-      scale(0.97);
-  }
-
-  to {
-    opacity: 1;
-
-    transform:
-      translateY(0)
-      scale(1);
-  }
-}
-
-@keyframes damesChatSlide {
-  from {
-    opacity: 0;
-
-    transform:
-      translateX(40px);
-  }
-
-  to {
-    opacity: 1;
-
-    transform:
-      translateX(0);
-  }
-}
-
-@keyframes damesWaitingFloat {
-  0%,
-  100% {
-    transform:
-      translateY(0)
-      rotate(0);
-  }
-
-  50% {
-    transform:
-      translateY(-8px)
-      rotate(2deg);
-  }
-}
-
-@keyframes damesLoader {
-  0%,
-  100% {
-    transform: translateY(0);
-
-    opacity: 0.4;
-  }
-
-  50% {
-    transform: translateY(-8px);
-
-    opacity: 1;
-  }
-}
-
-@keyframes damesTyping {
-  0%,
-  60%,
-  100% {
-    transform: translateY(0);
-
-    opacity: 0.45;
-  }
-
-  30% {
-    transform: translateY(-4px);
-
-    opacity: 1;
-  }
-}
-
-@keyframes damesResultWin {
-  0%,
-  100% {
-    transform: scale(1);
-
-    box-shadow:
-      0 0 30px rgba(244, 191, 69, 0.18);
-  }
-
-  50% {
-    transform: scale(1.06);
-
-    box-shadow:
-      0 0 55px rgba(244, 191, 69, 0.42);
-  }
-}
-
-@keyframes damesLoadingPiece {
-  0%,
-  100% {
-    transform:
-      translateY(0)
-      rotate(0);
-  }
-
-  50% {
-    transform:
-      translateY(-7px)
-      rotate(6deg);
-  }
-}
-
-@keyframes damesSpin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-/* =========================================================
-   TABLET
-========================================================= */
+/* ============================================================
+   21. RESPONSIVE TABLET
+   ============================================================ */
 
 @media (max-width: 1100px) {
   :root {
@@ -2968,7 +1907,6 @@ textarea:focus-visible {
 
   .dames-board-layout {
     grid-template-columns: 1fr;
-
     gap: 16px;
   }
 
@@ -2978,28 +1916,19 @@ textarea:focus-visible {
 
   .dames-players-mobile {
     display: grid;
-
     grid-template-columns: 1fr 1fr;
-
-    gap: 12px;
-
-    width: min(720px, 100%);
-
-    margin: 0 auto 17px;
+    gap: 10px;
+    margin-bottom: 14px;
   }
 
-  .dames-player-card {
-    min-height: 77px;
-  }
-
-  .dames-turn-indicator {
-    display: none;
+  .dames-players-mobile .dames-player-card {
+    min-width: 0;
   }
 }
 
-/* =========================================================
-   MOBILE
-========================================================= */
+/* ============================================================
+   22. RESPONSIVE MOBILE
+   ============================================================ */
 
 @media (max-width: 760px) {
   :root {
@@ -3012,26 +1941,21 @@ textarea:focus-visible {
 
   .dames-topbar {
     width: calc(100% - 16px);
-
     min-height: 63px;
 
     grid-template-columns: 1fr auto;
-
     gap: 10px;
 
     padding: 8px 10px;
-
     border-radius: 0 0 18px 18px;
   }
 
   .dames-brand-mark {
     width: 39px;
     height: 39px;
-
     flex-basis: 39px;
 
     border-radius: 12px;
-
     font-size: 21px;
   }
 
@@ -3043,10 +1967,7 @@ textarea:focus-visible {
     font-size: 8px;
   }
 
-  .dames-matchup {
-    display: none;
-  }
-
+  .dames-matchup,
   .dames-connection {
     display: none;
   }
@@ -3054,7 +1975,6 @@ textarea:focus-visible {
   .dames-chat-button {
     width: 39px;
     height: 39px;
-
     border-radius: 12px;
   }
 
@@ -3068,24 +1988,19 @@ textarea:focus-visible {
 
   .dames-prize-bar {
     min-height: auto;
-
     margin-bottom: 16px;
 
     gap: 10px;
-
     padding: 10px 11px;
-
     border-radius: 17px;
   }
 
   .dames-prize-icon {
     width: 40px;
     height: 40px;
-
     flex-basis: 40px;
 
     border-radius: 13px;
-
     font-size: 18px;
   }
 
@@ -3107,50 +2022,44 @@ textarea:focus-visible {
 
   .dames-players-mobile {
     gap: 7px;
-
     margin-bottom: 12px;
   }
 
   .dames-player-card {
     min-height: 64px;
-
     gap: 8px;
-
     padding: 9px;
-
     border-radius: 15px;
   }
 
   .dames-player-avatar {
     width: 38px;
     height: 38px;
-
     flex-basis: 38px;
-
     font-size: 20px;
   }
 
-  .dames-player-name {
+  .dames-player-info strong {
     font-size: 10px;
   }
 
-  .dames-player-stats {
-    gap: 3px;
-
+  .dames-player-info > span {
     font-size: 7px;
   }
 
-  .dames-me-label {
-    display: none;
+  .dames-player-info small {
+    font-size: 7px;
+  }
+
+  .dames-player-active {
+    top: 8px;
+    right: 8px;
   }
 
   .dames-turn-banner {
     min-height: 40px;
-
     margin-bottom: 8px;
-
     padding: 8px 10px;
-
     border-radius: 12px;
   }
 
@@ -3160,15 +2069,12 @@ textarea:focus-visible {
 
   .dames-timer {
     padding: 5px 7px;
-
     font-size: 9px;
   }
 
   .dames-board-frame {
     width: calc(var(--board-size) + 34px);
-
     padding: 5px;
-
     border-radius: 17px;
   }
 
@@ -3179,7 +2085,6 @@ textarea:focus-visible {
   .dames-board-coordinates.top,
   .dames-board-coordinates.bottom {
     height: 14px;
-
     padding-left: 14px;
   }
 
@@ -3187,37 +2092,31 @@ textarea:focus-visible {
     width: 14px;
   }
 
-  .dames-cell-selected {
+  .dames-cell.selected {
     box-shadow:
       inset 0 0 0 2px var(--dames-gold),
-      inset 0 0 14px rgba(244, 191, 69, 0.32);
+      inset 0 0 14px rgba(244,191,69,0.32);
   }
 
-  .dames-playable-dot {
+  .dames-cell.playable:not(:disabled)::before {
     top: 3px;
     right: 3px;
-
     width: 5px;
     height: 5px;
   }
 
-  .dames-target-dot {
+  .dames-cell-target {
     width: 18%;
   }
 
-  .dames-cell-last::before {
+  .dames-cell.last::after {
     inset: 2px;
-
     border-radius: 3px;
   }
 
   .dames-piece {
     width: 76%;
     height: 76%;
-  }
-
-  .dames-piece-inner {
-    font-size: 15px;
   }
 
   .dames-moving-piece {
@@ -3227,163 +2126,106 @@ textarea:focus-visible {
 
   .dames-board-help {
     margin-top: 8px;
-  }
-
-  .dames-board-help span {
-    min-height: 28px;
-
-    padding: 6px 10px;
-
     font-size: 8px;
   }
 
   .dames-bottom-toolbar {
     margin-top: 15px;
-
     flex-direction: column;
     align-items: stretch;
-
     padding: 9px;
-
     border-radius: 14px;
   }
 
   .dames-toolbar-info {
     justify-content: center;
-
     font-size: 8px;
   }
 
   .dames-toolbar-actions {
-    display: grid;
-
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    justify-content: center;
   }
 
   .dames-toolbar-actions button {
+    width: 100%;
     min-height: 35px;
-
-    padding: 0 8px;
-
     font-size: 9px;
   }
 
-  .dames-modal-layer {
+  .dames-modal-overlay {
     padding: 12px;
   }
 
   .dames-conditions-modal,
-  .dames-review-card,
-  .dames-result-card {
+  .dames-result-card,
+  .dames-avis-card {
     padding: 22px 17px;
-
     border-radius: 23px;
   }
 
   .dames-modal-icon {
     width: 54px;
     height: 54px;
-
     margin-bottom: 13px;
-
     border-radius: 17px;
-
     font-size: 27px;
   }
 
-  .dames-modal-title {
+  .dames-conditions-modal h2,
+  .dames-avis-card h2 {
     font-size: 19px;
   }
 
-  .dames-conditions-list {
-    gap: 6px;
-  }
-
-  .dames-conditions-list > div {
-    grid-template-columns: 19px 1fr;
-
-    padding: 8px;
-
-    border-radius: 10px;
-  }
-
-  .dames-conditions-list > div > span {
-    width: 16px;
-    height: 16px;
-
-    font-size: 8px;
-  }
-
-  .dames-conditions-list p {
+  .dames-conditions-modal li {
     font-size: 9px;
-  }
-
-  .dames-condition-warning {
-    font-size: 9px;
-  }
-
-  .dames-modal-actions {
-    flex-direction: column;
-  }
-
-  .dames-primary-button,
-  .dames-secondary-button {
-    width: 100%;
   }
 
   .dames-waiting-card {
     padding: 27px 17px;
-
     border-radius: 24px;
   }
 
-  .dames-waiting-card h1 {
-    font-size: 20px;
-  }
-
-  .dames-waiting-match {
-    gap: 6px;
-  }
-
-  .dames-waiting-match > div {
-    padding: 10px 4px;
-  }
-
-  .dames-waiting-match strong {
-    font-size: 9px;
+  .dames-waiting-stats {
+    grid-template-columns: 1fr 1fr;
   }
 
   .dames-chat-overlay {
     align-items: flex-end;
-
     padding: 0;
   }
 
   .dames-chat-panel {
     width: 100%;
-
     height: min(85vh, 720px);
-
-    border-radius:
-      25px 25px 0 0;
+    border-radius: 25px 25px 0 0;
   }
 
   .dames-result-card h1 {
     font-size: 23px;
   }
 
-  .dames-result-message {
+  .dames-result-card > p {
     font-size: 11px;
   }
 
-  .dames-result-prize strong {
+  .dames-result-money strong {
     font-size: 21px;
+  }
+
+  .dames-avis-actions {
+    flex-direction: column;
+  }
+
+  .dames-avis-actions .dames-primary-button,
+  .dames-avis-actions .dames-secondary-button {
+    width: 100%;
   }
 }
 
-/* =========================================================
-   VERY SMALL MOBILE
-========================================================= */
+/* ============================================================
+   23. VERY SMALL MOBILE
+   ============================================================ */
 
 @media (max-width: 420px) {
   :root {
@@ -3415,41 +2257,9 @@ textarea:focus-visible {
   }
 }
 
-/* =========================================================
-   TOUCH DEVICES
-========================================================= */
-
-@media (hover: none) and (pointer: coarse) {
-  .dames-cell-dark:not(:disabled):hover {
-    filter: none;
-  }
-
-  .dames-chat-button:hover,
-  .dames-primary-button:hover:not(:disabled),
-  .dames-secondary-button:hover,
-  .dames-toolbar-actions button:hover:not(:disabled) {
-    transform: none;
-  }
-}
-
-/* =========================================================
-   REDUCED MOTION
-========================================================= */
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/* =========================================================
-   SAFETY — PREVENT BOARD OVERFLOW
-========================================================= */
+/* ============================================================
+   24. VERY NARROW DEVICES
+   ============================================================ */
 
 @media (max-width: 360px) {
   :root {
@@ -3462,7 +2272,6 @@ textarea:focus-visible {
 
   .dames-board-frame {
     width: calc(var(--board-size) + 24px);
-
     padding: 4px;
   }
 
@@ -3479,5 +2288,128 @@ textarea:focus-visible {
   .dames-piece {
     width: 73%;
     height: 73%;
+  }
+}
+
+/* ============================================================
+   25. TOUCH / REDUCED MOTION
+   ============================================================ */
+
+@media (hover: none) and (pointer: coarse) {
+  .dames-cell.dark:not(:disabled):hover {
+    filter: none;
+  }
+
+  .dames-chat-button:hover,
+  .dames-primary-button:hover:not(:disabled),
+  .dames-secondary-button:hover:not(:disabled),
+  .dames-toolbar-actions button:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   26. ANIMATIONS
+   ============================================================ */
+
+@keyframes damesOnlinePulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.18);
+    opacity: 0.72;
+  }
+}
+
+@keyframes damesPlayablePulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: scale(1.28);
+    opacity: 1;
+  }
+}
+
+@keyframes damesTargetPulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0.7;
+  }
+
+  50% {
+    transform: translate(-50%, -50%) scale(1.15);
+    opacity: 1;
+  }
+}
+
+@keyframes damesSelectedPiece {
+  0%, 100% {
+    transform: translateY(-2%) scale(1);
+  }
+
+  50% {
+    transform: translateY(-9%) scale(1.06);
+  }
+}
+
+@keyframes damesFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes damesModalUp {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes damesChatSlide {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes damesLoadingPiece {
+  0%, 100% {
+    transform: translateY(0) rotate(0);
+  }
+
+  50% {
+    transform: translateY(-7px) rotate(6deg);
+  }
+}
+
+@keyframes damesSpin {
+  to {
+    transform: rotate(360deg);
   }
 }

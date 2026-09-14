@@ -29,7 +29,7 @@ const games = [
     id: "bravman",
     available: true,
     description:
-      "Affrontez un adversaire dans un bras de fer compétitif en temps réel.",
+      "Le Bras de fer digital.",
     players: "2 Joueurs",
     difficulty: "PRO",
   },
@@ -40,7 +40,7 @@ const games = [
     id: "dames",
     available: true,
     description:
-      "Le jeu officiel actuellement disponible sur 6BetBall.",
+      "Le jeu de Réflexion.",
     players: "2 Joueurs",
     difficulty: "PRO",
   },
@@ -49,7 +49,7 @@ const games = [
     name: "Football",
     icon: "⚽",
     id: "football",
-    available: true,
+    available: false,
     description:
       "Ici on joue, on ne parie pas.",
   },
@@ -1589,8 +1589,8 @@ const handleCreateChallenge =
               marginTop: 6,
             }}
           >
-            Plateforme
-            compétitive sécurisée
+            Un Système d'Arbitrage Centralisé
+            Authentique, Honnête et Sûr !
           </div>
         </div>
       </div>

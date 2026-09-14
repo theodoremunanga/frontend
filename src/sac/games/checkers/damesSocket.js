@@ -4,16 +4,26 @@
 //
 // RESPONSABILITÉ UNIQUE :
 // - connexion Socket.IO du jeu de dames
-// - authentification par JWT
+// - authentification JWT
 // - rejoindre un match
+// - reconnexion automatique au match
 // - envoyer les coups
 // - chat
-// - écoute des événements serveur
+// - exposer les événements serveur
 //
 // IMPORTANT :
-// Ce fichier ne contient AUCUN JSX.
-// Ce fichier n'est PAS un composant React.
-// Toute l'interface est dans Dames.jsx.
+// - AUCUN JSX
+// - AUCUNE logique de plateau
+// - AUCUN calcul de résultat
+// - AUCUN chrono local de 90 secondes
+//
+// SOURCE DE VÉRITÉ : BACKEND
+//
+// Le backend contrôle :
+//   turn:timer  -> affichage du chrono
+//   match:end   -> fin officielle du match
+//
+// Le socket ne fait que transporter ces événements vers Dames.jsx.
 //
 // ============================================================
 
@@ -24,9 +34,9 @@ import { io } from "socket.io-client";
 // ============================================================
 
 const SOCKET_URL =
-  import.meta.env.VITE_SOCKET_URL ||
-  import.meta.env.VITE_API_SOCKET_URL ||
-  "https://backend-ad3t.onrender.com";
+    import.meta.env.VITE_SOCKET_URL ||
+    import.meta.env.VITE_API_SOCKET_URL ||
+    "https://backend-ad3t.onrender.com";
 
 // ============================================================
 // ÉTAT INTERNE
@@ -40,11 +50,29 @@ let currentMatchId = null;
 // ============================================================
 
 function getToken() {
-  return (
-    localStorage.getItem("token") ||
-    localStorage.getItem("accessToken") ||
-    ""
-  );
+    return (
+        localStorage.getItem("token") ||
+        localStorage.getItem("accessToken") ||
+        localStorage.getItem("jwt") ||
+        ""
+    );
+}
+
+// ============================================================
+// NORMALISATION MATCH ID
+// ============================================================
+
+function normalizeMatchId(matchId) {
+    const id = Number(matchId);
+
+    if (
+        !Number.isFinite(id) ||
+        id <= 0
+    ) {
+        return null;
+    }
+
+    return id;
 }
 
 // ============================================================
@@ -52,101 +80,167 @@ function getToken() {
 // ============================================================
 
 export function connectDamesSocket() {
-  // Déjà connecté
-  if (socket?.connected) {
+    // --------------------------------------------------------
+    // SOCKET DÉJÀ CONNECTÉ
+    // --------------------------------------------------------
+
+    if (
+        socket &&
+        socket.connected
+    ) {
+        return socket;
+    }
+
+    const token = getToken();
+
+    if (!token) {
+        console.error(
+            "❌ DAMES SOCKET : token JWT manquant"
+        );
+
+        return null;
+    }
+
+    // --------------------------------------------------------
+    // ANCIEN SOCKET EXISTANT MAIS DÉCONNECTÉ
+    // --------------------------------------------------------
+
+    if (socket) {
+        try {
+            socket.removeAllListeners();
+            socket.disconnect();
+        } catch (error) {
+            console.error(
+                "❌ DAMES SOCKET : erreur fermeture ancien socket",
+                error
+            );
+        }
+
+        socket = null;
+    }
+
+    // --------------------------------------------------------
+    // CRÉATION SOCKET
+    // --------------------------------------------------------
+
+    socket = io(
+        SOCKET_URL,
+        {
+            transports: [
+                "websocket",
+                "polling",
+            ],
+
+            withCredentials: true,
+
+            auth: {
+                token,
+            },
+
+            autoConnect: true,
+
+            reconnection: true,
+
+            reconnectionAttempts:
+                Infinity,
+
+            reconnectionDelay:
+                1000,
+
+            reconnectionDelayMax:
+                5000,
+        }
+    );
+
+    // ========================================================
+    // CONNEXION
+    // ========================================================
+
+    socket.on(
+        "connect",
+        () => {
+            console.log(
+                "♟️ DAMES SOCKET CONNECTÉ :",
+                socket.id
+            );
+
+            // ------------------------------------------------
+            // REJOIN AUTOMATIQUE
+            // ------------------------------------------------
+            //
+            // Important après :
+            // - perte réseau
+            // - changement Wi-Fi
+            // - reconnexion Render
+            // - réveil du navigateur
+            //
+            // Le match backend continue.
+            // On rejoint simplement sa room.
+            // ------------------------------------------------
+
+            if (
+                currentMatchId
+            ) {
+                console.log(
+                    "♻️ DAMES REJOIN MATCH :",
+                    currentMatchId
+                );
+
+                socket.emit(
+                    "joinMatch",
+                    {
+                        matchId:
+                            currentMatchId,
+                    }
+                );
+            }
+        }
+    );
+
+    // ========================================================
+    // ERREUR CONNEXION
+    // ========================================================
+
+    socket.on(
+        "connect_error",
+        (error) => {
+            console.error(
+                "❌ DAMES SOCKET CONNECT ERROR :",
+                error?.message ||
+                    error
+            );
+        }
+    );
+
+    // ========================================================
+    // DÉCONNEXION
+    // ========================================================
+
+    socket.on(
+        "disconnect",
+        (reason) => {
+            console.warn(
+                "⚠️ DAMES SOCKET DISCONNECT :",
+                reason
+            );
+
+            // ------------------------------------------------
+            // IMPORTANT
+            // ------------------------------------------------
+            //
+            // NE PAS supprimer currentMatchId ici.
+            //
+            // Socket.IO va tenter de se reconnecter.
+            // Une fois reconnecté, le handler "connect"
+            // fera automatiquement :
+            //
+            // socket.emit("joinMatch", { matchId })
+            //
+            // ------------------------------------------------
+        }
+    );
+
     return socket;
-  }
-
-  const token = getToken();
-
-  if (!token) {
-    console.error("❌ DAMES SOCKET : token manquant");
-    return null;
-  }
-
-  // Si un ancien socket existe mais n'est plus connecté,
-  // on le ferme proprement avant d'en créer un nouveau.
-  if (socket) {
-    try {
-      socket.removeAllListeners();
-      socket.disconnect();
-    } catch (error) {
-      console.error(
-        "❌ ERREUR FERMETURE ANCIEN SOCKET :",
-        error
-      );
-    }
-
-    socket = null;
-  }
-
-  socket = io(SOCKET_URL, {
-    transports: ["websocket", "polling"],
-
-    withCredentials: true,
-
-    auth: {
-      token,
-    },
-
-    autoConnect: true,
-
-    reconnection: true,
-
-    reconnectionAttempts: Infinity,
-
-    reconnectionDelay: 1000,
-
-    reconnectionDelayMax: 5000,
-  });
-
-  // ==========================================================
-  // LOG CONNEXION
-  // ==========================================================
-
-  socket.on("connect", () => {
-    console.log(
-      "♟️ DAMES SOCKET CONNECTÉ :",
-      socket.id
-    );
-
-    // Si un match était déjà connu, on le rejoint après
-    // reconnexion.
-    if (currentMatchId) {
-      console.log(
-        "♟️ REJOIN MATCH APRÈS RECONNEXION :",
-        currentMatchId
-      );
-
-      socket.emit("joinMatch", {
-        matchId: currentMatchId,
-      });
-    }
-  });
-
-  // ==========================================================
-  // ERREUR DE CONNEXION
-  // ==========================================================
-
-  socket.on("connect_error", (error) => {
-    console.error(
-      "❌ DAMES SOCKET CONNECT ERROR :",
-      error?.message || error
-    );
-  });
-
-  // ==========================================================
-  // DÉCONNEXION
-  // ==========================================================
-
-  socket.on("disconnect", (reason) => {
-    console.log(
-      "❌ DAMES SOCKET DISCONNECT :",
-      reason
-    );
-  });
-
-  return socket;
 }
 
 // ============================================================
@@ -154,11 +248,13 @@ export function connectDamesSocket() {
 // ============================================================
 
 export function getDamesSocket() {
-  if (!socket) {
-    return connectDamesSocket();
-  }
+    if (
+        !socket
+    ) {
+        return connectDamesSocket();
+    }
 
-  return socket;
+    return socket;
 }
 
 // ============================================================
@@ -166,135 +262,164 @@ export function getDamesSocket() {
 // ============================================================
 
 export function isDamesSocketConnected() {
-  return Boolean(
-    socket &&
-    socket.connected
-  );
+    return Boolean(
+        socket &&
+        socket.connected
+    );
 }
 
 // ============================================================
 // JOIN MATCH
 // ============================================================
 //
-// Correspond exactement au backend :
+// BACKEND :
 //
-// socket.on("joinMatch", async (payload) => {})
-//
-// Payload accepté par le backend :
-// { matchId }
+// socket.on("joinMatch", async ({ matchId }) => {})
 //
 // ============================================================
 
-export function joinDamesMatch(matchId) {
-  if (!matchId) {
-    console.warn(
-      "⚠️ JOIN DAMES : matchId manquant"
+export function joinDamesMatch(
+    matchId
+) {
+    const id =
+        normalizeMatchId(
+            matchId
+        );
+
+    if (!id) {
+        console.warn(
+            "⚠️ DAMES JOIN : matchId invalide",
+            matchId
+        );
+
+        return false;
+    }
+
+    const s =
+        getDamesSocket();
+
+    if (!s) {
+        console.error(
+            "❌ DAMES JOIN : socket indisponible"
+        );
+
+        return false;
+    }
+
+    currentMatchId =
+        id;
+
+    console.log(
+        "📤 DAMES JOIN MATCH :",
+        id
     );
 
-    return false;
-  }
+    // --------------------------------------------------------
+    // Si le socket n'est pas encore connecté,
+    // Socket.IO enverra automatiquement le join
+    // depuis le handler "connect".
+    // --------------------------------------------------------
 
-  const s = getDamesSocket();
+    if (
+        !s.connected
+    ) {
+        console.log(
+            "⏳ DAMES JOIN : attente connexion socket"
+        );
 
-  if (!s) {
-    console.error(
-      "❌ JOIN DAMES : socket indisponible"
+        return true;
+    }
+
+    s.emit(
+        "joinMatch",
+        {
+            matchId: id,
+        }
     );
 
-    return false;
-  }
-
-  currentMatchId = Number(matchId);
-
-  console.log(
-    "📤 DAMES JOIN MATCH :",
-    currentMatchId
-  );
-
-  s.emit("joinMatch", {
-    matchId: currentMatchId,
-  });
-
-  return true;
+    return true;
 }
 
 // ============================================================
 // MOVE
 // ============================================================
 //
-// Correspond exactement au backend :
+// BACKEND :
 //
-// socket.on("move", async ({ matchId, move }) => {})
-//
-// Le backend accepte :
-// {
-//   matchId,
-//   move
-// }
-//
-// Le move peut notamment contenir :
-// {
-//   id,
-//   from: { r, c },
-//   path: [
-//     { r, c },
-//     ...
-//   ]
-// }
+// socket.on(
+//   "move",
+//   async ({ matchId, move }) => {}
+// )
 //
 // ============================================================
 
 export function sendDamesMove(
-  matchId,
-  move
+    matchId,
+    move
 ) {
-  if (!matchId) {
-    console.warn(
-      "⚠️ MOVE DAMES : matchId manquant"
-    );
+    const id =
+        normalizeMatchId(
+            matchId
+        );
 
-    return false;
-  }
+    if (!id) {
+        console.warn(
+            "⚠️ DAMES MOVE : matchId invalide"
+        );
 
-  if (!move) {
-    console.warn(
-      "⚠️ MOVE DAMES : move manquant"
-    );
-
-    return false;
-  }
-
-  const s = getDamesSocket();
-
-  if (!s) {
-    console.error(
-      "❌ MOVE DAMES : socket indisponible"
-    );
-
-    return false;
-  }
-
-  console.log(
-    "📤 DAMES MOVE :",
-    {
-      matchId,
-      move,
+        return false;
     }
-  );
 
-  s.emit("move", {
-    matchId: Number(matchId),
-    move,
-  });
+    if (
+        !move ||
+        typeof move !==
+            "object"
+    ) {
+        console.warn(
+            "⚠️ DAMES MOVE : move invalide"
+        );
 
-  return true;
+        return false;
+    }
+
+    const s =
+        getDamesSocket();
+
+    if (
+        !s ||
+        !s.connected
+    ) {
+        console.error(
+            "❌ DAMES MOVE : socket non connecté"
+        );
+
+        return false;
+    }
+
+    console.log(
+        "📤 DAMES MOVE :",
+        {
+            matchId: id,
+            move,
+        }
+    );
+
+    s.emit(
+        "move",
+        {
+            matchId: id,
+            move,
+        }
+    );
+
+    return true;
 }
 
 // ============================================================
 // CHAT MESSAGE
 // ============================================================
 //
-// Correspond exactement au backend :
+// BACKEND :
 //
 // socket.on(
 //   "chat:message",
@@ -304,39 +429,52 @@ export function sendDamesMove(
 // ============================================================
 
 export function sendDamesChat(
-  matchId,
-  text
+    matchId,
+    text
 ) {
-  if (!matchId) {
-    return false;
-  }
+    const id =
+        normalizeMatchId(
+            matchId
+        );
 
-  if (
-    typeof text !== "string" ||
-    !text.trim()
-  ) {
-    return false;
-  }
+    if (!id) {
+        return false;
+    }
 
-  const s = getDamesSocket();
+    if (
+        typeof text !==
+            "string" ||
+        !text.trim()
+    ) {
+        return false;
+    }
 
-  if (!s) {
-    return false;
-  }
+    const s =
+        getDamesSocket();
 
-  s.emit("chat:message", {
-    matchId: Number(matchId),
-    text: text.trim(),
-  });
+    if (
+        !s ||
+        !s.connected
+    ) {
+        return false;
+    }
 
-  return true;
+    s.emit(
+        "chat:message",
+        {
+            matchId: id,
+            text: text.trim(),
+        }
+    );
+
+    return true;
 }
 
 // ============================================================
 // CHAT TYPING
 // ============================================================
 //
-// Correspond exactement au backend :
+// BACKEND :
 //
 // socket.on(
 //   "chat:typing",
@@ -346,200 +484,284 @@ export function sendDamesChat(
 // ============================================================
 
 export function sendDamesTyping(
-  matchId
+    matchId
 ) {
-  if (!matchId) {
-    return false;
-  }
+    const id =
+        normalizeMatchId(
+            matchId
+        );
 
-  const s = getDamesSocket();
+    if (!id) {
+        return false;
+    }
 
-  if (!s) {
-    return false;
-  }
+    const s =
+        getDamesSocket();
 
-  s.emit("chat:typing", {
-    matchId: Number(matchId),
-  });
+    if (
+        !s ||
+        !s.connected
+    ) {
+        return false;
+    }
 
-  return true;
+    s.emit(
+        "chat:typing",
+        {
+            matchId: id,
+        }
+    );
+
+    return true;
 }
 
 // ============================================================
 // PING
 // ============================================================
 //
-// Backend :
+// BACKEND :
 //
 // socket.on("ping:test", (start) => {
-//   socket.emit("pong:test", start);
+//     socket.emit("pong:test", start);
 // });
 //
 // ============================================================
 
 export function pingDamesSocket(
-  value = Date.now()
+    value = Date.now()
 ) {
-  const s = getDamesSocket();
+    const s =
+        getDamesSocket();
 
-  if (!s) {
-    return false;
-  }
+    if (
+        !s ||
+        !s.connected
+    ) {
+        return false;
+    }
 
-  s.emit(
-    "ping:test",
-    value
-  );
+    s.emit(
+        "ping:test",
+        value
+    );
 
-  return true;
+    return true;
 }
 
 // ============================================================
-// ÉCOUTE GÉNÉRIQUE
+// LISTENER GÉNÉRIQUE
 // ============================================================
 
 export function onDames(
-  event,
-  callback
-) {
-  const s = getDamesSocket();
-
-  if (
-    !s ||
-    typeof callback !== "function"
-  ) {
-    return () => {};
-  }
-
-  s.on(
     event,
     callback
-  );
+) {
+    const s =
+        getDamesSocket();
 
-  // Permet à Dames.jsx de nettoyer
-  // exactement ce listener.
-  return () => {
-    s.off(
-      event,
-      callback
+    if (
+        !s ||
+        typeof callback !==
+            "function"
+    ) {
+        return () => {};
+    }
+
+    s.on(
+        event,
+        callback
     );
-  };
+
+    return () => {
+        s.off(
+            event,
+            callback
+        );
+    };
 }
 
 // ============================================================
-// SUPPRIMER UN LISTENER
+// REMOVE LISTENER
 // ============================================================
 
 export function offDames(
-  event,
-  callback
+    event,
+    callback
 ) {
-  if (!socket) {
-    return;
-  }
+    if (!socket) {
+        return;
+    }
 
-  if (callback) {
-    socket.off(
-      event,
-      callback
-    );
-  } else {
-    socket.off(event);
-  }
+    if (
+        typeof callback ===
+        "function"
+    ) {
+        socket.off(
+            event,
+            callback
+        );
+    } else {
+        socket.off(event);
+    }
 }
 
 // ============================================================
-// ÉVÉNEMENTS MATCH
+// MATCH INIT
 // ============================================================
 
 export function onDamesMatchInit(
-  callback
-) {
-  return onDames(
-    "match:init",
     callback
-  );
-}
-
-export function onDamesMatchUpdate(
-  callback
 ) {
-  return onDames(
-    "match:update",
-    callback
-  );
-}
-
-export function onDamesMatchEnd(
-  callback
-) {
-  return onDames(
-    "match:end",
-    callback
-  );
+    return onDames(
+        "match:init",
+        callback
+    );
 }
 
 // ============================================================
-// CHRONOMÈTRE
+// MATCH UPDATE
+// ============================================================
+
+export function onDamesMatchUpdate(
+    callback
+) {
+    return onDames(
+        "match:update",
+        callback
+    );
+}
+
+// ============================================================
+// MATCH END
+// ============================================================
+//
+// IMPORTANT :
+// Cet événement est la FIN OFFICIELLE.
+//
+// Il peut être déclenché par :
+// - victoire normale
+// - absence de coups
+// - défaite du joueur
+// - timeout backend
+// - IA qui termine la partie
+// - toute autre règle du moteur
+//
+// Le socket NE DÉCIDE PAS du gagnant.
+//
+// Il transmet intégralement le payload
+// reçu du backend à Dames.jsx.
+//
+// Dames.jsx doit alors :
+//   gameOver = true
+//   winnerSide = ...
+//   draw = ...
+//   resultReady = true
+//   reviewOpen = true
+//
+// ============================================================
+
+export function onDamesMatchEnd(
+    callback
+) {
+    return onDames(
+        "match:end",
+        callback
+    );
+}
+
+// ============================================================
+// CHRONOMÈTRE SERVEUR
+// ============================================================
+//
+// IMPORTANT :
+// Aucun chrono local de 90 secondes ici.
+//
+// Le backend envoie :
+//
+// turn:timer
+//
+// avec par exemple :
+//
+// {
+//     matchId,
+//     player,
+//     seconds
+// }
+//
+// ou :
+//
+// {
+//     matchId,
+//     turn,
+//     remaining
+// }
+//
+// Dames.jsx affiche simplement la valeur reçue.
+//
+// Lorsque le chrono arrive à zéro,
+// le backend doit déclencher "match:end".
+//
 // ============================================================
 
 export function onDamesTurnTimer(
-  callback
-) {
-  return onDames(
-    "turn:timer",
     callback
-  );
+) {
+    return onDames(
+        "turn:timer",
+        callback
+    );
 }
 
 // ============================================================
-// CHAT
+// CHAT MESSAGE
 // ============================================================
 
 export function onDamesChatMessage(
-  callback
-) {
-  return onDames(
-    "chat:message",
     callback
-  );
+) {
+    return onDames(
+        "chat:message",
+        callback
+    );
 }
+
+// ============================================================
+// CHAT TYPING
+// ============================================================
 
 export function onDamesChatTyping(
-  callback
-) {
-  return onDames(
-    "chat:typing",
     callback
-  );
+) {
+    return onDames(
+        "chat:typing",
+        callback
+    );
 }
 
+// ============================================================
+// CHAT ERROR
+// ============================================================
+
 export function onDamesChatError(
-  callback
-) {
-  return onDames(
-    "chat:error",
     callback
-  );
+) {
+    return onDames(
+        "chat:error",
+        callback
+    );
 }
 
 // ============================================================
 // ERREUR SERVEUR
 // ============================================================
-//
-// Le backend utilise :
-//
-// socket.emit("error", "...")
-//
-// ============================================================
 
 export function onDamesError(
-  callback
-) {
-  return onDames(
-    "error",
     callback
-  );
+) {
+    return onDames(
+        "error",
+        callback
+    );
 }
 
 // ============================================================
@@ -547,12 +769,12 @@ export function onDamesError(
 // ============================================================
 
 export function onDamesPong(
-  callback
-) {
-  return onDames(
-    "pong:test",
     callback
-  );
+) {
+    return onDames(
+        "pong:test",
+        callback
+    );
 }
 
 // ============================================================
@@ -560,37 +782,61 @@ export function onDamesPong(
 // ============================================================
 //
 // IMPORTANT :
+// Cette fonction ne signifie PAS "abandon".
 //
-// Cette fonction déconnecte le socket.
-// Elle ne dit PAS au backend que le joueur abandonne.
+// Elle ferme uniquement la connexion frontend.
 //
-// Ton backend actuel ne possède aucun événement
-// "abandon" / "leaveMatch".
+// Aucun événement d'abandon n'est envoyé au backend.
 //
 // ============================================================
 
 export function disconnectDamesSocket() {
-  if (!socket) {
-    return;
-  }
+    if (!socket) {
+        currentMatchId =
+            null;
 
-  console.log(
-    "♟️ DAMES SOCKET : déconnexion"
-  );
+        return;
+    }
 
-  socket.removeAllListeners();
+    console.log(
+        "♟️ DAMES SOCKET : fermeture"
+    );
 
-  socket.disconnect();
+    try {
+        socket.removeAllListeners();
+        socket.disconnect();
+    } catch (error) {
+        console.error(
+            "❌ DAMES SOCKET : erreur déconnexion",
+            error
+        );
+    }
 
-  socket = null;
-  currentMatchId = null;
+    socket = null;
+    currentMatchId =
+        null;
 }
 
-export function acceptDamesConditions(matchId) {
-  console.warn(
-    "⚠️ acceptDamesConditions : événement non implémenté par le socket backend actuel",
+// ============================================================
+// CONDITIONS
+// ============================================================
+//
+// Pour l'instant, le backend ne possède pas d'événement
+// d'acceptation des conditions.
+//
+// On ne simule donc rien côté socket.
+//
+// ============================================================
+
+export function acceptDamesConditions(
     matchId
-  );
+) {
+    console.warn(
+        "⚠️ DAMES CONDITIONS : événement backend non implémenté",
+        matchId
+    );
+
+    return false;
 }
 
 // ============================================================
@@ -598,16 +844,16 @@ export function acceptDamesConditions(matchId) {
 // ============================================================
 
 export function getCurrentDamesMatchId() {
-  return currentMatchId;
+    return currentMatchId;
 }
 
 export function setCurrentDamesMatchId(
-  matchId
-) {
-  currentMatchId =
     matchId
-      ? Number(matchId)
-      : null;
+) {
+    currentMatchId =
+        normalizeMatchId(
+            matchId
+        );
 }
 
 // ============================================================
@@ -615,38 +861,49 @@ export function setCurrentDamesMatchId(
 // ============================================================
 
 export default {
-  connectDamesSocket,
-  getDamesSocket,
-  isDamesSocketConnected,
+    connectDamesSocket,
 
-  joinDamesMatch,
+    getDamesSocket,
 
-  sendDamesMove,
+    isDamesSocketConnected,
 
-  sendDamesChat,
-  sendDamesTyping,
+    joinDamesMatch,
 
-  pingDamesSocket,
+    sendDamesMove,
 
-  onDames,
-  offDames,
+    sendDamesChat,
 
-  onDamesMatchInit,
-  onDamesMatchUpdate,
-  onDamesMatchEnd,
+    sendDamesTyping,
 
-  onDamesTurnTimer,
+    pingDamesSocket,
 
-  onDamesChatMessage,
-  onDamesChatTyping,
-  onDamesChatError,
+    onDames,
 
-  onDamesError,
+    offDames,
 
-  onDamesPong,
+    onDamesMatchInit,
 
-  disconnectDamesSocket,
+    onDamesMatchUpdate,
 
-  getCurrentDamesMatchId,
-  setCurrentDamesMatchId,
+    onDamesMatchEnd,
+
+    onDamesTurnTimer,
+
+    onDamesChatMessage,
+
+    onDamesChatTyping,
+
+    onDamesChatError,
+
+    onDamesError,
+
+    onDamesPong,
+
+    disconnectDamesSocket,
+
+    acceptDamesConditions,
+
+    getCurrentDamesMatchId,
+
+    setCurrentDamesMatchId,
 };
