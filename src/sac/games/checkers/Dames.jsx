@@ -137,7 +137,25 @@ function isValidBoard(board) {
 }
 
 function normalizePosition(position) {
-    if (!position) {
+    if (position === null || position === undefined) {
+        return null;
+    }
+
+    if (typeof position === "string") {
+        const raw = position.trim();
+
+        // Formats acceptés: "r,c", "r-c", "(r,c)".
+        const match = raw.match(
+            /^\(?\s*(-?\d+)\s*[,;:\-]\s*(-?\d+)\s*\)?$/
+        );
+
+        if (match) {
+            return normalizePosition([
+                Number(match[1]),
+                Number(match[2]),
+            ]);
+        }
+
         return null;
     }
 
@@ -148,12 +166,18 @@ function normalizePosition(position) {
         const row =
             position.r ??
             position.row ??
-            position.y;
+            position.y ??
+            position.fromRow ??
+            position.from?.r ??
+            position.from?.row;
 
         const col =
             position.c ??
             position.col ??
-            position.x;
+            position.x ??
+            position.fromCol ??
+            position.from?.c ??
+            position.from?.col;
 
         const r = Number(row);
         const c = Number(col);
@@ -172,7 +196,10 @@ function normalizePosition(position) {
         return null;
     }
 
-    if (Array.isArray(position) && position.length >= 2) {
+    if (
+        Array.isArray(position) &&
+        position.length >= 2
+    ) {
         const r = Number(position[0]);
         const c = Number(position[1]);
 
@@ -192,56 +219,155 @@ function normalizePosition(position) {
 }
 
 function normalizeMove(move) {
-    if (!move || typeof move !== "object") {
+    if (!move) {
         return null;
     }
 
+    /*
+     * Format compact éventuel :
+     * [from, to]
+     * [from, step1, step2, to]
+     */
+    if (Array.isArray(move)) {
+        if (move.length < 2) {
+            return null;
+        }
+
+        const positions = move
+            .map(normalizePosition)
+            .filter(Boolean);
+
+        if (positions.length < 2) {
+            return null;
+        }
+
+        const from = positions[0];
+        const path = positions.slice(1);
+        const to = path[path.length - 1];
+
+        return {
+            id: null,
+            from,
+            path,
+            to,
+            captures: [],
+        };
+    }
+
+    if (typeof move !== "object") {
+        return null;
+    }
+
+    /*
+     * Le backend peut encapsuler le mouvement
+     * dans une propriété move.
+     */
+    const sourceMove =
+        move.move &&
+        typeof move.move === "object"
+            ? move.move
+            : move;
+
     const from = normalizePosition(
-        move.from ||
-        move.start ||
-        move.origin ||
-        move.source
+        sourceMove.from ??
+        sourceMove.start ??
+        sourceMove.origin ??
+        sourceMove.source ??
+        sourceMove.fromPosition
     );
 
-    const rawPath =
-        move.path ||
-        move.positions ||
-        move.route ||
-        move.steps;
+    if (!from) {
+        return null;
+    }
 
-    const path = Array.isArray(rawPath)
+    const rawPath =
+        sourceMove.path ??
+        sourceMove.positions ??
+        sourceMove.route ??
+        sourceMove.steps ??
+        sourceMove.sequence ??
+        sourceMove.landings ??
+        [];
+
+    let path = Array.isArray(rawPath)
         ? rawPath
-            .map(normalizePosition)
-            .filter(Boolean)
+              .map(normalizePosition)
+              .filter(Boolean)
         : [];
 
     const rawTo =
-        move.to ||
-        move.destination ||
-        move.end ||
+        sourceMove.to ??
+        sourceMove.destination ??
+        sourceMove.end ??
+        sourceMove.target ??
+        sourceMove.toPosition ??
         path[path.length - 1];
 
     const to = normalizePosition(rawTo);
 
-    if (!from || !to) {
+    if (!to) {
         return null;
     }
 
+    /*
+     * Le backend SAC définit path comme la succession
+     * des cases atteintes après from.
+     *
+     * La destination officielle doit toujours être
+     * la dernière position de path.
+     */
+    if (
+        path.length === 0 ||
+        !samePosition(
+            path[path.length - 1],
+            to
+        )
+    ) {
+        path = [
+            ...path,
+            to,
+        ];
+    }
+
+    /*
+     * Certains formats peuvent répéter from
+     * au début de path.
+     */
+    if (
+        path.length > 0 &&
+        samePosition(
+            path[0],
+            from
+        )
+    ) {
+        path = path.slice(1);
+    }
+
+    const id =
+        sourceMove.id ??
+        sourceMove.moveId ??
+        sourceMove.move_id ??
+        move.id ??
+        move.moveId ??
+        move.move_id ??
+        null;
+
+    const captures =
+        Array.isArray(
+            sourceMove.captures
+        )
+            ? sourceMove.captures
+            : [];
+
     return {
-        id:
-            move.id ??
-            move.moveId ??
-            move.move_id ??
-            null,
-
+        id,
         from,
-
         path:
             path.length > 0
                 ? path
                 : [to],
-
         to,
+        captures,
     };
 }
 
@@ -253,7 +379,49 @@ function isValidMove(move) {
     );
 }
 
+function hasMovesPayload(data) {
+    if (!data || typeof data !== "object") {
+        return false;
+    }
+
+    return [
+        data.allMoves,
+        data.validMoves,
+        data.moves,
+        data.possibleMoves,
+        data.legalMoves,
+
+        data.state?.allMoves,
+        data.state?.validMoves,
+        data.state?.moves,
+        data.state?.possibleMoves,
+        data.state?.legalMoves,
+
+        data.game?.allMoves,
+        data.game?.validMoves,
+        data.game?.moves,
+        data.game?.possibleMoves,
+        data.game?.legalMoves,
+
+        data.match?.allMoves,
+        data.match?.validMoves,
+        data.match?.moves,
+        data.match?.possibleMoves,
+        data.match?.legalMoves,
+
+        data.data?.allMoves,
+        data.data?.validMoves,
+        data.data?.moves,
+        data.data?.possibleMoves,
+        data.data?.legalMoves,
+    ].some(Array.isArray);
+}
+
 function normalizeMoves(data) {
+    if (!data) {
+        return [];
+    }
+
     const candidates = [
         data?.allMoves,
         data?.validMoves,
@@ -278,19 +446,55 @@ function normalizeMoves(data) {
         data?.match?.moves,
         data?.match?.possibleMoves,
         data?.match?.legalMoves,
+
+        data?.data?.allMoves,
+        data?.data?.validMoves,
+        data?.data?.moves,
+        data?.data?.possibleMoves,
+        data?.data?.legalMoves,
     ];
 
+    /*
+     * BUG IMPORTANT de l'ancien fichier:
+     * find(Array.isArray) prenait [] dans allMoves avant
+     * de regarder validMoves.
+     *
+     * Ici on privilégie le premier tableau NON VIDE.
+     */
     const found = candidates.find(
-        (value) => Array.isArray(value)
+        (value) =>
+            Array.isArray(value) &&
+            value.length > 0
     );
 
-    if (!Array.isArray(found)) {
-        return [];
+    if (Array.isArray(found)) {
+        return found
+            .map(normalizeMove)
+            .filter(Boolean);
     }
 
-    return found
-        .map(normalizeMove)
-        .filter(Boolean);
+    // Certains backends peuvent renvoyer un objet indexé
+    // par la case de départ.
+    const objectCandidate =
+        candidates.find(
+            (value) =>
+                value &&
+                typeof value === "object" &&
+                !Array.isArray(value)
+        );
+
+    if (objectCandidate) {
+        return Object.values(objectCandidate)
+            .flatMap((value) =>
+                Array.isArray(value)
+                    ? value
+                    : [value]
+            )
+            .map(normalizeMove)
+            .filter(Boolean);
+    }
+
+    return [];
 }
 
 function samePosition(a, b) {
@@ -897,6 +1101,8 @@ const Cell = memo(function Cell({
     col,
     selected,
     possible,
+    path,
+    pathIndex,
     playable,
     last,
     disabled,
@@ -907,36 +1113,23 @@ const Cell = memo(function Cell({
 
     const classes = [
         "dames-cell",
-        dark
-            ? "dark"
-            : "light",
-
-        selected
-            ? "selected"
-            : "",
-
-        possible
-            ? "possible"
-            : "",
-
-        playable
-            ? "playable"
-            : "",
-
-        last
-            ? "last"
-            : "",
+        dark ? "dark" : "light",
+        selected ? "selected" : "",
+        possible ? "possible" : "",
+        path ? "path" : "",
+        playable ? "playable" : "",
+        last ? "last" : "",
     ]
         .filter(Boolean)
         .join(" ");
 
     const isPlayer1 =
-        cell === PLAYER_1 ||
-        cell === KING_1;
+        Number(cell) === PLAYER_1 ||
+        Number(cell) === KING_1;
 
     const isKing =
-        cell === KING_1 ||
-        cell === KING_2;
+        Number(cell) === KING_1 ||
+        Number(cell) === KING_2;
 
     return (
         <button
@@ -948,6 +1141,17 @@ const Cell = memo(function Cell({
             }
             onClick={() =>
                 onClick(row, col)
+            }
+            aria-label={
+                possible
+                    ? `Destination possible ${row + 1}-${col + 1}`
+                    : path
+                    ? `Étape ${pathIndex + 1} du chemin`
+                    : isPlayer1
+                    ? "Pion joueur 1"
+                    : isKing
+                    ? "Dame"
+                    : "Case"
             }
         >
             {cell !== 0 && (
@@ -964,20 +1168,29 @@ const Cell = memo(function Cell({
                         .filter(Boolean)
                         .join(" ")}
                 >
-                    {isKing
-                        ? "♛"
-                        : ""}
+                    {isKing ? "♛" : ""}
+                </span>
+            )}
+
+            {path && !possible && (
+                <span
+                    className="dames-cell-path"
+                    aria-hidden="true"
+                >
+                    {pathIndex + 1}
                 </span>
             )}
 
             {possible && (
-                <span className="dames-cell-target" />
+                <span
+                    className="dames-cell-target"
+                    aria-hidden="true"
+                />
             )}
         </button>
     );
 });
 
-// ======================================================
 // PLAYER CARD
 // ======================================================
 
@@ -1792,7 +2005,8 @@ function Dames({
                         );
 
                     if (
-                        normalized
+                        normalized &&
+                        normalized.to
                     ) {
                         map.set(
                             `${normalized.to.r}-${normalized.to.c}`,
@@ -1804,6 +2018,59 @@ function Dames({
 
             return map;
         }, [validMoves]);
+
+    /*
+     * Chemin visuel du mouvement sélectionné.
+     *
+     * IMPORTANT:
+     * on ne calcule aucune règle de jeu côté frontend.
+     * Les cases viennent exclusivement du mouvement légal
+     * fourni par le backend.
+     */
+    const pathCells =
+        useMemo(() => {
+            const map = new Map();
+
+            if (!selected) {
+                return map;
+            }
+
+            validMoves.forEach((move) => {
+                const normalized =
+                    normalizeMove(move);
+
+                if (
+                    !normalized ||
+                    !samePosition(
+                        normalized.from,
+                        selected
+                    )
+                ) {
+                    return;
+                }
+
+                normalized.path.forEach(
+                    (position, index) => {
+                        const key =
+                            `${position.r}-${position.c}`;
+
+                        if (
+                            !samePosition(
+                                position,
+                                normalized.to
+                            )
+                        ) {
+                            map.set(
+                                key,
+                                index
+                            );
+                        }
+                    }
+                );
+            });
+
+            return map;
+        }, [selected, validMoves]);
 
     const boardStats =
         useMemo(() => {
@@ -2191,7 +2458,8 @@ function Dames({
                     data.board ||
                     state.board ||
                     data.game?.board ||
-                    data.match?.board;
+                    data.match?.board ||
+                    data.data?.board;
 
                 if (
                     isValidBoard(
@@ -2214,7 +2482,8 @@ function Dames({
                     data.turn ??
                     state.turn ??
                     data.game?.turn ??
-                    data.match?.turn;
+                    data.match?.turn ??
+                    data.data?.turn;
 
                 const numericTurn =
                     Number(
@@ -2257,18 +2526,14 @@ function Dames({
                 // MOVES
                 // ------------------------------------------
 
-                const receivedMoves =
-                    normalizeMoves(
-                        data
-                    );
+                if (hasMovesPayload(data)) {
+                    const receivedMoves =
+                        normalizeMoves(data);
 
-                if (
-                    Array.isArray(
-                        receivedMoves
-                    )
-                ) {
                     setAllMoves(
-                        receivedMoves
+                        Array.isArray(receivedMoves)
+                            ? receivedMoves
+                            : []
                     );
                 }
 
@@ -2281,7 +2546,10 @@ function Dames({
                         data.lastMove ||
                         state.lastMove ||
                         data.move ||
-                        data.last_move
+                        data.last_move ||
+                        data.data?.lastMove ||
+                        data.data?.move ||
+                        data.data?.last_move
                     );
 
                 if (
@@ -2301,6 +2569,7 @@ function Dames({
                     state.turnSeconds ??
                     data.game?.turnSeconds ??
                     data.match?.turnSeconds ??
+                    data.remainingTime ??
                     data.remaining ??
                     data.seconds;
 
@@ -3282,26 +3551,36 @@ function Dames({
 
                 const moves =
                     allMoves
-                        .map(
-                            normalizeMove
-                        )
+                        .map(normalizeMove)
                         .filter(Boolean)
                         .filter(
                             (move) =>
-                                move.from.r ===
-                                    row &&
-                                move.from.c ===
-                                    col
+                                samePosition(
+                                    move.from,
+                                    {
+                                        r: row,
+                                        c: col,
+                                    }
+                                )
                         );
+
+                /*
+                 * Un pion ne devient sélectionnable que si le
+                 * serveur l'a inclus dans ses mouvements légaux.
+                 * Aucune règle n'est simulée ici.
+                 */
+                if (moves.length === 0) {
+                    setSelected(null);
+                    setValidMoves([]);
+                    return;
+                }
 
                 setSelected({
                     r: row,
                     c: col,
                 });
 
-                setValidMoves(
-                    moves
-                );
+                setValidMoves(moves);
             },
             [
                 board,
@@ -3371,6 +3650,7 @@ function Dames({
                         id: move.id,
                         from: move.from,
                         path: move.path,
+                        captures: move.captures || [],
                     }
                 );
 
@@ -4025,6 +4305,19 @@ function Dames({
                                                             targets.has(
                                                                 key
                                                             );
+
+                                                        const pathIndex =
+                                                            pathCells.has(
+                                                                key
+                                                            )
+                                                                ? pathCells.get(
+                                                                      key
+                                                                  )
+                                                                : null;
+
+                                                        const isPath =
+                                                            pathIndex !==
+                                                            null;
 
                                                         const playable =
                                                             playablePieces.has(

@@ -15,7 +15,7 @@ export const createSacMatch = async ({ game, stake }) => {
         }
     );
 
-    return response.data?.match ?? response.data;
+    return response.data;
 };
 
 // ==========================================================
@@ -30,7 +30,7 @@ export const joinSacMatch = async ({ game, matchId }) => {
         }
     );
 
-    return response.data?.match ?? response.data;
+    return response.data;
 };
 
 // ==========================================================
@@ -47,7 +47,7 @@ export const getSacMatch = async (matchId) => {
         response.data
     );
 
-    return response.data?.match ?? response.data;
+    return response.data;
 };
 
 // ==========================================================
