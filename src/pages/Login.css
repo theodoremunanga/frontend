@@ -122,19 +122,26 @@ input:focus-visible {
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
+
+  background-image: url("/assets/login/6betball-bg.PNG");
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
 }
 
 .background-overlay {
   position: absolute;
   inset: 0;
+
   background:
     linear-gradient(
       90deg,
-      rgba(3, 7, 18, 0.96) 0%,
-      rgba(3, 7, 18, 0.78) 38%,
-      rgba(3, 7, 18, 0.48) 70%,
-      rgba(3, 7, 18, 0.78) 100%
+      rgba(3, 7, 18, 0.82) 0%,
+      rgba(3, 7, 18, 0.58) 38%,
+      rgba(3, 7, 18, 0.28) 70%,
+      rgba(3, 7, 18, 0.62) 100%
     );
+
   z-index: 2;
 }
 
@@ -843,28 +850,9 @@ input:focus-visible {
 
   border-radius: 34px;
 
-  background:
-    linear-gradient(
-      145deg,
-      rgba(37, 99, 235, 0.2),
-      rgba(124, 58, 237, 0.15) 45%,
-      rgba(2, 6, 23, 0.95)
-    );
+  /* reste de ton CSS actuel */
 
-  border:
-    1px solid rgba(255, 255, 255, 0.14);
-
-  box-shadow:
-    0 40px 100px rgba(0, 0, 0, 0.55),
-    0 0 80px rgba(37, 99, 235, 0.12);
-
-  transform:
-    perspective(1200px)
-    rotateY(-8deg)
-    rotateX(3deg);
-
-  transition:
-    transform 0.6s ease;
+  isolation: isolate;
 }
 
 .hero-player-card:hover {
@@ -879,17 +867,20 @@ input:focus-visible {
   position: absolute;
   inset: 0;
 
-  background:
-    radial-gradient(
-      circle at 50% 25%,
-      rgba(56, 189, 248, 0.2),
-      transparent 25%
-    ),
+  background-image:
     linear-gradient(
       180deg,
-      rgba(15, 23, 42, 0),
-      rgba(2, 6, 23, 0.95)
-    );
+      rgba(2, 6, 23, 0.05) 0%,
+      rgba(2, 6, 23, 0.10) 45%,
+      rgba(2, 6, 23, 0.92) 100%
+    ),
+    url("/assets/login/hero-football.PNG");
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  z-index: 1;
 }
 
 
@@ -1121,48 +1112,81 @@ input:focus-visible {
 
 .floating-game-card {
   position: absolute;
-
-  z-index: 10;
+  z-index: 20;
 
   display: flex;
   align-items: center;
   gap: 11px;
 
-  padding: 12px 15px;
+  width: 145px;
+  min-height: 62px;
+  padding: 10px 12px;
 
   border-radius: 15px;
 
-  background:
-    rgba(9, 17, 38, 0.85);
+  background: rgba(9, 17, 38, 0.92);
 
-  border:
-    1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.14);
 
   backdrop-filter: blur(15px);
 
   box-shadow:
-    0 18px 40px rgba(0, 0, 0, 0.3);
+    0 18px 40px rgba(0, 0, 0, 0.35);
 
-  animation:
-    floatingCard 5s ease-in-out infinite;
+  pointer-events: none;
+
+  animation: floatingCard 5s ease-in-out infinite;
 }
 
-.floating-game-card > span {
-  width: 38px;
-  height: 38px;
 
-  display: grid;
-  place-items: center;
+/* =========================================================
+   ICÔNE DE LA CARTE
+   ========================================================= */
+
+.floating-game-card > span {
+  flex: 0 0 42px;
+
+  width: 42px;
+  height: 42px;
+
+  display: block;
 
   border-radius: 11px;
 
-  background:
-    rgba(37, 99, 235, 0.14);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 
-  font-size: 21px;
+  font-size: 0;
+
+  overflow: hidden;
 }
 
+
+/* =========================================================
+   IMAGES DES CARTES
+   ========================================================= */
+
+.card-football > span {
+  background-image: url("/assets/login/hero-football.PNG");
+}
+
+.card-combat > span {
+  background-image: url("/assets/login/hero-combat.PNG");
+}
+
+.card-racing > span {
+  background-image: url("/assets/login/hero-racing.PNG");
+}
+
+
+/* =========================================================
+   TEXTE
+   ========================================================= */
+
 .floating-game-card div {
+  min-width: 0;
+
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -1170,30 +1194,50 @@ input:focus-visible {
 
 .floating-game-card strong {
   font-size: 12px;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 .floating-game-card small {
   color: var(--bb-text-muted);
+
   font-size: 8px;
   letter-spacing: 1px;
 }
 
+
+/* =========================================================
+   POSITION DES 3 CARTES
+   ========================================================= */
+
+/* Football : haut gauche */
 .card-football {
-  top: 12%;
-  left: -2%;
+  top: 8%;
+  left: -4%;
 }
 
+
+/* Combat : milieu droite */
 .card-combat {
-  right: -3%;
   top: 43%;
-  animation-delay: -1.5s;
+  right: -5%;
+
+  animation-delay: -1.7s;
 }
 
+
+/* Racing : bas gauche */
 .card-racing {
-  left: 2%;
-  bottom: 13%;
-  animation-delay: -3s;
+  bottom: 8%;
+  left: -1%;
+
+  animation-delay: -3.2s;
 }
+
+
+/* =========================================================
+   ANIMATION
+   ========================================================= */
 
 @keyframes floatingCard {
   0%,
@@ -1202,10 +1246,9 @@ input:focus-visible {
   }
 
   50% {
-    transform: translateY(-15px) rotate(1deg);
+    transform: translateY(-12px) rotate(1deg);
   }
 }
-
 
 /* =========================================================
    TRUST BAR
@@ -2808,451 +2851,70 @@ input:focus-visible {
    RESPONSIVE — TABLET
    ========================================================= */
 
-@media (max-width: 900px) {
-
-  .public-navbar {
-    width: min(100% - 30px, 700px);
-  }
-
-  .public-nav-links {
-    display: none;
-  }
-
-  .hero-section {
-    grid-template-columns: 1fr;
-
-    padding-top: 60px;
-
-    text-align: center;
-  }
-
-  .hero-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .hero-description {
-    max-width: 650px;
-  }
-
-  .hero-stats {
-    justify-content: center;
-  }
-
-  .hero-visual {
-    min-height: 560px;
-  }
-
-  .trust-bar {
-    grid-template-columns:
-      repeat(2, 1fr);
-  }
-
-  .trust-item:nth-child(2) {
-    border-right: 0;
-  }
-
-  .trust-item:nth-child(-n + 2) {
-    border-bottom:
-      1px solid var(--bb-border);
-  }
-
-  .games-grid {
-    grid-template-columns:
-      repeat(2, 1fr);
-  }
-
-  .game-card:last-child {
-    grid-column: span 2;
-  }
-
-  .features-grid {
-    grid-template-columns:
-      repeat(2, 1fr);
-  }
-
-  .competition-section {
-    grid-template-columns: 1fr;
-
-    text-align: center;
-  }
-
-  .competition-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .competition-points {
-    width: 100%;
-    max-width: 500px;
-    text-align: left;
-  }
-
-  .competition-visual {
-    width: min(600px, 100%);
-    margin: 0 auto;
-  }
-
-  .about-section {
-    grid-template-columns: 1fr;
-
-    text-align: center;
-
-    padding: 80px 40px;
-  }
-
-  .about-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .about-values {
-    width: 100%;
-  }
-
-  .public-footer {
-    grid-template-columns: 1fr;
-
-    text-align: center;
-  }
-
-  .footer-brand {
-    justify-content: center;
-  }
-
-  .footer-links {
-    justify-content: center;
-  }
-
-  .footer-copy {
-    text-align: center;
-  }
-
+.floating-game-card {
+  width: 135px;
+  min-height: 58px;
+  padding: 8px 10px;
 }
 
+.floating-game-card > span {
+  flex-basis: 36px;
+  width: 36px;
+  height: 36px;
+}
+
+.card-football {
+  top: 6%;
+  left: -2%;
+}
+
+.card-combat {
+  top: 44%;
+  right: -2%;
+}
+
+.card-racing {
+  bottom: 6%;
+  left: -2%;
+}
 
 /* =========================================================
    RESPONSIVE — MOBILE
    ========================================================= */
 
-@media (max-width: 600px) {
-
-  .public-navbar {
-    width: calc(100% - 24px);
-
-    min-height: 72px;
-  }
-
-  .brand-text strong {
-    font-size: 18px;
-  }
-
-  .brand-text small {
-    display: none;
-  }
-
-  .brand-logo {
-    width: 42px;
-    height: 42px;
-  }
-
-  .navbar-actions {
-    gap: 5px;
-  }
-
-  .nav-login-button,
-  .nav-register-button {
-    min-height: 39px;
-
-    padding: 0 10px;
-
-    font-size: 10px;
-
-    border-radius: 10px;
-  }
-
-  .nav-login-button {
-    display: none;
-  }
-
-  .hero-section,
-  .games-section,
-  .features-section,
-  .competition-section,
-  .about-section,
-  .final-cta-section,
-  .public-footer,
-  .trust-bar {
-    width: calc(100% - 24px);
-  }
-
-  .hero-section {
-    min-height: auto;
-
-    padding:
-      55px 0
-      70px;
-  }
-
-  .hero-badge {
-    max-width: 95%;
-
-    text-align: center;
-
-    font-size: 8px;
-  }
-
-  .hero-content h1 {
-    margin-top: 20px;
-
-    font-size: clamp(46px, 15vw, 65px);
-
-    letter-spacing: -3px;
-  }
-
-  .hero-description {
-    font-size: 14px;
-  }
-
-  .hero-actions {
-    width: 100%;
-
-    flex-direction: column;
-  }
-
-  .primary-hero-button,
-  .secondary-hero-button {
-    width: 100%;
-  }
-
-  .hero-stats {
-    gap: 12px;
-  }
-
-  .hero-stat strong {
-    font-size: 15px;
-  }
-
-  .hero-visual {
-    min-height: 500px;
-  }
-
-  .hero-player-card {
-    width: min(315px, 78vw);
-    height: 440px;
-  }
-
-  .player-silhouette {
-    transform:
-      translateX(-50%)
-      scale(0.8);
-
-    transform-origin: top center;
-  }
-
-  .player-card-info strong {
-    font-size: 38px;
-  }
-
-  .floating-game-card {
-    padding: 8px 10px;
-  }
-
-  .floating-game-card > span {
-    width: 32px;
-    height: 32px;
-
-    font-size: 16px;
-  }
-
-  .floating-game-card strong {
-    font-size: 10px;
-  }
-
-  .card-football {
-    left: -3%;
-  }
-
-  .card-combat {
-    right: -3%;
-  }
-
-  .trust-bar {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .trust-item {
-    min-height: 70px;
-
-    padding: 8px;
-
-    text-align: center;
-
-    font-size: 9px;
-  }
-
-  .trust-item span {
-    font-size: 17px;
-  }
-
-  .games-section {
-    padding:
-      100px 0
-      70px;
-  }
-
-  .features-section {
-    padding:
-      70px 0
-      90px;
-  }
-
-  .section-heading {
-    margin-bottom: 35px;
-  }
-
-  .section-heading h2,
-  .competition-content h2,
-  .about-content h2,
-  .final-cta-content h2 {
-    font-size: 40px;
-
-    letter-spacing: -2px;
-  }
-
-  .section-heading p {
-    font-size: 13px;
-  }
-
-  .games-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .game-card,
-  .game-card:last-child {
-    grid-column: auto;
-
-    min-height: 275px;
-  }
-
-  .features-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .feature-card {
-    min-height: 210px;
-  }
-
-  .competition-section {
-    margin-bottom: 90px;
-
-    padding: 35px 22px;
-
-    border-radius: 26px;
-  }
-
-  .competition-content p {
-    font-size: 13px;
-  }
-
-  .competition-visual {
-    min-height: 260px;
-  }
-
-  .versus-card {
-    padding: 15px;
-
-    gap: 7px;
-  }
-
-  .versus-avatar {
-    width: 60px;
-    height: 60px;
-
-    font-size: 25px;
-  }
-
-  .versus-middle {
-    width: 48px;
-    height: 48px;
-  }
-
-  .versus-player strong {
-    font-size: 10px;
-  }
-
-  .about-section {
-    padding:
-      70px 10px;
-
-    gap: 45px;
-  }
-
-  .about-logo-circle {
-    width: 180px;
-    height: 180px;
-
-    font-size: 110px;
-  }
-
-  .about-values {
-    grid-template-columns:
-      repeat(2, 1fr);
-  }
-
-  .final-cta-section {
-    min-height: 470px;
-
-    margin-top: 90px;
-    margin-bottom: 70px;
-
-    border-radius: 27px;
-  }
-
-  .final-cta-content {
-    padding: 30px 18px;
-  }
-
-  .final-cta-actions {
-    flex-direction: column;
-  }
-
-  .public-footer {
-    padding:
-      30px 0;
-
-    gap: 20px;
-  }
-
-  .footer-links {
-    flex-wrap: wrap;
-  }
-
-  .footer-copy {
-    font-size: 9px;
-  }
-
-  .login-modal {
-    padding: 12px;
-  }
-
-  .login-modal-card {
-    padding: 32px 22px;
-
-    border-radius: 24px;
-  }
-
-  .login-modal-header h2 {
-    font-size: 27px;
-  }
-
-  .login-options {
-    align-items: flex-start;
-  }
-
+.floating-game-card {
+  width: 125px;
+  min-height: 54px;
+  padding: 7px 9px;
+}
+
+.floating-game-card > span {
+  flex-basis: 34px;
+  width: 34px;
+  height: 34px;
+}
+
+.floating-game-card strong {
+  font-size: 10px;
+}
+
+.floating-game-card small {
+  font-size: 7px;
+}
+
+.card-football {
+  top: 5%;
+  left: -8px;
+}
+
+.card-combat {
+  top: 45%;
+  right: -8px;
+}
+
+.card-racing {
+  bottom: 5%;
+  left: -8px;
 }
 
 

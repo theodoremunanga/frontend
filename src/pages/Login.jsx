@@ -120,6 +120,7 @@ export default function Login({ setPage, setIsAuth }) {
       icon: "⚽",
       title: "Football",
       category: "SPORT",
+      image: "/assets/login/hero-football.PNG",
       description:
         "Affrontez vos adversaires dans des matchs compétitifs.",
     },
@@ -127,6 +128,7 @@ export default function Login({ setPage, setIsAuth }) {
       icon: "🥊",
       title: "BraVMan",
       category: "COMBAT",
+      image: "/assets/login/hero-combat.PNG",
       description:
         "Entrez dans l'arène et imposez votre style de combat.",
     },
@@ -134,6 +136,7 @@ export default function Login({ setPage, setIsAuth }) {
       icon: "♟️",
       title: "Dames",
       category: "STRATÉGIE",
+      image: "/assets/login/hero-gaming.PNG",
       description:
         "Mettez votre intelligence et votre stratégie à l'épreuve.",
     },
@@ -141,6 +144,7 @@ export default function Login({ setPage, setIsAuth }) {
       icon: "🎲",
       title: "Ludo",
       category: "ARCADE",
+      image: "/assets/login/hero-gaming.PNG",
       description:
         "Jouez, défiez et tentez de prendre l'avantage.",
     },
@@ -148,6 +152,7 @@ export default function Login({ setPage, setIsAuth }) {
       icon: "🃏",
       title: "Cartes",
       category: "CARDS",
+      image: "/assets/login/hero-gaming.PNG",
       description:
         "Des parties de cartes compétitives entre joueurs.",
     },
@@ -155,6 +160,7 @@ export default function Login({ setPage, setIsAuth }) {
       icon: "🏎️",
       title: "Course",
       category: "RACING",
+      image: "/assets/login/hero-racing.PNG",
       description:
         "Vitesse, réflexes et stratégie pour arriver premier.",
     },
@@ -162,6 +168,7 @@ export default function Login({ setPage, setIsAuth }) {
       icon: "🥋",
       title: "Mortal Combat",
       category: "ACTION",
+      image: "/assets/login/hero-combat.PNG",
       description:
         "Un univers de combat intense entre adversaires.",
     },
@@ -215,10 +222,15 @@ export default function Login({ setPage, setIsAuth }) {
   return (
     <div className="login-page">
 
-      {/* =====================================================
-          BACKGROUND / EFFETS VISUELS
-      ====================================================== */}
-      <div className="login-background">
+      <div
+        className="login-background"
+        style={{
+          backgroundImage: "url('/assets/login/6betball-bg.PNG')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundRepeat: "no-repeat",
+        }}
+      >
         <div className="background-overlay"></div>
 
         <div className="floating-shape shape-one"></div>
@@ -389,65 +401,74 @@ export default function Login({ setPage, setIsAuth }) {
           {/* =================================================
               VISUEL HERO
           ================================================== */}
-          <div className="hero-visual">
+          <div className="hero-player-card">
 
-            <div className="hero-player-glow"></div>
+            <img
+              src="/assets/login/hero-football.PNG"
+              alt="Football - 6BetBall"
+              className="hero-real-image"
+            />
 
-            <div className="hero-player-card">
+            <div className="hero-image-overlay"></div>
 
-              <div className="player-card-background"></div>
+            <div className="player-card-info">
 
-              <div className="player-silhouette">
-                <div className="player-head"></div>
-                <div className="player-body"></div>
-                <div className="player-arm left"></div>
-                <div className="player-arm right"></div>
-                <div className="player-leg left"></div>
-                <div className="player-leg right"></div>
-              </div>
+              <span className="player-label">
+                6BETBALL
+              </span>
 
-              <div className="player-card-info">
+              <strong>
+                GAME
+                <br />
+                CHANGER
+              </strong>
 
-                <span className="player-label">
-                  6BETBALL
-                </span>
-
-                <strong>
-                  GAME
-                  <br />
-                  CHANGER
-                </strong>
-
-                <small>
-                  COMPETE WITHOUT LIMITS
-                </small>
-
-              </div>
+              <small>
+                AUTHENTIQUE • HONNÊTE • SÛR
+              </small>
 
             </div>
 
             <div className="floating-game-card card-football">
-              <span>⚽</span>
+
+              <img
+                src="/assets/login/hero-football.PNG"
+                alt="Football"
+              />
+
               <div>
                 <strong>Football</strong>
                 <small>VS</small>
               </div>
+
             </div>
 
             <div className="floating-game-card card-combat">
-              <span>🥊</span>
+
+              <img
+                src="/assets/login/hero-combat.PNG"
+                alt="BraVMan"
+              />
+
               <div>
-                <strong>Combat</strong>
+                <strong>BraVMan</strong>
                 <small>FIGHT</small>
               </div>
+
             </div>
 
             <div className="floating-game-card card-racing">
-              <span>🏎️</span>
+
+              <img
+                src="/assets/login/hero-racing.PNG"
+                alt="Course"
+              />
+
               <div>
                 <strong>Racing</strong>
                 <small>RACE</small>
               </div>
+
             </div>
 
           </div>
@@ -520,6 +541,14 @@ export default function Login({ setPage, setIsAuth }) {
 
                 <div className="game-number">
                   0{index + 1}
+                </div>
+
+                <div className="game-card-image">
+                  <img
+                    src={game.image}
+                    alt={`Visuel ${game.title}`}
+                    loading="lazy"
+                  />
                 </div>
 
                 <div className="game-icon">
