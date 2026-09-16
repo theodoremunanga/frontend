@@ -9,6 +9,7 @@ export default function Login({ setPage, setIsAuth }) {
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [aboutExpanded, setAboutExpanded] = useState(false);
 
   // =========================================================
   // CONNEXION
@@ -769,17 +770,51 @@ export default function Login({ setPage, setIsAuth }) {
               <span> Authentique, Honnête et Sûr.</span>
             </h2>
 
-            <p>
-              6BetBall est une Plateforme de Jeux Compétitifs en ligne, 
-              l'important est de rendre le quotidien spécial avec les
-              défis dans les jeux.
-            </p>
+            
+            <div className="about-description-text">
+              <p>
+                6BetBall est une plateforme de jeux compétitifs en ligne pensée
+                pour transformer chaque partie en une véritable expérience de
+                challenge. Football, combat, stratégie, vitesse et autres univers
+                se rencontrent dans un même espace où chaque joueur peut entrer
+                dans la compétition, relever des défis et chercher à progresser.
+              </p>
 
-            <p>
-              Notre vision est de valoriser le talent, l'effort,
-              la stratégie et l'esprit de compétition à travers
-              différents univers de jeu.
-            </p>
+              <p>
+                Notre ambition est de créer un environnement où le talent, l'effort,
+                la stratégie, la maîtrise du jeu et l'esprit de compétition ont une
+                véritable place. Sur 6BetBall, chaque défi peut devenir une occasion
+                de se mesurer à d'autres joueurs, de développer son expérience et
+                de repousser ses propres limites.
+              </p>
+
+              <p>
+                La plateforme rassemble plusieurs univers afin que chacun puisse
+                trouver son terrain de jeu. Que l'on préfère la précision du sport,
+                l'intensité du combat, la réflexion stratégique ou la vitesse,
+                l'objectif reste le même : jouer, progresser et relever de nouveaux
+                défis.
+              </p>
+
+              <p>
+                6BetBall veut également construire une expérience claire et agréable,
+                basée sur une relation de confiance avec ses joueurs. Chaque détail
+                de la plateforme est pensé pour faire du jeu compétitif une expérience
+                dynamique, accessible et engageante.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="about-see-more"
+              onClick={() => setAboutExpanded((prev) => !prev)}
+              aria-expanded={aboutExpanded}
+            >
+              {aboutExpanded ? "Voir moins" : "Voir plus"}
+              <span className={aboutExpanded ? "rotated" : ""}>↓</span>
+            </button>
+
+          </div>
 
             <div className="about-values">
 
@@ -804,9 +839,7 @@ export default function Login({ setPage, setIsAuth }) {
               </div>
 
             </div>
-
-          </div>
-
+  
         </section>
 
         {/* ===================================================

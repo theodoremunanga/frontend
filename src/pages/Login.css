@@ -670,6 +670,94 @@ input:focus-visible {
   color: white;
 }
 
+/* =========================================================
+   ABOUT — DESCRIPTION
+   ========================================================= */
+
+.about-description {
+  position: relative;
+  max-width: 760px;
+}
+
+.about-description-text {
+  position: relative;
+  max-height: 185px;
+  overflow: hidden;
+
+  transition:
+    max-height 0.55s ease;
+}
+
+.about-description:not(.is-expanded) .about-description-text::after {
+  content: "";
+
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+
+  height: 90px;
+
+  background: linear-gradient(
+    180deg,
+    transparent,
+    var(--bb-bg)
+  );
+
+  pointer-events: none;
+}
+
+.about-description.is-expanded .about-description-text {
+  max-height: 1200px;
+}
+
+
+/* =========================================================
+   BOUTON VOIR PLUS
+   ========================================================= */
+
+.about-see-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  margin-top: 18px;
+  padding: 9px 0;
+
+  border: 0;
+  background: transparent;
+
+  color: var(--bb-primary-light);
+
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+
+  cursor: pointer;
+
+  transition:
+    color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.about-see-more:hover {
+  color: #ffffff;
+}
+
+.about-see-more span {
+  display: inline-block;
+
+  font-size: 16px;
+
+  transition:
+    transform 0.3s ease;
+}
+
+.about-see-more span.rotated {
+  transform: rotate(180deg);
+}
+
 
 /* =========================================================
    HERO BUTTONS

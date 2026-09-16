@@ -1,904 +1,958 @@
+// ============================================================
+// 6BETBALL — MENU PRINCIPAL
+// ============================================================
+
 import { useEffect, useState } from "react";
-import { checkJOEligibility } from "../utils/joEligibility";
 
-// ======================================================
+import PrivacyPolicy from "../legal/PrivacyPolicy";
+import TermsOfUse from "../legal/TermsOfUse";
+
+import "./Menu.css";
+
+// ============================================================
+// CONSTANTES
+// ============================================================
+
+const APP_NAME = "6BetBall";
+const CURRENT_YEAR = new Date().getFullYear();
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+function getStoredValue(...keys) {
+  for (const key of keys) {
+    const value = localStorage.getItem(key);
+
+    if (value !== null && value !== undefined && value !== "") {
+      return value;
+    }
+  }
+
+  return "";
+}
+
+function normalizeRole(value) {
+  const role = String(value || "").trim().toUpperCase();
+
+  if (role === "ADMIN" || role === "ADMINISTRATOR") {
+    return "ADMIN";
+  }
+
+  if (
+    role === "AMBASSADOR" ||
+    role === "AMBASSADEUR" ||
+    role === "AMBASSADOR_USER"
+  ) {
+    return "AMBASSADOR";
+  }
+
+  return role || "JOUEUR";
+}
+
+// ============================================================
 // COMPONENT
-// ======================================================
+// ============================================================
 
-export default function Menu({
-  setPage,
-}) {
-  const [role, setRole] =
-    useState("");
+export default function Menu({ setPage }) {
+  // ----------------------------------------------------------
+  // USER
+  // ----------------------------------------------------------
 
-  const [
-    username,
-    setUsername,
-  ] = useState("");
+  const [role, setRole] = useState("JOUEUR");
+  const [username, setUsername] = useState("Joueur");
 
-  const [
-    isEligible,
-    setIsEligible,
-  ] = useState(false);
+  // ----------------------------------------------------------
+  // LEGAL
+  // ----------------------------------------------------------
 
-  // ======================================================
-  // INIT
-  // ======================================================
+  const [legalPage, setLegalPage] = useState(null);
+
+  // ----------------------------------------------------------
+  // UI
+  // ----------------------------------------------------------
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // ==========================================================
+  // INITIALISATION
+  // ==========================================================
 
   useEffect(() => {
-    const r =
-      localStorage.getItem(
-        "role"
-      ) || "";
-
-    const user =
-      localStorage.getItem(
-        "username"
-      ) || "Joueur";
-
-    setRole(r);
-    setUsername(user);
-
-    const result =
-      checkJOEligibility();
-
-    setIsEligible(
-      result.isEligible
+    const storedRole = getStoredValue(
+      "role",
+      "userRole"
     );
 
-    if (
-      result.isEligible
-    ) {
-      setTimeout(() => {
-        alert(
-          "🎉 Vous êtes éligible pour devenir Joueur Officiel !"
-        );
-      }, 500);
-    }
+    const storedUsername =
+      getStoredValue(
+        "username",
+        "name",
+        "userName"
+      ) || "Joueur";
+
+    setRole(normalizeRole(storedRole));
+    setUsername(storedUsername);
   }, []);
 
-  // ======================================================
-  // LOGOUT
-  // ======================================================
+  // ==========================================================
+  // NAVIGATION
+  // ==========================================================
 
-  const handleLogout =
-    () => {
+  const navigate = (page) => {
+    setMobileMenuOpen(false);
+
+    if (typeof setPage === "function") {
+      setPage(page);
+    }
+  };
+
+  // ==========================================================
+  // LEGAL NAVIGATION
+  // ==========================================================
+
+  const openPrivacyPolicy = () => {
+    setMobileMenuOpen(false);
+    setLegalPage("privacy");
+  };
+
+  const openTermsOfUse = () => {
+    setMobileMenuOpen(false);
+    setLegalPage("terms");
+  };
+
+  const closeLegalPage = () => {
+    setLegalPage(null);
+  };
+
+  // ==========================================================
+  // LOGOUT
+  // ==========================================================
+
+  const handleLogout = () => {
+    try {
       sessionStorage.clear();
       localStorage.clear();
+    } catch (error) {
+      console.warn(
+        "6BetBall — nettoyage session impossible :",
+        error
+      );
+    }
 
+    setMobileMenuOpen(false);
+
+    if (typeof setPage === "function") {
       setPage("login");
-    };
+    }
+  };
 
-  // ======================================================
+  // ==========================================================
   // MENU BUTTON
-  // ======================================================
+  // ==========================================================
 
   const MenuButton = ({
     icon,
     title,
     subtitle,
     onClick,
-    color,
+    variant = "default",
     badge,
+    disabled = false,
+    compact = false,
   }) => {
+    const handleClick = () => {
+      if (disabled) {
+        return;
+      }
+
+      if (typeof onClick === "function") {
+        onClick();
+      }
+    };
+
     return (
       <button
-        onClick={onClick}
-        className={`
-          relative
-          overflow-hidden
-          rounded-[34px]
-          p-6
-          text-left
-          transition-all
-          duration-300
-          hover:scale-[1.02]
-          active:scale-[0.98]
-          shadow-2xl
-          border
-          border-white/10
-          bg-gradient-to-br
-          ${color}
-          group
-        `}
+        type="button"
+        onClick={handleClick}
+        disabled={disabled}
+        className={[
+          "menu-button",
+          `menu-button--${variant}`,
+          disabled ? "menu-button--disabled" : "",
+          compact ? "menu-button--compact" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        aria-disabled={disabled}
       >
-        {/* Glow */}
-        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500 bg-white/5" />
+        <span className="menu-button__shine" />
 
-        {/* Blur */}
-        <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10 blur-3xl" />
+        <span className="menu-button__icon">
+          {icon}
+        </span>
 
-        {/* Badge */}
+        <span className="menu-button__content">
+          <span className="menu-button__title">
+            {title}
+          </span>
+
+          {subtitle && (
+            <span className="menu-button__subtitle">
+              {subtitle}
+            </span>
+          )}
+        </span>
+
         {badge && (
-          <div className="absolute top-4 right-4 bg-red-500 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-xl animate-pulse">
+          <span className="menu-button__badge">
             {badge}
-          </div>
+          </span>
         )}
 
-        <div className="relative z-10 flex items-center gap-5">
-          <div
-            className="
-            w-20 h-20
-            rounded-[24px]
-            bg-white/10
-            border border-white/10
-            backdrop-blur-xl
-            flex items-center justify-center
-            text-4xl
-            shadow-xl
-          "
-          >
-            {icon}
-          </div>
-
-          <div className="flex-1">
-            <div className="text-2xl font-black text-white">
-              {title}
-            </div>
-
-            <div className="text-sm text-gray-200 mt-2 leading-6">
-              {subtitle}
-            </div>
-          </div>
-
-          <div className="text-3xl text-white/40 group-hover:text-white transition">
+        {!disabled && (
+          <span className="menu-button__arrow">
             →
-          </div>
-        </div>
+          </span>
+        )}
       </button>
     );
   };
 
-  // ======================================================
+  // ==========================================================
   // BADGE
-  // ======================================================
+  // ==========================================================
 
   const Badge = ({
     children,
-    color,
+    variant = "default",
   }) => (
-    <div
-      className={`
-        px-4 py-2
-        rounded-full
-        text-xs
-        font-black
-        border
-        backdrop-blur-xl
-        ${color}
-      `}
+    <span
+      className={[
+        "menu-badge",
+        `menu-badge--${variant}`,
+      ].join(" ")}
     >
       {children}
-    </div>
+    </span>
   );
 
-  // ======================================================
-  // UI
-  // ======================================================
+  // ==========================================================
+  // LEGAL VIEW
+  // ==========================================================
+
+  if (legalPage === "privacy") {
+    return (
+      <div className="menu-legal-page">
+        <div className="menu-legal-page__topbar">
+          <button
+            type="button"
+            className="menu-legal-page__back"
+            onClick={closeLegalPage}
+          >
+            ← Retour au menu
+          </button>
+
+          <div className="menu-legal-page__brand">
+            <span className="menu-brand-mark">
+              6
+            </span>
+
+            <span>
+              Bet<span>Ball</span>
+            </span>
+          </div>
+        </div>
+
+        <main className="menu-legal-page__content">
+          <PrivacyPolicy />
+        </main>
+      </div>
+    );
+  }
+
+  if (legalPage === "terms") {
+    return (
+      <div className="menu-legal-page">
+        <div className="menu-legal-page__topbar">
+          <button
+            type="button"
+            className="menu-legal-page__back"
+            onClick={closeLegalPage}
+          >
+            ← Retour au menu
+          </button>
+
+          <div className="menu-legal-page__brand">
+            <span className="menu-brand-mark">
+              6
+            </span>
+
+            <span>
+              Bet<span>Ball</span>
+            </span>
+          </div>
+        </div>
+
+        <main className="menu-legal-page__content">
+          <TermsOfUse />
+        </main>
+      </div>
+    );
+  }
+
+  // ==========================================================
+  // STATUS DATA
+  // ==========================================================
+
+  const accountStatus = [
+    {
+      label: "Connexion",
+      value: "SÉCURISÉE",
+      variant: "success",
+    },
+    {
+      label: "Synchronisation",
+      value: "TEMPS RÉEL",
+      variant: "info",
+    },
+    {
+      label: "Session",
+      value: "ACTIVE",
+      variant: "warning",
+    },
+    {
+      label: "Réseau",
+      value: "STABLE",
+      variant: "purple",
+    },
+  ];
+
+  // ==========================================================
+  // STATS
+  // ==========================================================
+
+  const stats = [
+    {
+      icon: "⚡",
+      value: "24/7",
+      label: "Plateforme active",
+    },
+    
+    {
+      icon: "🌍",
+      value: "LIVE",
+      label: "Multijoueur",
+    },
+    {
+      icon: "🔒",
+      value: "SÛR",
+      label: "Environnement sécurisé",
+    },
+  ];
+
+  // ==========================================================
+  // RENDER
+  // ==========================================================
 
   return (
-    <div
-      className="
-      min-h-screen
-      bg-[#020617]
-      text-white
-      overflow-hidden
-      relative
-    "
-    >
-      {/* ====================================================== */}
-      {/* BACKGROUND */}
-      {/* ====================================================== */}
-
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div
-          className="
-          absolute
-          top-[-200px]
-          left-[-150px]
-          w-[600px]
-          h-[600px]
-          rounded-full
-          bg-blue-600/20
-          blur-[140px]
-        "
-        />
-
-        <div
-          className="
-          absolute
-          bottom-[-250px]
-          right-[-150px]
-          w-[600px]
-          h-[600px]
-          rounded-full
-          bg-purple-600/20
-          blur-[140px]
-        "
-        />
-
-        <div
-          className="
-          absolute
-          top-[40%]
-          left-[40%]
-          w-[400px]
-          h-[400px]
-          rounded-full
-          bg-cyan-500/10
-          blur-[140px]
-        "
-        />
-      </div>
-
-      {/* ====================================================== */}
-      {/* HEADER */}
-      {/* ====================================================== */}
+    <div className="menu-page">
+      {/* ======================================================
+          BACKGROUND
+      ====================================================== */}
 
       <div
-        className="
-        sticky top-0 z-30
-        backdrop-blur-2xl
-        bg-black/30
-        border-b border-white/10
-      "
+        className="menu-background"
+        aria-hidden="true"
       >
-        <div className="max-w-7xl mx-auto px-5 py-5">
-          <div
-            className="
-            flex
-            justify-between
-            items-center
-            gap-5
-            flex-wrap
-          "
-          >
-            {/* LEFT */}
-            <div>
-              <h1
-                className="
-                text-5xl
-                md:text-6xl
-                font-black
-                tracking-tight
-                bg-gradient-to-r
-                from-white
-                via-blue-200
-                to-purple-300
-                bg-clip-text
-                text-transparent
-              "
-              >
-                🎮 6BetBall
-              </h1>
-
-              <p
-                className="
-                text-gray-400
-                mt-2
-                text-sm
-                md:text-base
-              "
-              >
-                Centre de contrôle nouvelle génération
-              </p>
-            </div>
-
-            {/* RIGHT */}
-            <div className="flex items-center gap-3 flex-wrap">
-              <Badge color="bg-green-500/20 border-green-500/20 text-green-300">
-                🟢 EN LIGNE
-              </Badge>
-
-              <Badge color="bg-blue-500/20 border-blue-500/20 text-blue-300">
-                {role || "JOUEUR"}
-              </Badge>
-            </div>
-          </div>
-        </div>
+        <div className="menu-background__orb menu-background__orb--one" />
+        <div className="menu-background__orb menu-background__orb--two" />
+        <div className="menu-background__orb menu-background__orb--three" />
+        <div className="menu-background__grid" />
       </div>
 
-      {/* ====================================================== */}
-      {/* CONTENT */}
-      {/* ====================================================== */}
+      {/* ======================================================
+          HEADER
+      ====================================================== */}
 
-      <div className="relative z-10 max-w-7xl mx-auto px-5 py-8">
-        {/* ====================================================== */}
-        {/* HERO */}
-        {/* ====================================================== */}
+      <header className="menu-header">
+        <div className="menu-header__inner">
+          {/* BRAND */}
 
-        <div
-          className="
-          relative
-          overflow-hidden
-          rounded-[42px]
-          border border-white/10
-          bg-gradient-to-r
-          from-blue-700
-          via-indigo-700
-          to-purple-800
-          shadow-[0_30px_120px_rgba(59,130,246,0.35)]
-          mb-12
-        "
-        >
-          <div
-            className="
-            absolute
-            top-0
-            right-0
-            w-96
-            h-96
-            bg-white/10
-            blur-[120px]
-            rounded-full
-          "
-          />
+          <button
+            type="button"
+            className="menu-brand"
+            onClick={() => navigate("home")}
+            aria-label="Retour à l'accueil 6BetBall"
+          >
+            <span className="menu-brand__icon">
+              6
+            </span>
 
-          <div
-            className="
-            absolute
-            bottom-0
-            left-0
-            w-96
-            h-96
-            bg-black/20
-            blur-[120px]
-            rounded-full
-          "
-          />
+            <span className="menu-brand__text">
+              <span>Bet</span>
+              <strong>Ball</strong>
+            </span>
+          </button>
 
-          <div className="relative z-10 p-8 md:p-12">
-            <div
-              className="
-              flex
-              flex-col
-              xl:flex-row
-              justify-between
-              gap-10
-            "
+          {/* DESKTOP STATUS */}
+
+          <div className="menu-header__status">
+            <Badge variant="success">
+              🟢 EN LIGNE
+            </Badge>
+
+            <Badge variant="info">
+              {role === "AMBASSADOR"
+                ? "AMBASSADEUR"
+                : role === "ADMIN"
+                ? "ADMIN"
+                : "JOUEUR"}
+            </Badge>
+          </div>
+
+          {/* MOBILE TOGGLE */}
+
+          <button
+            type="button"
+            className="menu-mobile-toggle"
+            onClick={() =>
+              setMobileMenuOpen(
+                (previous) => !previous
+              )
+            }
+            aria-label="Ouvrir le menu"
+            aria-expanded={mobileMenuOpen}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+        </div>
+
+        {/* MOBILE NAV */}
+
+        {mobileMenuOpen && (
+          <div className="menu-mobile-nav">
+            <button
+              type="button"
+              onClick={() => navigate("profile")}
             >
-              {/* USER */}
-              <div className="flex gap-6 items-center flex-wrap">
-                <div
-                  className="
-                  w-32 h-32
-                  rounded-full
-                  bg-white/10
-                  border border-white/20
-                  backdrop-blur-2xl
-                  flex items-center justify-center
-                  text-7xl
-                  shadow-2xl
-                "
-                >
-                  👤
-                </div>
+              👤 Profil
+            </button>
 
-                <div>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <h2
-                      className="
-                      text-5xl
-                      font-black
-                    "
-                    >
-                      {username}
-                    </h2>
+            <button
+              type="button"
+              onClick={() => navigate("messages")}
+            >
+              📩 Support
+            </button>
 
-                    {role ===
-                      "JO" && (
-                      <Badge color="bg-yellow-400 text-black border-yellow-300">
-                        ⭐ JO
-                      </Badge>
-                    )}
+            <button
+              type="button"
+              onClick={openTermsOfUse}
+            >
+              📜 Conditions
+            </button>
 
-                    {role === "AMBASSADOR" && (
-                      <MenuButton
-                        icon="🤝"
-                        title="Paramètres Ambassadeur"
-                        subtitle="Récupérez les fonds de vos utilisateurs et gérez vos commissions"
-                        onClick={() =>
-                          setPage("ambassade")
-                        }
-                        color="from-emerald-600 via-teal-700 to-emerald-950"
-                        badge="AMBASSADEUR"
-                      />
-                    )}
+            <button
+              type="button"
+              onClick={openPrivacyPolicy}
+            >
+              🔐 Confidentialité
+            </button>
 
-                    {role ===
-                      "ADMIN" && (
-                      <Badge color="bg-red-500 text-white border-red-400">
-                        🛠️ ADMIN
-                      </Badge>
-                    )}
-                  </div>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="menu-mobile-nav__logout"
+            >
+              🚪 Déconnexion
+            </button>
+          </div>
+        )}
+      </header>
 
-                  <p
-                    className="
-                    mt-3
-                    text-blue-100
-                    text-lg
-                  "
-                  >
-                    Bienvenue sur la plateforme officielle
-                    6BetBall
-                  </p>
+      {/* ======================================================
+          MAIN
+      ====================================================== */}
 
-                  <div className="flex gap-3 flex-wrap mt-5">
-                    <Badge color="bg-black/30 text-white border-white/10">
-                      ⚡ Temps réel
-                    </Badge>
+      <main className="menu-main">
+        {/* ====================================================
+            HERO
+        ==================================================== */}
 
-                    <Badge color="bg-emerald-500/20 text-emerald-200 border-emerald-500/20">
-                      🔒 Sécurisé
-                    </Badge>
+        <section className="menu-hero">
+          <div className="menu-hero__glow" />
 
-                    <Badge color="bg-purple-500/20 text-purple-200 border-purple-500/20">
-                      🌍 Multijoueur
-                    </Badge>
+          <div className="menu-hero__content">
+            {/* USER */}
 
-                    {isEligible && (
-                      <Badge color="bg-emerald-500 text-white border-emerald-400">
-                        🎉 Éligible JO
-                      </Badge>
-                    )}
-                  </div>
-                </div>
+            <div className="menu-user">
+              <div className="menu-user__avatar">
+                👤
               </div>
 
-              {/* STATUS */}
-              <div
-                className="
-                min-w-[320px]
-                rounded-[34px]
-                bg-black/20
-                border border-white/10
-                backdrop-blur-2xl
-                p-7
-                shadow-2xl
-              "
-              >
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-300">
-                    Statut du compte
-                  </span>
+              <div className="menu-user__info">
+                <div className="menu-user__name-row">
+                  <h1>
+                    Bonjour,{" "}
+                    <strong>{username}</strong>
+                  </h1>
 
-                  <Badge color="bg-green-500 text-white border-green-400">
-                    ACTIF
-                  </Badge>
+                  {role === "AMBASSADOR" && (
+                    <Badge variant="gold">
+                      🤝 AMBASSADEUR
+                    </Badge>
+                  )}
+
+                  {role === "ADMIN" && (
+                    <Badge variant="danger">
+                      🛠️ ADMIN
+                    </Badge>
+                  )}
                 </div>
 
-                <div className="space-y-5 mt-7">
-                  {[
-                    [
-                      "Anti-triche",
-                      "ACTIVÉE",
-                      "text-green-400",
-                    ],
-                    [
-                      "Synchronisation",
-                      "TEMPS RÉEL",
-                      "text-blue-300",
-                    ],
-                    [
-                      "Session",
-                      "SÉCURISÉE",
-                      "text-yellow-300",
-                    ],
-                    [
-                      "Réseau",
-                      "STABLE",
-                      "text-purple-300",
-                    ],
-                  ].map(
-                    (
-                      item,
-                      i
-                    ) => (
-                      <div
-                        key={i}
-                        className="flex justify-between items-center"
-                      >
-                        <span className="text-gray-300">
-                          {
-                            item[0]
-                          }
-                        </span>
+                <p>
+                  Bienvenue dans votre espace
+                  personnel 6BetBall.
+                </p>
 
-                        <span
-                          className={`font-black ${item[2]}`}
-                        >
-                          {
-                            item[1]
-                          }
-                        </span>
-                      </div>
-                    )
-                  )}
+                <div className="menu-user__features">
+                  <Badge variant="dark">
+                    ⚡ Temps réel
+                  </Badge>
+
+                  <Badge variant="success">
+                    🔒 Sécurisé
+                  </Badge>
+
+                  <Badge variant="purple">
+                    🌍 Multijoueur
+                  </Badge>
                 </div>
               </div>
             </div>
+
+            {/* ACCOUNT STATUS */}
+
+            <div className="menu-account-status">
+              <div className="menu-account-status__header">
+                <span>Statut du compte</span>
+
+                <Badge variant="success">
+                  ACTIF
+                </Badge>
+              </div>
+
+              <div className="menu-account-status__list">
+                {accountStatus.map(
+                  (item) => (
+                    <div
+                      key={item.label}
+                      className="menu-account-status__item"
+                    >
+                      <span>
+                        {item.label}
+                      </span>
+
+                      <strong
+                        className={`menu-status-value menu-status-value--${item.variant}`}
+                      >
+                        {item.value}
+                      </strong>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
 
-        {/* ====================================================== */}
-        {/* STATS */}
-        {/* ====================================================== */}
+        {/* ====================================================
+            STATS
+        ==================================================== */}
 
-        <div
-          className="
-          grid
-          grid-cols-1
-          sm:grid-cols-2
-          xl:grid-cols-4
-          gap-5
-          mb-12
-        "
-        >
-          {[
-            {
-              icon: "⚡",
-              value: "99.9%",
-              label:
-                "Disponibilité",
-            },
-            {
-              icon: "🌍",
-              value: "24/7",
-              label:
-                "Serveurs actifs",
-            },
-            {
-              icon: "🧠",
-              value: "IA",
-              label:
-                "Bots intelligents",
-            },
-            {
-              icon: "🔒",
-              value: "AES-256",
-              label:
-                "Chiffrement",
-            },
-          ].map((item, i) => (
+        <section className="menu-stats">
+          {stats.map((item) => (
             <div
-              key={i}
-              className="
-                rounded-[30px]
-                bg-white/5
-                border border-white/10
-                p-6
-                backdrop-blur-xl
-                shadow-2xl
-              "
+              key={item.label}
+              className="menu-stat"
             >
-              <div className="text-4xl">
+              <div className="menu-stat__icon">
                 {item.icon}
               </div>
 
-              <div className="text-4xl font-black mt-4">
+              <div className="menu-stat__value">
                 {item.value}
               </div>
 
-              <div className="text-gray-400 mt-2">
+              <div className="menu-stat__label">
                 {item.label}
               </div>
             </div>
           ))}
-        </div>
+        </section>
 
-        {/* ====================================================== */}
-        {/* MENU GRID */}
-        {/* ====================================================== */}
 
-        <div
-          className="
-          grid
-          md:grid-cols-2
-          xl:grid-cols-3
-          gap-7
-        "
-        >
-          <MenuButton
-            icon="👤"
-            title="Profil"
-            subtitle="Visitez et modifiez les détails de votre compte"
-            onClick={() =>
-              setPage(
-                "profile"
-              )
-            }
-            color="from-slate-700 via-slate-800 to-slate-900"
-          />
+        {/* ====================================================
+            SERVICES
+        ==================================================== */}
 
-          <MenuButton
-            icon="⭐"
-            title="Devenir Joueur Officiel"
-            subtitle="Rejoignez le programme officiel 6BetBall"
-            onClick={() =>
-              setPage(
-                "jo-request"
-              )
-            }
-            color="from-green-600 via-emerald-700 to-emerald-950"
-          />
+        <section className="menu-section">
+          <div className="menu-section__heading">
+            <div>
+              <span className="menu-section__eyebrow">
+                SERVICES
+              </span>
 
-          <MenuButton
-            icon="🤖"
-            title="Bots IA"
-            subtitle="Louez des bots intelligents pour vos matchs"
-            onClick={() =>
-              setPage("bots")
-            }
-            color="from-blue-600 via-indigo-700 to-indigo-950"
-          />
+              <h2>
+                ⚡ Votre espace
+              </h2>
 
-          <MenuButton
-            icon="💸"
-            title="Retrait via JO"
-            subtitle="Effectuez vos retraits sécurisés"
-            onClick={() =>
-              setPage(
-                "withdraw-jo"
-              )
-            }
-            color="from-yellow-500 via-orange-600 to-orange-950"
-          />
+              <p>
+                Gérez votre compte et accédez
+                aux services disponibles.
+              </p>
+            </div>
+          </div>
 
-          {/* ====================================================== */}
-          {/* NEW MESSAGES PAGE */}
-          {/* ====================================================== */}
+          <div className="menu-grid">
+            {/* PROFIL */}
 
-          <MenuButton
-            icon="📩"
-            title="Support & Messages"
-            subtitle="Envoyer une réclamation, signaler un problème ou contacter l'administration"
-            onClick={() =>
-              setPage(
-                "messages"
-              )
-            }
-            color="from-pink-600 via-rose-700 to-rose-950"
-            badge="SUPPORT"
-          />
-
-          {role ===
-            "JO" && (
             <MenuButton
-              icon="🎮"
-              title="Mode JO"
-              subtitle="Gestion des matchs et validations"
+              icon="👤"
+              title="Mon profil"
+              subtitle="Consultez et modifiez les informations de votre compte."
               onClick={() =>
-                setPage(
-                  "jo-mode"
-                )
+                navigate("profile")
               }
-              color="from-teal-600 via-green-700 to-teal-950"
+              variant="profile"
             />
-          )}
 
-          {role ===
-            "ADMIN" && (
+            {/* AMBASSADEUR */}
+
             <MenuButton
-              icon="🛠️"
-              title="Admin Dashboard"
-              subtitle="Administration complète de la plateforme"
-              onClick={() =>
-                setPage(
-                  "admin"
-                )
+              icon="🤝"
+              title={
+                role === "AMBASSADOR"
+                  ? "Espace Ambassadeur"
+                  : "Devenir Ambassadeur"
               }
-              color="from-red-700 via-red-800 to-black"
+              subtitle={
+                role === "AMBASSADOR"
+                  ? "Récupérez les fonds, consultez vos opérations et gérez vos commissions."
+                  : "Découvrez le programme Ambassadeur et les possibilités offertes par 6BetBall."
+              }
+              onClick={() =>
+                navigate("ambassade")
+              }
+              variant="ambassador"
+              badge={
+                role === "AMBASSADOR"
+                  ? "ACTIF"
+                  : "AMBASSADEUR"
+              }
             />
-          )}
 
-          <MenuButton
-            icon="🚪"
-            title="Déconnexion"
-            subtitle="Quitter votre session sécurisée"
-            onClick={
-              handleLogout
-            }
-            color="from-red-600 via-red-700 to-black"
-          />
-        </div>
+            {/* SUPPORT */}
 
-        {/* ====================================================== */}
-        {/* PANELS */}
-        {/* ====================================================== */}
+            <MenuButton
+              icon="📩"
+              title="Retrouvez vos amis et Discutez"
+              subtitle="C'est aussi le meilleur moyen d'envoyer et récevoir des messages"
+              onClick={() =>
+                navigate("messages")
+              }
+              variant="support"
+              badge="SUPPORT"
+            />
 
-        <div
-          className="
-          grid
-          lg:grid-cols-2
-          gap-7
-          mt-14
-        "
-        >
+            {/* BOT IA */}
+
+            <MenuButton
+              icon="🤖"
+              title="Bot IA"
+              subtitle="Louez le Joueur Artificiel pour jouer à vos matchs de Dames."
+              disabled
+              variant="ai"
+              badge="Bientôt disponible"
+            />
+
+            {/* TOURNOIS */}
+
+            <MenuButton
+              icon="🏆"
+              title="Tournois"
+              subtitle="Participez à des compétitions organisées et suivez vos performances."
+              disabled
+              variant="tournament"
+              badge="Bientôt disponible"
+            />
+
+            {/* CLASSEMENTS */}
+
+            <MenuButton
+              icon="📊"
+              title="Classements"
+              subtitle="Consultez les performances et les statistiques de la communauté."
+              disabled
+              variant="ranking"
+              badge="Bientôt disponible"
+            />
+          </div>
+        </section>
+
+        {/* ====================================================
+            ADMINISTRATION
+        ==================================================== */}
+
+        {role === "ADMIN" && (
+          <section className="menu-section menu-admin-section">
+            <div className="menu-section__heading">
+              <div>
+                <span className="menu-section__eyebrow">
+                  ADMINISTRATION
+                </span>
+
+                <h2>
+                  🛠️ Administration
+                </h2>
+
+                <p>
+                  Outils de gestion réservés à
+                  l'administration 6BetBall.
+                </p>
+              </div>
+            </div>
+
+            <div className="menu-grid menu-grid--admin">
+              <MenuButton
+                icon="🛠️"
+                title="Admin Dashboard"
+                subtitle="Administration complète de la plateforme et supervision des services."
+                onClick={() =>
+                  navigate("admin")
+                }
+                variant="admin"
+                badge="ADMIN"
+              />
+            </div>
+          </section>
+        )}
+
+        {/* ====================================================
+            À PROPOS
+        ==================================================== */}
+
+        <section className="menu-information-grid">
           {/* ABOUT */}
-          <div
-            className="
-            rounded-[36px]
-            bg-white/5
-            border border-white/10
-            p-8
-            backdrop-blur-2xl
-            shadow-2xl
-          "
-          >
-            <h3 className="text-4xl font-black mb-6">
-              ℹ️ À propos de
-              6BetBall
-            </h3>
 
-            <p className="text-gray-300 leading-8 text-[15px]">
-              6BetBall est une
-              plateforme compétitive moderne
-              spécialisée dans
-              les jeux
-              stratégiques,
-              les défis
-              multijoueurs en
-              temps réel et
-              les systèmes
-              sécurisés de
-              compétition.
-            </p>
+          <article className="menu-information-card">
+            <div className="menu-information-card__icon">
+              🎯
+            </div>
 
-            <div className="flex flex-wrap gap-3 mt-7">
-              <Badge color="bg-blue-500/20 border-blue-500/20 text-blue-300">
+            <div>
+              <span className="menu-information-card__eyebrow">
+                NOTRE PLATEFORME
+              </span>
+
+              <h2>
+                À propos de 6BetBall
+              </h2>
+
+              <p>
+                6BetBall est une plateforme de
+                jeux compétitifs pensée autour
+                du divertissement, du
+                multijoueur et de l'expérience
+                en temps réel.
+              </p>
+            </div>
+
+            <div className="menu-information-card__tags">
+              <Badge variant="info">
                 ⚡ Temps réel
               </Badge>
 
-              <Badge color="bg-green-500/20 border-green-500/20 text-green-300">
+              <Badge variant="success">
                 🔒 Sécurité
-                avancée
               </Badge>
 
-              <Badge color="bg-purple-500/20 border-purple-500/20 text-purple-300">
-                🌍 Réseau
-                multijoueur
+              <Badge variant="purple">
+                🌍 Multijoueur
               </Badge>
 
-              <Badge color="bg-yellow-500/20 border-yellow-500/20 text-yellow-300">
-                🧠 IA intégrée
+              <Badge variant="gold">
+                🎮 Jeux
               </Badge>
             </div>
-          </div>
+          </article>
 
           {/* SECURITY */}
-          <div
-            className="
-            rounded-[36px]
-            bg-white/5
-            border border-white/10
-            p-8
-            backdrop-blur-2xl
-            shadow-2xl
-          "
-          >
-            <h3 className="text-4xl font-black mb-6">
-              🔐 Sécurité &
-              Système
-            </h3>
 
-            <div className="space-y-5">
+          <article className="menu-information-card">
+            <div className="menu-information-card__icon">
+              🔐
+            </div>
+
+            <div>
+              <span className="menu-information-card__eyebrow">
+                PROTECTION
+              </span>
+
+              <h2>
+                Sécurité & système
+              </h2>
+
+              <p>
+                Votre espace est conçu pour
+                maintenir une expérience claire,
+                sécurisée et synchronisée.
+              </p>
+            </div>
+
+            <div className="menu-security-list">
               {[
                 "Connexion sécurisée",
-                "Détection anti-triche",
-                "Vérification temps réel",
-                "Chiffrement des données",
-              ].map(
-                (
-                  item,
-                  i
-                ) => (
-                  <div
-                    key={i}
-                    className="
-                    flex
-                    justify-between
-                    items-center
-                    bg-black/20
-                    rounded-[24px]
-                    p-5
-                    border border-white/5
-                  "
-                  >
-                    <span className="text-gray-300">
-                      {item}
-                    </span>
+                "Synchronisation temps réel",
+                "Protection de session",
+                "Vérification des données",
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="menu-security-item"
+                >
+                  <span>
+                    {item}
+                  </span>
 
-                    <Badge color="bg-green-500 text-white border-green-400">
-                      ACTIVE
-                    </Badge>
-                  </div>
-                )
-              )}
+                  <Badge variant="success">
+                    ACTIVE
+                  </Badge>
+                </div>
+              ))}
             </div>
-          </div>
-        </div>
+          </article>
+        </section>
 
-        {/* ====================================================== */}
-        {/* FOOTER */}
-        {/* ====================================================== */}
+        {/* ====================================================
+            QUICK ACCESS
+        ==================================================== */}
 
-        <div
-          className="
-          mt-16
-          border-t
-          border-white/10
-          pt-10
-          pb-14
-        "
-        >
-          <div
-            className="
-            flex
-            flex-col
-            lg:flex-row
-            justify-between
-            items-center
-            gap-7
-          "
+        <section className="menu-quick-access">
+          <button
+            type="button"
+            onClick={() => navigate("profile")}
           >
-            <div>
-              <div
-                className="
-                text-4xl
-                font-black
-                bg-gradient-to-r
-                from-white
-                to-blue-300
-                bg-clip-text
-                text-transparent
-              "
-              >
-                🎮 6BetBall
-              </div>
+            <span>👤</span>
+            <strong>Profil</strong>
+          </button>
 
-              <div className="text-gray-500 text-sm mt-3">
-                Copyright ©
-                2026
-                6BetBall.
-                Tous droits
-                réservés.
-              </div>
-            </div>
+          <button
+            type="button"
+            onClick={() => navigate("messages")}
+          >
+            <span>📩</span>
+            <strong>Support</strong>
+          </button>
 
-            <div className="flex gap-4 flex-wrap">
-              <button
-                className="
-                px-6 py-4
-                rounded-[22px]
-                bg-white/5
-                hover:bg-white/10
-                transition
-                border border-white/10
-                backdrop-blur-xl
-              "
-              >
-                📜 Conditions
-              </button>
+          <button
+            type="button"
+            onClick={openTermsOfUse}
+          >
+            <span>📜</span>
+            <strong>Conditions</strong>
+          </button>
 
-              <button
-                className="
-                px-6 py-4
-                rounded-[22px]
-                bg-white/5
-                hover:bg-white/10
-                transition
-                border border-white/10
-                backdrop-blur-xl
-              "
-              >
-                🔐
-                Confidentialité
-              </button>
-            </div>
+          <button
+            type="button"
+            onClick={openPrivacyPolicy}
+          >
+            <span>🔐</span>
+            <strong>Confidentialité</strong>
+          </button>
+        </section>
+
+        {/* ====================================================
+            FOOTER
+        ==================================================== */}
+
+        <footer className="menu-footer">
+          <div className="menu-footer__brand">
+            <button
+              type="button"
+              className="menu-footer__logo"
+              onClick={() =>
+                navigate("home")
+              }
+              aria-label="Retour à l'accueil"
+            >
+              <span className="menu-footer__logo-mark">
+                6
+              </span>
+
+              <span>
+                <strong>Bet</strong>
+                <b>Ball</b>
+              </span>
+            </button>
+
+            <p>
+              Authentique, Honnête et Sûr
+            </p>
+
+            <small>
+              Copyright © {CURRENT_YEAR}{" "}
+              {APP_NAME}. Tous droits réservés.
+            </small>
           </div>
+
+          <div className="menu-footer__links">
+            <button
+              type="button"
+              onClick={openTermsOfUse}
+            >
+              📜 Conditions d'utilisation
+            </button>
+
+            <button
+              type="button"
+              onClick={openPrivacyPolicy}
+            >
+              🔐 Politique de confidentialité
+            </button>
+          </div>
+
+          <div className="menu-footer__actions">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="menu-footer__logout"
+            >
+              🚪
+              <span>
+                Déconnexion
+              </span>
+            </button>
+          </div>
+        </footer>
+
+        {/* ====================================================
+            SIGNATURE
+        ==================================================== */}
+
+        <div className="menu-signature">
+          <span>6BetBall</span>
+          <i>•</i>
+          <span>Authentique</span>
+          <i>•</i>
+          <span>Honnête</span>
+          <i>•</i>
+          <span>Sûr</span>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

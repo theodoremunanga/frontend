@@ -39,6 +39,7 @@ const games = [
     icon: "♟️",
     id: "dames",
     available: true,
+    image: "/assets/login/hero-gaming.PNG",
     description:
       "Le jeu de Réflexion.",
     players: "2 Joueurs",
@@ -49,7 +50,7 @@ const games = [
     name: "Football",
     icon: "⚽",
     id: "football",
-    available: SVGComponentTransferFunctionElement,
+    available: false,
     description:
       "Ici on joue, on ne parie pas !",
   },
