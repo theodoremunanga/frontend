@@ -32,7 +32,7 @@ import Competition from "./pages/Competitions";
 import Infos from "./pages/Infos";
 import Menu from "./pages/Menu";
 import Avis from "./pages/Avis";
-import Messages from "./pages/Messages";
+import Chat from "./pages/Chat";
 
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -85,7 +85,7 @@ const KNOWN_PAGES = new Set([
   "infos",
   "menu",
   "ambassade",
-  "messages",
+  "chat",
   "avis",
   "ads",
   "game",
@@ -1307,11 +1307,11 @@ export default function App() {
           )}
 
           {/* ================================================
-              MESSAGES
+              CHAT
           ================================================ */}
 
-          {page === "messages" && (
-            <Messages />
+          {page === "chat" && (
+            <Chat />
           )}
 
           {/* ================================================

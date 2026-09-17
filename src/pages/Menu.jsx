@@ -443,7 +443,7 @@ export default function Menu({ setPage }) {
 
             <button
               type="button"
-              onClick={() => navigate("messages")}
+              onClick={() => navigate("chat")}
             >
               📩 Support
             </button>
@@ -662,7 +662,7 @@ export default function Menu({ setPage }) {
               title="Retrouvez vos amis et Discutez"
               subtitle="C'est aussi le meilleur moyen d'envoyer et récevoir des messages"
               onClick={() =>
-                navigate("messages")
+                navigate("chat")
               }
               variant="support"
               badge="SUPPORT"
@@ -852,7 +852,7 @@ export default function Menu({ setPage }) {
 
           <button
             type="button"
-            onClick={() => navigate("messages")}
+            onClick={() => navigate("chat")}
           >
             <span>📩</span>
             <strong>Support</strong>
