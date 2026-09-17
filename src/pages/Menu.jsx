@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import PrivacyPolicy from "../legal/PrivacyPolicy";
 import TermsOfUse from "../legal/TermsOfUse";
+import Formation from "./Formation";
 
 import "./Menu.css";
 
@@ -24,7 +25,11 @@ function getStoredValue(...keys) {
   for (const key of keys) {
     const value = localStorage.getItem(key);
 
-    if (value !== null && value !== undefined && value !== "") {
+    if (
+      value !== null &&
+      value !== undefined &&
+      value !== ""
+    ) {
       return value;
     }
   }
@@ -33,9 +38,14 @@ function getStoredValue(...keys) {
 }
 
 function normalizeRole(value) {
-  const role = String(value || "").trim().toUpperCase();
+  const role = String(value || "")
+    .trim()
+    .toUpperCase();
 
-  if (role === "ADMIN" || role === "ADMINISTRATOR") {
+  if (
+    role === "ADMIN" ||
+    role === "ADMINISTRATOR"
+  ) {
     return "ADMIN";
   }
 
@@ -69,10 +79,18 @@ export default function Menu({ setPage }) {
   const [legalPage, setLegalPage] = useState(null);
 
   // ----------------------------------------------------------
+  // AMBASSADEUR / FORMATION
+  // ----------------------------------------------------------
+
+  const [ambassadorPage, setAmbassadorPage] =
+    useState(null);
+
+  // ----------------------------------------------------------
   // UI
   // ----------------------------------------------------------
 
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] =
+    useState(false);
 
   // ==========================================================
   // INITIALISATION
@@ -105,6 +123,36 @@ export default function Menu({ setPage }) {
     if (typeof setPage === "function") {
       setPage(page);
     }
+  };
+
+  // ==========================================================
+  // AMBASSADEUR
+  // ==========================================================
+
+  const openFormation = () => {
+    setMobileMenuOpen(false);
+    setLegalPage(null);
+    setAmbassadorPage("formation");
+  };
+
+  const closeFormation = () => {
+    setAmbassadorPage(null);
+  };
+
+  const openAmbassadorSpace = () => {
+    setMobileMenuOpen(false);
+
+    /*
+     * SÉCURITÉ UI :
+     * Seul un utilisateur possédant réellement
+     * le rôle AMBASSADOR peut accéder à l'espace
+     * Ambassadeur depuis ce menu.
+     */
+    if (role !== "AMBASSADOR") {
+      return;
+    }
+
+    navigate("ambassade");
   };
 
   // ==========================================================
@@ -179,8 +227,12 @@ export default function Menu({ setPage }) {
         className={[
           "menu-button",
           `menu-button--${variant}`,
-          disabled ? "menu-button--disabled" : "",
-          compact ? "menu-button--compact" : "",
+          disabled
+            ? "menu-button--disabled"
+            : "",
+          compact
+            ? "menu-button--compact"
+            : "",
         ]
           .filter(Boolean)
           .join(" ")}
@@ -238,7 +290,41 @@ export default function Menu({ setPage }) {
   );
 
   // ==========================================================
-  // LEGAL VIEW
+  // FORMATION AMBASSADEUR
+  // ==========================================================
+
+  if (ambassadorPage === "formation") {
+    return (
+      <div className="menu-legal-page">
+        <div className="menu-legal-page__topbar">
+          <button
+            type="button"
+            className="menu-legal-page__back"
+            onClick={closeFormation}
+          >
+            ← Retour au menu
+          </button>
+
+          <div className="menu-legal-page__brand">
+            <span className="menu-brand-mark">
+              6
+            </span>
+
+            <span>
+              Bet<span>Ball</span>
+            </span>
+          </div>
+        </div>
+
+        <main className="menu-legal-page__content">
+          <Formation />
+        </main>
+      </div>
+    );
+  }
+
+  // ==========================================================
+  // LEGAL VIEW — PRIVACY
   // ==========================================================
 
   if (legalPage === "privacy") {
@@ -270,6 +356,10 @@ export default function Menu({ setPage }) {
       </div>
     );
   }
+
+  // ==========================================================
+  // LEGAL VIEW — TERMS
+  // ==========================================================
 
   if (legalPage === "terms") {
     return (
@@ -338,7 +428,6 @@ export default function Menu({ setPage }) {
       value: "24/7",
       label: "Plateforme active",
     },
-    
     {
       icon: "🌍",
       value: "LIVE",
@@ -436,14 +525,36 @@ export default function Menu({ setPage }) {
           <div className="menu-mobile-nav">
             <button
               type="button"
-              onClick={() => navigate("profile")}
+              onClick={() =>
+                navigate("profile")
+              }
             >
               👤 Profil
             </button>
 
+            {/* AMBASSADEUR / FORMATION */}
+
+            {role === "AMBASSADOR" ? (
+              <button
+                type="button"
+                onClick={openAmbassadorSpace}
+              >
+                🤝 Espace Ambassadeur
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={openFormation}
+              >
+                🤝 Devenir Ambassadeur
+              </button>
+            )}
+
             <button
               type="button"
-              onClick={() => navigate("chat")}
+              onClick={() =>
+                navigate("chat")
+              }
             >
               📩 Support
             </button>
@@ -594,7 +705,6 @@ export default function Menu({ setPage }) {
           ))}
         </section>
 
-
         {/* ====================================================
             SERVICES
         ==================================================== */}
@@ -630,37 +740,41 @@ export default function Menu({ setPage }) {
               variant="profile"
             />
 
-            {/* AMBASSADEUR */}
+            {/* ==================================================
+                AMBASSADEUR
+                ==================================================
 
-            <MenuButton
-              icon="🤝"
-              title={
-                role === "AMBASSADOR"
-                  ? "Espace Ambassadeur"
-                  : "Devenir Ambassadeur"
-              }
-              subtitle={
-                role === "AMBASSADOR"
-                  ? "Récupérez les fonds, consultez vos opérations et gérez vos commissions."
-                  : "Découvrez le programme Ambassadeur et les possibilités offertes par 6BetBall."
-              }
-              onClick={() =>
-                navigate("ambassade")
-              }
-              variant="ambassador"
-              badge={
-                role === "AMBASSADOR"
-                  ? "ACTIF"
-                  : "AMBASSADEUR"
-              }
-            />
+                IMPORTANT :
+                - AMBASSADOR → véritable espace Ambassadeur
+                - autre rôle → Formation pour devenir Ambassadeur
+            */}
+
+            {role === "AMBASSADOR" ? (
+              <MenuButton
+                icon="🤝"
+                title="Espace Ambassadeur"
+                subtitle="Récupérez les fonds, consultez vos opérations et gérez vos commissions."
+                onClick={openAmbassadorSpace}
+                variant="ambassador"
+                badge="ACTIF"
+              />
+            ) : (
+              <MenuButton
+                icon="🤝"
+                title="Devenir Ambassadeur"
+                subtitle="Découvrez la formation, le programme Ambassadeur et les conditions pour rejoindre le réseau 6BetBall."
+                onClick={openFormation}
+                variant="ambassador"
+                badge="FORMATION"
+              />
+            )}
 
             {/* SUPPORT */}
 
             <MenuButton
               icon="📩"
               title="Retrouvez vos amis et Discutez"
-              subtitle="C'est aussi le meilleur moyen d'envoyer et récevoir des messages"
+              subtitle="C'est aussi le meilleur moyen d'envoyer et recevoir des messages."
               onClick={() =>
                 navigate("chat")
               }
@@ -844,7 +958,9 @@ export default function Menu({ setPage }) {
         <section className="menu-quick-access">
           <button
             type="button"
-            onClick={() => navigate("profile")}
+            onClick={() =>
+              navigate("profile")
+            }
           >
             <span>👤</span>
             <strong>Profil</strong>
@@ -852,7 +968,9 @@ export default function Menu({ setPage }) {
 
           <button
             type="button"
-            onClick={() => navigate("chat")}
+            onClick={() =>
+              navigate("chat")
+            }
           >
             <span>📩</span>
             <strong>Support</strong>
