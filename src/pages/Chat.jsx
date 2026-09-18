@@ -1370,7 +1370,7 @@ export default function Chat() {
                     event.target.value
                   )
                 }
-                placeholder="+243 975551224"
+                placeholder="+243 987654321"
                 autoComplete="tel"
                 autoFocus
                 onKeyDown={(event) => {

@@ -17,7 +17,71 @@ if (!API_URL) {
   throw new Error("❌ VITE_API_URL is missing");
 }
 
-const REFRESH_INTERVAL = 60000;
+// ------------------------------------------------------
+// Le polling reste uniquement un filet de sécurité.
+// La mise à jour normale du solde doit passer par
+// l'événement "wallet:updated" dès qu'une opération
+// modifie réellement le portefeuille.
+// ------------------------------------------------------
+
+const FALLBACK_REFRESH_INTERVAL = 5000;
+
+// ======================================================
+// NAVIGATION
+// ======================================================
+
+const NAV_ITEMS = [
+  {
+    id: "accueil",
+    
+    icon: "🏠",
+  },
+  {
+    id: "competition",
+    
+    icon: "🏆",
+  },
+  {
+    id: "infos",
+    
+    icon: "🔔",
+  },
+  {
+    id: "menu",
+    
+    icon: "☰",
+  },
+  {
+    id: "profile",
+    
+    icon: "👤",
+  },
+];
+
+// ======================================================
+// HELPERS
+// ======================================================
+
+function getStoredToken() {
+  return (
+    localStorage.getItem("token") ||
+    localStorage.getItem("accessToken")
+  );
+}
+
+function normalizeBalance(value) {
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue)) {
+    return 0;
+  }
+
+  return numericValue;
+}
+
+function formatBalance(value) {
+  return normalizeBalance(value).toLocaleString("fr-FR");
+}
 
 // ======================================================
 // COMPONENT
@@ -40,120 +104,176 @@ export default function Navbar({ setPage }) {
   // REFS
   // ====================================================
 
-  const intervalRef = useRef(null);
-
   const mountedRef = useRef(true);
 
   const loadingRef = useRef(false);
+
+  const intervalRef = useRef(null);
+
+  const broadcastChannelRef = useRef(null);
+
+  // ====================================================
+  // SET BALANCE SAFELY
+  // ====================================================
+
+  const updateBalance = useCallback((nextBalance) => {
+    if (!mountedRef.current) {
+      return;
+    }
+
+    setBalance(normalizeBalance(nextBalance));
+  }, []);
 
   // ====================================================
   // LOAD WALLET
   // ====================================================
 
-  const loadWallet = useCallback(async () => {
-    try {
-      // ----------------------------------------------
-      // Already loading
-      // ----------------------------------------------
+  const loadWallet = useCallback(
+    async ({ silent = false } = {}) => {
+      try {
+        // ------------------------------------------------
+        // Évite plusieurs requêtes simultanées.
+        // ------------------------------------------------
 
-      if (loadingRef.current) {
-        return;
-      }
-
-      // ----------------------------------------------
-      // Offline
-      // ----------------------------------------------
-
-      if (!navigator.onLine) {
-        setIsOffline(true);
-        return;
-      }
-
-      setIsOffline(false);
-
-      // ----------------------------------------------
-      // Token
-      // ----------------------------------------------
-
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        setBalance(0);
-        return;
-      }
-
-      // ----------------------------------------------
-      // Request
-      // ----------------------------------------------
-
-      loadingRef.current = true;
-
-      setLoading(true);
-
-      const res = await fetch(
-        `${API_URL}/wallet/me`,
-        {
-          method: "GET",
-
-          headers: {
-            Authorization: `Bearer ${token}`,
-
-            "Content-Type": "application/json",
-          },
+        if (loadingRef.current) {
+          return;
         }
-      );
 
-      // ----------------------------------------------
-      // Unauthorized
-      // ----------------------------------------------
+        // ------------------------------------------------
+        // Offline
+        // ------------------------------------------------
 
-      if (res.status === 401) {
-        console.warn("⚠️ Session expirée");
+        if (!navigator.onLine) {
+          if (mountedRef.current) {
+            setIsOffline(true);
+          }
 
-        localStorage.removeItem("token");
+          return;
+        }
 
-        setBalance(0);
+        if (mountedRef.current) {
+          setIsOffline(false);
+        }
 
-        return;
+        // ------------------------------------------------
+        // Token
+        // ------------------------------------------------
+
+        const token = getStoredToken();
+
+        if (!token) {
+          updateBalance(0);
+          return;
+        }
+
+        // ------------------------------------------------
+        // Loading uniquement pour le chargement initial.
+        // Les refresh silencieux ne doivent pas faire
+        // clignoter le portefeuille.
+        // ------------------------------------------------
+
+        loadingRef.current = true;
+
+        if (!silent && mountedRef.current) {
+          setLoading(true);
+        }
+
+        // ------------------------------------------------
+        // Request
+        // ------------------------------------------------
+
+        const controller = new AbortController();
+
+        const timeout = setTimeout(() => {
+          controller.abort();
+        }, 10000);
+
+        let res;
+
+        try {
+          res = await fetch(`${API_URL}/wallet/me`, {
+            method: "GET",
+
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+
+            cache: "no-store",
+
+            signal: controller.signal,
+          });
+        } finally {
+          clearTimeout(timeout);
+        }
+
+        // ------------------------------------------------
+        // Unauthorized
+        // ------------------------------------------------
+
+        if (res.status === 401) {
+          console.warn("⚠️ Session expirée");
+
+          localStorage.removeItem("token");
+          localStorage.removeItem("accessToken");
+
+          updateBalance(0);
+
+          return;
+        }
+
+        // ------------------------------------------------
+        // Server error
+        // ------------------------------------------------
+
+        if (!res.ok) {
+          console.error(
+            "❌ Wallet request failed:",
+            res.status
+          );
+
+          return;
+        }
+
+        // ------------------------------------------------
+        // Response
+        // ------------------------------------------------
+
+        const data = await res.json();
+
+        // ------------------------------------------------
+        // Compatible avec plusieurs formats backend.
+        // ------------------------------------------------
+
+        const nextBalance =
+          data?.balance ??
+          data?.wallet?.balance ??
+          data?.data?.balance ??
+          0;
+
+        updateBalance(nextBalance);
+      } catch (err) {
+        // Abort = timeout volontaire.
+        if (err?.name !== "AbortError") {
+          console.error(
+            "❌ Wallet error:",
+            err?.message || err
+          );
+        }
+
+        if (mountedRef.current && !navigator.onLine) {
+          setIsOffline(true);
+        }
+      } finally {
+        loadingRef.current = false;
+
+        if (mountedRef.current) {
+          setLoading(false);
+        }
       }
-
-      // ----------------------------------------------
-      // Server error
-      // ----------------------------------------------
-
-      if (!res.ok) {
-        console.error(
-          "❌ Wallet request failed:",
-          res.status
-        );
-
-        return;
-      }
-
-      // ----------------------------------------------
-      // Response
-      // ----------------------------------------------
-
-      const data = await res.json();
-
-      if (mountedRef.current) {
-        setBalance(data?.balance || 0);
-      }
-    } catch (err) {
-      console.error(
-        "❌ Wallet error:",
-        err?.message || err
-      );
-
-      setIsOffline(true);
-    } finally {
-      loadingRef.current = false;
-
-      if (mountedRef.current) {
-        setLoading(false);
-      }
-    }
-  }, []);
+    },
+    [updateBalance]
+  );
 
   // ====================================================
   // INITIAL LOAD
@@ -170,7 +290,169 @@ export default function Navbar({ setPage }) {
   }, [loadWallet]);
 
   // ====================================================
-  // AUTO REFRESH
+  // INSTANT WALLET EVENTS
+  // ====================================================
+  //
+  // Lorsqu'une autre partie de l'application modifie
+  // le solde, elle peut simplement faire :
+  //
+  // window.dispatchEvent(
+  //   new CustomEvent("wallet:updated", {
+  //     detail: { balance: nouveauSolde }
+  //   })
+  // );
+  //
+  // Le Navbar se met alors à jour immédiatement,
+  // sans attendre une nouvelle requête.
+  // ====================================================
+
+  useEffect(() => {
+    const handleWalletUpdated = (event) => {
+      const nextBalance =
+        event?.detail?.balance ??
+        event?.detail?.wallet?.balance ??
+        event?.detail?.amount;
+
+      if (
+        nextBalance !== undefined &&
+        nextBalance !== null
+      ) {
+        updateBalance(nextBalance);
+      }
+
+      // Si seul un signal de changement est envoyé,
+      // on récupère immédiatement la valeur serveur.
+      if (
+        nextBalance === undefined ||
+        nextBalance === null
+      ) {
+        loadWallet({ silent: true });
+      }
+    };
+
+    window.addEventListener(
+      "wallet:updated",
+      handleWalletUpdated
+    );
+
+    return () => {
+      window.removeEventListener(
+        "wallet:updated",
+        handleWalletUpdated
+      );
+    };
+  }, [loadWallet, updateBalance]);
+
+  // ====================================================
+  // BROADCAST CHANNEL
+  // ====================================================
+  //
+  // Permet de synchroniser plusieurs onglets du navigateur.
+  // ====================================================
+
+  useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      typeof BroadcastChannel === "undefined"
+    ) {
+      return undefined;
+    }
+
+    const channel = new BroadcastChannel(
+      "6betball-wallet"
+    );
+
+    broadcastChannelRef.current = channel;
+
+    const handleMessage = (event) => {
+      const data = event?.data;
+
+      if (!data) {
+        return;
+      }
+
+      if (data.type === "wallet:updated") {
+        if (
+          data.balance !== undefined &&
+          data.balance !== null
+        ) {
+          updateBalance(data.balance);
+        } else {
+          loadWallet({ silent: true });
+        }
+      }
+    };
+
+    channel.addEventListener(
+      "message",
+      handleMessage
+    );
+
+    return () => {
+      channel.removeEventListener(
+        "message",
+        handleMessage
+      );
+
+      channel.close();
+
+      broadcastChannelRef.current = null;
+    };
+  }, [loadWallet, updateBalance]);
+
+  // ====================================================
+  // STORAGE EVENT
+  // ====================================================
+
+  useEffect(() => {
+    const handleStorage = (event) => {
+      // Une autre fenêtre / un autre onglet a changé
+      // le token.
+      if (
+        event.key === "token" ||
+        event.key === "accessToken"
+      ) {
+        loadWallet({ silent: true });
+        return;
+      }
+
+      // Certaines parties de l'application peuvent
+      // également stocker directement le dernier solde.
+      if (
+        event.key === "wallet_balance" &&
+        event.newValue !== null
+      ) {
+        updateBalance(event.newValue);
+      }
+
+      // Signal générique.
+      if (event.key === "wallet_updated") {
+        loadWallet({ silent: true });
+      }
+    };
+
+    window.addEventListener(
+      "storage",
+      handleStorage
+    );
+
+    return () => {
+      window.removeEventListener(
+        "storage",
+        handleStorage
+      );
+    };
+  }, [loadWallet, updateBalance]);
+
+  // ====================================================
+  // FALLBACK REFRESH
+  // ====================================================
+  //
+  // Le Navbar ne dépend plus d'un refresh à 60 secondes.
+  //
+  // Le système événementiel fait la mise à jour immédiate.
+  // Ce polling sert uniquement de sécurité si une opération
+  // externe ne déclenche aucun événement frontend.
   // ====================================================
 
   useEffect(() => {
@@ -179,21 +461,35 @@ export default function Navbar({ setPage }) {
         return;
       }
 
-      loadWallet();
-    }, REFRESH_INTERVAL);
+      loadWallet({ silent: true });
+    }, FALLBACK_REFRESH_INTERVAL);
 
     return () => {
-      clearInterval(intervalRef.current);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
     };
   }, [loadWallet]);
 
   // ====================================================
-  // WINDOW FOCUS
+  // WINDOW FOCUS / VISIBILITY
   // ====================================================
 
   useEffect(() => {
+    const refresh = () => {
+      if (!document.hidden) {
+        loadWallet({ silent: true });
+      }
+    };
+
     const handleFocus = () => {
-      loadWallet();
+      refresh();
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        refresh();
+      }
     };
 
     window.addEventListener(
@@ -201,10 +497,20 @@ export default function Navbar({ setPage }) {
       handleFocus
     );
 
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityChange
+    );
+
     return () => {
       window.removeEventListener(
         "focus",
         handleFocus
+      );
+
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityChange
       );
     };
   }, [loadWallet]);
@@ -217,7 +523,7 @@ export default function Navbar({ setPage }) {
     const handleOnline = () => {
       setIsOffline(false);
 
-      loadWallet();
+      loadWallet({ silent: true });
     };
 
     const handleOffline = () => {
@@ -248,108 +554,70 @@ export default function Navbar({ setPage }) {
   }, [loadWallet]);
 
   // ====================================================
-  // FORMAT BALANCE
-  // ====================================================
-
-  const formatBalance = (value) => {
-    return Number(value || 0).toLocaleString(
-      "fr-FR"
-    );
-  };
-
-  // ====================================================
   // NAVIGATION
   // ====================================================
 
-  const navItems = [
-  {
-    id: "accueil",
-    icon: "🏠",
-  },
+  const handleNav = useCallback(
+    (page) => {
+      setActive(page);
 
-  {
-    id: "competition",
-    icon: "🏆",
-  },
-
-  {
-    id: "infos",
-    icon: "🔔",
-  },
-
-  {
-    id: "menu",
-    icon: "☰",
-  },
-
-  {
-    id: "profile",
-    icon: "👤",
-  },
-];
-
-  // ====================================================
-  // HANDLE NAVIGATION
-  // ====================================================
-
-  const handleNav = (page) => {
-    setActive(page);
-
-    if (setPage) {
-      setPage(page);
-    }
-  };
+      if (setPage) {
+        setPage(page);
+      }
+    },
+    [setPage]
+  );
 
   // ====================================================
   // RENDER
   // ====================================================
 
   return (
-    <header style={navbar}>
-      {/* ==================================================
-          MAIN NAVBAR
-      ================================================== */}
+    <header className="sixbetball-navbar">
+      <div className="sixbetball-navbar__inner">
 
-      <div style={navbarInner}>
-
-        {/* ==================================================
+        {/* ==============================================
             LOGO
-        ================================================== */}
+        ============================================== */}
 
         <button
           type="button"
-          style={logoSection}
+          className="sixbetball-navbar__logo"
           onClick={() => handleNav("accueil")}
           aria-label="Accueil 6BetBall"
         >
           <img
             src={logo}
             alt="6BetBall"
-            style={logoStyle}
+            className="sixbetball-navbar__logo-image"
           />
 
-          <span style={logoText}>
+          <span className="sixbetball-navbar__logo-text">
             6BetBall
           </span>
         </button>
 
-        {/* ==================================================
-            HORIZONTAL NAVIGATION
-        ================================================== */}
+        {/* ==============================================
+            NAVIGATION
+        ============================================== */}
 
         <nav
-          style={navigationWrapper}
+          className="sixbetball-navbar__navigation"
           aria-label="Navigation principale"
         >
-          <div style={navigation}>
-            {navItems.map((item) => {
-              const isActive =
-                active === item.id;
+          <div className="sixbetball-navbar__navigation-list">
+            {NAV_ITEMS.map((item) => {
+              const isActive = active === item.id;
 
               return (
                 <button
                   key={item.id}
                   type="button"
+                  className={`sixbetball-navbar__nav-button ${
+                    isActive
+                      ? "sixbetball-navbar__nav-button--active"
+                      : ""
+                  }`}
                   onClick={() =>
                     handleNav(item.id)
                   }
@@ -360,23 +628,15 @@ export default function Navbar({ setPage }) {
                       ? "page"
                       : undefined
                   }
-                  style={{
-                    ...navButton,
-
-                    ...(isActive
-                      ? activeStyle
-                      : {}),
-                  }}
                 >
                   <span
-                    style={navIcon}
+                    className="sixbetball-navbar__nav-icon"
+                    aria-hidden="true"
                   >
                     {item.icon}
                   </span>
 
-                  <span
-                    style={navLabel}
-                  >
+                  <span className="sixbetball-navbar__nav-label">
                     {item.label}
                   </span>
                 </button>
@@ -385,19 +645,19 @@ export default function Navbar({ setPage }) {
           </div>
         </nav>
 
-        {/* ==================================================
-            RIGHT SIDE
-        ================================================== */}
+        {/* ==============================================
+            DESKTOP RIGHT SIDE
+        ============================================== */}
 
-        <div style={rightSection}>
+        <div className="sixbetball-navbar__right">
 
-          {/* ==================================================
+          {/* ----------------------------------------------
               DOWNLOAD
-          ================================================== */}
+          ---------------------------------------------- */}
 
           <button
             type="button"
-            style={downloadButton}
+            className="sixbetball-navbar__download"
             onClick={() =>
               window.open(
                 "https://backend-ad3t.onrender.com/downloads/6BetBall.apk",
@@ -405,42 +665,52 @@ export default function Navbar({ setPage }) {
                 "noopener,noreferrer"
               )
             }
+            aria-label="Télécharger 6BetBall"
           >
-            📱⬇️
+            <span aria-hidden="true">
+              📱⬇️
+            </span>
+
             <span>
               Télécharger
             </span>
           </button>
 
-          {/* ==================================================
+          {/* ----------------------------------------------
               WALLET
-          ================================================== */}
+          ---------------------------------------------- */}
 
           <div
-            style={wallet}
+            className="sixbetball-navbar__wallet"
             title="Solde du portefeuille"
+            aria-label={`Solde : ${formatBalance(
+              balance
+            )} CDF`}
           >
             {isOffline ? (
-              <span
-                style={{
-                  color: "#ef4444",
-                }}
-              >
+              <span className="sixbetball-navbar__wallet-offline">
                 🔴 Hors ligne
               </span>
             ) : loading ? (
-              "⏳ ..."
+              <span className="sixbetball-navbar__wallet-loading">
+                ⏳ ...
+              </span>
             ) : (
               <>
-                💰{" "}
-                {formatBalance(
-                  balance
-                )}{" "}
-                CDF
+                <span aria-hidden="true">
+                  💰
+                </span>
+
+                <span>
+                  {formatBalance(balance)}
+                </span>
+
+                <span>
+                  CDF
+                </span>
               </>
             )}
           </div>
-
         </div>
       </div>
     </header>
@@ -450,305 +720,553 @@ export default function Navbar({ setPage }) {
 // ======================================================
 // STYLES
 // ======================================================
-
-const navbar = {
-  position: "fixed",
-
-  top: 0,
-
-  left: 0,
-
-  right: 0,
-
-  width: "100%",
-
-  height: 70,
-
-  background:
-    "rgba(15, 23, 42, 0.92)",
-
-  backdropFilter:
-    "blur(12px)",
-
-  WebkitBackdropFilter:
-    "blur(12px)",
-
-  borderBottom:
-    "1px solid rgba(255,255,255,0.05)",
-
-  zIndex: 9999,
-
-  color: "white",
-
-  boxSizing: "border-box",
-
-  overflow: "hidden",
-};
-
-// ======================================================
-// INNER
+//
+// Le Navbar est volontairement dans le flux normal.
+//
+// IMPORTANT :
+// - PAS de position: fixed
+// - PAS de position: absolute
+// - PAS de z-index gigantesque
+//
+// Ainsi le contenu de chaque page commence après le
+// Navbar et aucune page ne passe derrière lui.
 // ======================================================
 
-const navbarInner = {
-  width: "100%",
+const styleId =
+  "sixbetball-navbar-styles";
 
-  height: "100%",
+if (
+  typeof document !== "undefined" &&
+  !document.getElementById(styleId)
+) {
+  const style = document.createElement("style");
 
-  display: "flex",
+  style.id = styleId;
 
-  alignItems: "center",
+  style.textContent = `
+    /* ==================================================
+       ROOT NAVBAR
+    ================================================== */
 
-  gap: 12,
+    .sixbetball-navbar {
+      position: relative;
+      width: 100%;
+      flex: 0 0 auto;
 
-  padding:
-    "0 16px",
+      background:
+        linear-gradient(
+          180deg,
+          rgba(15, 23, 42, 0.98),
+          rgba(15, 23, 42, 0.94)
+        );
 
-  boxSizing: "border-box",
+      color: #ffffff;
 
-  minWidth: 0,
-};
+      border-bottom:
+        1px solid rgba(255, 255, 255, 0.08);
 
-// ======================================================
-// LOGO
-// ======================================================
+      box-sizing: border-box;
 
-const logoSection = {
-  flexShrink: 0,
+      isolation: isolate;
+    }
 
-  display: "flex",
+    /* ==================================================
+       INNER
+    ================================================== */
 
-  alignItems: "center",
+    .sixbetball-navbar__inner {
+      width: 100%;
+      max-width: 100%;
 
-  gap: 10,
+      min-height: 70px;
 
-  border: "none",
+      display: flex;
+      align-items: center;
 
-  background: "transparent",
+      gap: 14px;
 
-  color: "white",
+      padding:
+        10px 16px;
 
-  cursor: "pointer",
+      box-sizing: border-box;
+    }
 
-  padding: 0,
+    /* ==================================================
+       LOGO
+    ================================================== */
 
-  minWidth: 145,
-};
+    .sixbetball-navbar__logo {
+      flex: 0 0 auto;
 
-const logoStyle = {
-  width: 40,
+      display: flex;
+      align-items: center;
 
-  height: 40,
+      gap: 10px;
 
-  borderRadius: 10,
+      min-width: 145px;
 
-  objectFit: "cover",
+      padding: 0;
 
-  flexShrink: 0,
-};
+      border: 0;
 
-const logoText = {
-  fontWeight: "bold",
+      background: transparent;
 
-  fontSize: 17,
+      color: #ffffff;
 
-  whiteSpace: "nowrap",
-};
+      cursor: pointer;
 
-// ======================================================
-// NAVIGATION WRAPPER
-// ======================================================
+      font: inherit;
 
-const navigationWrapper = {
-  flex: "1 1 auto",
+      text-align: left;
+    }
 
-  minWidth: 0,
+    .sixbetball-navbar__logo-image {
+      width: 40px;
+      height: 40px;
 
-  overflowX: "auto",
+      flex: 0 0 40px;
 
-  overflowY: "hidden",
+      border-radius: 10px;
 
-  WebkitOverflowScrolling:
-    "touch",
+      object-fit: cover;
 
-  scrollbarWidth: "none",
+      display: block;
+    }
 
-  msOverflowStyle: "none",
-};
+    .sixbetball-navbar__logo-text {
+      font-size: 17px;
 
-// ======================================================
-// NAVIGATION
-// ======================================================
+      font-weight: 800;
 
-const navigation = {
-  display: "flex",
+      letter-spacing: 0.2px;
 
-  alignItems: "center",
+      white-space: nowrap;
+    }
 
-  gap: 10,
+    /* ==================================================
+       NAVIGATION
+    ================================================== */
 
-  width: "max-content",
+    .sixbetball-navbar__navigation {
+      flex: 1 1 auto;
 
-  minWidth: "max-content",
+      min-width: 0;
 
-  padding:
-    "4px 2px",
-};
+      display: flex;
+      align-items: center;
 
-// ======================================================
-// NAV BUTTON
-// ======================================================
+      justify-content: center;
+    }
 
-const navButton = {
-  flex: "0 0 auto",
+    .sixbetball-navbar__navigation-list {
+      width: 100%;
 
-  minWidth: 48,
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
-  height: 46,
+      gap: 8px;
 
-  padding:
-    "0 12px",
+      min-width: 0;
+    }
 
-  borderRadius: 12,
+    /* ==================================================
+       NAV BUTTON
+    ================================================== */
 
-  border: "none",
+    .sixbetball-navbar__nav-button {
+      flex: 0 1 auto;
 
-  background:
-    "#1e293b",
+      min-width: 82px;
+      min-height: 46px;
 
-  color: "white",
+      padding:
+        7px 12px;
 
-  cursor: "pointer",
+      border: 0;
 
-  display: "flex",
+      border-radius: 12px;
 
-  alignItems: "center",
+      background:
+        rgba(30, 41, 59, 0.95);
 
-  justifyContent:
-    "center",
+      color: #ffffff;
 
-  gap: 7,
+      cursor: pointer;
 
-  fontSize: 18,
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
 
-  whiteSpace: "nowrap",
+      gap: 7px;
 
-  transition:
-    "all 0.2s ease",
+      font: inherit;
 
-  boxSizing: "border-box",
-};
+      box-sizing: border-box;
 
-// ======================================================
-// NAV ICON
-// ======================================================
+      transition:
+        background 0.18s ease,
+        transform 0.18s ease,
+        box-shadow 0.18s ease;
+    }
 
-const navIcon = {
-  display: "inline-flex",
+    .sixbetball-navbar__nav-button:hover {
+      background:
+        rgba(51, 65, 85, 0.98);
 
-  alignItems: "center",
+      transform:
+        translateY(-1px);
+    }
 
-  justifyContent: "center",
+    .sixbetball-navbar__nav-button:focus-visible {
+      outline:
+        2px solid #60a5fa;
 
-  fontSize: 20,
+      outline-offset: 2px;
+    }
 
-  lineHeight: 1,
-};
+    .sixbetball-navbar__nav-button--active {
+      background:
+        linear-gradient(
+          90deg,
+          #2563eb,
+          #7c3aed
+        );
 
-// ======================================================
-// NAV LABEL
-// ======================================================
+      box-shadow:
+        0 6px 18px
+        rgba(37, 99, 235, 0.25);
+    }
 
-const navLabel = {
-  fontSize: 13,
+    .sixbetball-navbar__nav-button--active:hover {
+      background:
+        linear-gradient(
+          90deg,
+          #2563eb,
+          #7c3aed
+        );
 
-  fontWeight: 600,
+      transform:
+        translateY(-1px);
+    }
 
-  whiteSpace: "nowrap",
-};
+    /* ==================================================
+       NAV ICON
+    ================================================== */
 
-// ======================================================
-// ACTIVE
-// ======================================================
+    .sixbetball-navbar__nav-icon {
+      display: inline-flex;
 
-const activeStyle = {
-  background:
-    "linear-gradient(90deg, #2563eb, #7c3aed)",
+      align-items: center;
+      justify-content: center;
 
-  transform:
-    "scale(1.03)",
+      font-size: 20px;
 
-  boxShadow:
-    "0 5px 15px rgba(0,0,0,0.4)",
-};
+      line-height: 1;
+    }
 
-// ======================================================
-// RIGHT SECTION
-// ======================================================
+    /* ==================================================
+       NAV LABEL
+    ================================================== */
 
-const rightSection = {
-  flexShrink: 0,
+    .sixbetball-navbar__nav-label {
+      font-size: 13px;
 
-  display: "flex",
+      font-weight: 700;
 
-  alignItems: "center",
+      line-height: 1;
 
-  gap: 10,
-};
+      white-space: nowrap;
+    }
 
-// ======================================================
-// WALLET
-// ======================================================
+    /* ==================================================
+       RIGHT SECTION
+    ================================================== */
 
-const wallet = {
-  background:
-    "#1e293b",
+    .sixbetball-navbar__right {
+      flex: 0 0 auto;
 
-  padding:
-    "8px 14px",
+      display: flex;
 
-  borderRadius: 10,
+      align-items: center;
 
-  fontWeight: "bold",
+      gap: 10px;
+    }
 
-  fontSize: 14,
+    /* ==================================================
+       DOWNLOAD
+    ================================================== */
 
-  border:
-    "1px solid rgba(255,255,255,0.05)",
+    .sixbetball-navbar__download {
+      min-height: 44px;
 
-  minWidth: 140,
+      padding:
+        9px 14px;
 
-  textAlign: "center",
+      border: 0;
 
-  whiteSpace: "nowrap",
+      border-radius: 10px;
 
-  flexShrink: 0,
-};
+      background:
+        linear-gradient(
+          90deg,
+          #22c55e,
+          #16a34a
+        );
 
-// ======================================================
-// DOWNLOAD
-// ======================================================
+      color: #ffffff;
 
-const downloadButton = {
-  background:
-    "linear-gradient(90deg,#22c55e,#16a34a)",
+      cursor: pointer;
 
-  color: "#fff",
+      display: inline-flex;
 
-  border: "none",
+      align-items: center;
+      justify-content: center;
 
-  borderRadius: 10,
+      gap: 6px;
 
-  padding:
-    "10px 16px",
+      font: inherit;
 
-  fontWeight: "bold",
+      font-size: 13px;
 
-  cursor: "pointer",
+      font-weight: 800;
 
-  whiteSpace: "nowrap",
+      white-space: nowrap;
 
-  transition:
-    "0.2s",
+      transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease;
+    }
 
-  flexShrink: 0,
-};
+    .sixbetball-navbar__download:hover {
+      transform:
+        translateY(-1px);
+
+      box-shadow:
+        0 5px 15px
+        rgba(34, 197, 94, 0.22);
+    }
+
+    .sixbetball-navbar__download:focus-visible {
+      outline:
+        2px solid #86efac;
+
+      outline-offset: 2px;
+    }
+
+    /* ==================================================
+       WALLET
+    ================================================== */
+
+    .sixbetball-navbar__wallet {
+      min-width: 145px;
+
+      min-height: 44px;
+
+      padding:
+        8px 13px;
+
+      border:
+        1px solid rgba(255, 255, 255, 0.07);
+
+      border-radius: 10px;
+
+      background:
+        rgba(30, 41, 59, 0.95);
+
+      box-sizing: border-box;
+
+      display: inline-flex;
+
+      align-items: center;
+      justify-content: center;
+
+      gap: 5px;
+
+      font-size: 14px;
+
+      font-weight: 800;
+
+      white-space: nowrap;
+    }
+
+    .sixbetball-navbar__wallet-offline {
+      color: #ef4444;
+    }
+
+    .sixbetball-navbar__wallet-loading {
+      opacity: 0.75;
+    }
+
+    /* ==================================================
+       LARGE DESKTOP
+    ================================================== */
+
+    @media (min-width: 1400px) {
+      .sixbetball-navbar__inner {
+        padding-left: 24px;
+        padding-right: 24px;
+      }
+
+      .sixbetball-navbar__navigation-list {
+        gap: 12px;
+      }
+
+      .sixbetball-navbar__nav-button {
+        min-width: 105px;
+      }
+    }
+
+    /* ==================================================
+       SMALL DESKTOP / TABLET LANDSCAPE
+    ================================================== */
+
+    @media (max-width: 1150px) {
+      .sixbetball-navbar__inner {
+        gap: 8px;
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+
+      .sixbetball-navbar__logo {
+        min-width: 125px;
+      }
+
+      .sixbetball-navbar__logo-text {
+        font-size: 16px;
+      }
+
+      .sixbetball-navbar__nav-button {
+        min-width: 70px;
+        padding-left: 8px;
+        padding-right: 8px;
+      }
+
+      .sixbetball-navbar__nav-label {
+        font-size: 12px;
+      }
+
+      .sixbetball-navbar__wallet {
+        min-width: 125px;
+        font-size: 13px;
+      }
+
+      .sixbetball-navbar__download {
+        padding-left: 10px;
+        padding-right: 10px;
+      }
+    }
+
+    /* ==================================================
+       TABLET / MOBILE
+    ================================================== */
+
+    @media (max-width: 768px) {
+      /*
+       * MOBILE :
+       * uniquement les 5 onglets.
+       *
+       * Logo, téléchargement et portefeuille
+       * disparaissent complètement.
+       */
+
+      .sixbetball-navbar__inner {
+        min-height: 68px;
+
+        padding:
+          7px 8px;
+
+        gap: 0;
+      }
+
+      .sixbetball-navbar__logo,
+      .sixbetball-navbar__right {
+        display: none;
+      }
+
+      .sixbetball-navbar__navigation {
+        width: 100%;
+        flex: 1 1 100%;
+
+        justify-content: stretch;
+      }
+
+      .sixbetball-navbar__navigation-list {
+        width: 100%;
+
+        gap: 4px;
+
+        justify-content: space-between;
+      }
+
+      .sixbetball-navbar__nav-button {
+        flex: 1 1 20%;
+
+        min-width: 0;
+
+        min-height: 54px;
+
+        padding:
+          5px 3px;
+
+        border-radius: 11px;
+
+        flex-direction: column;
+
+        gap: 4px;
+      }
+
+      .sixbetball-navbar__nav-icon {
+        font-size: 20px;
+      }
+
+      .sixbetball-navbar__nav-label {
+        font-size: 10px;
+
+        font-weight: 800;
+      }
+    }
+
+    /* ==================================================
+       PETITS MOBILES
+    ================================================== */
+
+    @media (max-width: 380px) {
+      .sixbetball-navbar__inner {
+        padding-left: 5px;
+        padding-right: 5px;
+      }
+
+      .sixbetball-navbar__navigation-list {
+        gap: 2px;
+      }
+
+      .sixbetball-navbar__nav-button {
+        min-height: 52px;
+
+        border-radius: 9px;
+      }
+
+      .sixbetball-navbar__nav-icon {
+        font-size: 18px;
+      }
+
+      .sixbetball-navbar__nav-label {
+        font-size: 9px;
+      }
+    }
+
+    /* ==================================================
+       REDUCED MOTION
+    ================================================== */
+
+    @media (prefers-reduced-motion: reduce) {
+      .sixbetball-navbar__nav-button,
+      .sixbetball-navbar__download {
+        transition: none;
+      }
+    }
+  `;
+
+  document.head.appendChild(style);
+}
