@@ -11,9 +11,6 @@ import React from "react";
 export default function DashboardStats({ stats = {} }) {
   /**
    * Formatage des montants.
-   *
-   * On protège la valeur pour éviter les erreurs si le backend
-   * renvoie null, undefined ou une chaîne.
    */
   const formatMoney = (value) => {
     const amount = Number(value) || 0;
@@ -25,91 +22,141 @@ export default function DashboardStats({ stats = {} }) {
   };
 
   return (
-    <div style={grid}>
-      {/* UTILISATEURS */}
-      <Card
-        title="👤 Users"
-        value={stats.users ?? 0}
-      />
+    <section className="dashboard-stats">
 
-      {/* MATCHS */}
-      <Card
-        title="⚽ Matches"
-        value={stats.matches ?? 0}
-      />
+      {/* =========================
+          EN-TÊTE DES STATISTIQUES
+      ========================= */}
+      <div className="dashboard-stats-header">
+        <div>
+          <span className="dashboard-stats-eyebrow">
+            Vue générale
+          </span>
 
-      {/* DEPOTS */}
-      <Card
-        title="💰 Total Deposits"
-        value={formatMoney(stats.totalDeposits)}
-        suffix=" FC"
-      />
+          <h2>Statistiques du système</h2>
 
-      {/* RETRAITS */}
-      <Card
-        title="💸 Total Withdrawals"
-        value={formatMoney(stats.totalWithdrawals)}
-        suffix=" FC"
-      />
+          <p>
+            Aperçu des principales données de la plateforme.
+          </p>
+        </div>
 
-      {/* TRANSACTIONS EN ATTENTE */}
-      <Card
-        title="⏳ Pending Transactions"
-        value={stats.pendingTx ?? 0}
-      />
-    </div>
+        <div className="dashboard-stats-live">
+          <span className="dashboard-stats-live-dot" />
+          Données actuelles
+        </div>
+      </div>
+
+      {/* =========================
+          GRILLE DES STATISTIQUES
+      ========================= */}
+      <div className="dashboard-stats-grid">
+
+        {/* UTILISATEURS */}
+        <StatCard
+          className="dashboard-stat-users"
+          icon="👤"
+          title="Utilisateurs"
+          value={stats.users ?? 0}
+          status="Actifs"
+          footer="Utilisateurs enregistrés"
+        />
+
+        {/* MATCHS */}
+        <StatCard
+          className="dashboard-stat-matches"
+          icon="⚽"
+          title="Matchs"
+          value={stats.matches ?? 0}
+          status="Matchs"
+          footer="Matchs enregistrés"
+        />
+
+        {/* DÉPÔTS */}
+        <StatCard
+          className="dashboard-stat-deposits"
+          icon="💰"
+          title="Total dépôts"
+          value={formatMoney(stats.totalDeposits)}
+          suffix=" FC"
+          status="Dépôts"
+          footer="Montant total déposé"
+        />
+
+        {/* RETRAITS */}
+        <StatCard
+          className="dashboard-stat-withdrawals"
+          icon="💸"
+          title="Total retraits"
+          value={formatMoney(stats.totalWithdrawals)}
+          suffix=" FC"
+          status="Retraits"
+          footer="Montant total retiré"
+        />
+
+        {/* TRANSACTIONS EN ATTENTE */}
+        <StatCard
+          className="dashboard-stat-pending"
+          icon="⏳"
+          title="Transactions en attente"
+          value={stats.pendingTx ?? 0}
+          status="À traiter"
+          footer="Transactions nécessitant une action"
+        />
+
+      </div>
+    </section>
   );
 }
 
 /**
- * Carte statistique
+ * Carte statistique réutilisable.
  */
-function Card({ title, value, suffix = "" }) {
+function StatCard({
+  className = "",
+  icon,
+  title,
+  value,
+  suffix = "",
+  status,
+  footer,
+}) {
   return (
-    <div style={card}>
-      <h3 style={titleStyle}>
-        {title}
-      </h3>
+    <article
+      className={`dashboard-stat-card ${className}`.trim()}
+    >
+      {/* TOP */}
+      <div className="dashboard-stat-top">
 
-      <p style={valueStyle}>
-        {value}
-        {suffix}
-      </p>
-    </div>
+        <div className="dashboard-stat-icon">
+          {icon}
+        </div>
+
+        <span className="dashboard-stat-status">
+          {status}
+        </span>
+
+      </div>
+
+      {/* BODY */}
+      <div className="dashboard-stat-body">
+
+        <span className="dashboard-stat-label">
+          {title}
+        </span>
+
+        <strong className="dashboard-stat-value">
+          {value}
+          {suffix}
+        </strong>
+
+      </div>
+
+      {/* FOOTER */}
+      {footer && (
+        <div className="dashboard-stat-footer">
+          {footer}
+        </div>
+      )}
+    </article>
   );
 }
-
-/* =========================
-   STYLES
-========================= */
-
-const grid = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-  gap: 15,
-  width: "100%",
-};
-
-const card = {
-  background: "#1e293b",
-  padding: 15,
-  borderRadius: 10,
-  border: "1px solid rgba(255,255,255,0.06)",
-  minHeight: 100,
-  boxSizing: "border-box",
-};
-
-const titleStyle = {
-  margin: 0,
-  marginBottom: 8,
-  fontSize: 14,
-  fontWeight: 600,
-  color: "#cbd5e1",
-};
-
-const valueStyle = {
-  margin: 0,
-  fontSize: 22,
-  fontWeight: "bold",
-  color: "#ffffff",
-};

@@ -143,79 +143,30 @@ export default function AIControlPanel({
   // CREDIT BOT
   // =====================================
 
-  const handleCredit =
-    async () => {
+  const handleCredit = async () => {
+    const amount = Number(creditAmount);
 
+    if (!amount || amount <= 0) {
+      return setError("Montant invalide.");
+    }
 
-      const amount =
-        Number(
-          creditAmount
-        );
+    if (typeof creditBot !== "function") {
+      return setError("creditBot non fourni");
+    }
 
+    try {
+      setError("");
 
-      if(
-        !amount ||
-        amount <= 0
-      ){
-
-        return alert(
-          "Montant invalide"
-        );
-
-      }
-
-
-
-      try {
-
-
-        await creditBot(
-          amount
-        );
-
-        if(typeof creditBot !== "function"){
-          throw new Error("creditBot non fourni");
-        }
-
-
-        setCreditAmount("");
-
-        await refreshAI();
-
-
-        alert(
-          "✅ Wallet IA crédité"
-        );
-
-
-      }catch(error){
-
-
-        console.error(error);
-
-
-        alert(
-          error?.response?.data?.message ||
-          "Erreur crédit IA"
-        );
-
-
-      }
-
-    };
-
-
-
-
-
-
-  
-
-
-
-
-
-
+      await creditBot(amount);
+      await refreshAI();
+    } catch (error) {
+      setError(
+        error?.response?.data?.message ||
+        error?.message ||
+        "Impossible de créditer le bot."
+      );
+    }
+  };
 
   // =====================================
   // TRANSFER SYSTEM
