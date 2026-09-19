@@ -7,7 +7,7 @@ import {
 import {
   createAd,
   updateAd,
-} from "../../services/adService";
+} from "../services/adService";
 
 export default function AdsEditor({
   ad = null,

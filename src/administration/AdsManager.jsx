@@ -4,7 +4,7 @@ import {
   getAllAds,
   deleteAd,
   toggleAdStatus,
-} from "../../services/adService";
+} from "../services/adService";
 
 import AdsEditor from "./AdsEditor";
 

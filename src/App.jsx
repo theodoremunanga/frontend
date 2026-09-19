@@ -24,7 +24,7 @@ import { useState, useEffect, useCallback } from "react";
 // COMPONENTS
 // ============================================================
 
-import AdminDashboard from "./components/AdminDashboard";
+import AdminDashboard from "./administration/AdminDashboard";
 import Navbar from "./components/Navbar";
 
 import Accueil from "./pages/Accueil";

@@ -4,7 +4,7 @@ import {
   useState,
 } from "react";
 
-import api from "../../services/api";
+import api from "../services/api";
 
 const API_BASE =
   import.meta.env.VITE_API_URL?.replace(
