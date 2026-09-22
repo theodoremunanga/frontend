@@ -61,8 +61,6 @@ import {
 // CONFIGURATION
 // ============================================================
 
-const REFRESH_INTERVAL = 5000;
-
 // ============================================================
 // STATS PAR DEFAUT
 // ============================================================
@@ -354,104 +352,50 @@ const AdminDashboard = () => {
   // CHARGER LES UTILISATEURS
   // ==========================================================
 
-  const fetchUsers =
-    useCallback(async () => {
-      try {
-        /*
-         * adminApi ne possède actuellement pas
-         * getUsers().
-         *
-         * On utilise donc l'API générale directement.
-         */
-        const response =
-          await api.get("/admin/users");
+  const fetchUsers = useCallback(async () => {
+  try {
+    const response = await api.get("/admin/users");
+    const list = extractArray(response?.data);
 
-        const list =
-          extractArray(response?.data);
+    console.log("👥 ADMIN USERS :", list.length);
+    setUsers(list);
 
-        console.log(
-          "👥 ADMIN USERS :",
-          list.length,
-        );
+    return list;
+  } catch (error) {
+    console.error("❌ ADMIN USERS :", error);
+    return [];
+  }
+}, []);
 
-        setUsers(list);
+const fetchTransactions = useCallback(async () => {
+  try {
+    const response = await adminApi.getTransactions();
+    const list = extractArray(response);
 
-        return list;
-      } catch (error) {
-        console.error(
-          "❌ ADMIN USERS :",
-          error,
-        );
+    console.log("💰 ADMIN TRANSACTIONS :", list.length);
+    setTransactions(list);
 
-        /*
-         * On ne détruit pas la liste déjà chargée
-         * si un refresh échoue.
-         */
-        return users;
-      }
-    }, [users]);
+    return list;
+  } catch (error) {
+    console.error("❌ ADMIN TRANSACTIONS :", error);
+    return [];
+  }
+}, []);
 
-  // ==========================================================
-  // CHARGER LES TRANSACTIONS
-  // ==========================================================
+const fetchMatches = useCallback(async () => {
+  try {
+    const response = await adminApi.getMatches();
+    const list = extractArray(response);
 
-  const fetchTransactions =
-    useCallback(async () => {
-      try {
-        const response =
-          await adminApi.getTransactions();
+    console.log("⚽ ADMIN MATCHES :", list.length);
+    setMatches(list);
 
-        const list =
-          extractArray(response);
-
-        console.log(
-          "💰 ADMIN TRANSACTIONS :",
-          list.length,
-        );
-
-        setTransactions(list);
-
-        return list;
-      } catch (error) {
-        console.error(
-          "❌ ADMIN TRANSACTIONS :",
-          error,
-        );
-
-        return transactions;
-      }
-    }, [transactions]);
-
-  // ==========================================================
-  // CHARGER LES MATCHS
-  // ==========================================================
-
-  const fetchMatches =
-    useCallback(async () => {
-      try {
-        const response =
-          await adminApi.getMatches();
-
-        const list =
-          extractArray(response);
-
-        console.log(
-          "⚽ ADMIN MATCHES :",
-          list.length,
-        );
-
-        setMatches(list);
-
-        return list;
-      } catch (error) {
-        console.error(
-          "❌ ADMIN MATCHES :",
-          error,
-        );
-
-        return matches;
-      }
-    }, [matches]);
+    return list;
+  } catch (error) {
+    console.error("❌ ADMIN MATCHES :", error);
+    return [];
+  }
+}, []);
 
   // ==========================================================
   // CHARGEMENT GLOBAL ADMIN
@@ -509,15 +453,6 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     fetchAdminData();
-
-    const interval =
-      setInterval(() => {
-        fetchAdminData();
-      }, REFRESH_INTERVAL);
-
-    return () => {
-      clearInterval(interval);
-    };
   }, [fetchAdminData]);
 
   // ==========================================================
@@ -595,61 +530,124 @@ const AdminDashboard = () => {
     try {
       setAILoading(true);
 
-      const [settingsResponse, walletResponse] = await Promise.all([
-        getAISettings(),
-        getAIWallet(),
-      ]);
+      const [settingsResult, walletResult] =
+        await Promise.allSettled([
+          getAISettings(),
+          getAIWallet(),
+        ]);
 
-      console.log("🤖 ADMIN AI SETTINGS :", settingsResponse);
-      console.log("💰 ADMIN AI WALLET :", walletResponse);
+      let settings = null;
+      let user = null;
 
-      const settings =
-        settingsResponse?.data ??
-        settingsResponse?.settings ??
-        settingsResponse ??
-        null;
+      // ============================
+      // SETTINGS
+      // ============================
 
-      const wallet =
-        walletResponse?.data ??
-        walletResponse?.wallet ??
-        walletResponse ??
-        null;
+      if (settingsResult.status === "fulfilled") {
+        const response = settingsResult.value;
 
-      setAI({
-        settings,
-        user: wallet?.user ?? wallet,
-      });
+        console.log(
+          "🤖 ADMIN AI SETTINGS :",
+          response
+        );
+
+        settings =
+          response?.data ??
+          response?.settings ??
+          response ??
+          null;
+      } else {
+        console.error(
+          "❌ ADMIN AI SETTINGS :",
+          settingsResult.reason
+        );
+      }
+
+      // ============================
+      // WALLET
+      // ============================
+
+      if (walletResult.status === "fulfilled") {
+        const response = walletResult.value;
+
+        console.log(
+          "💰 ADMIN AI WALLET :",
+          response
+        );
+
+        const wallet =
+          response?.data ??
+          response?.wallet ??
+          response ??
+          null;
+
+        user =
+          wallet?.user ??
+          wallet ??
+          null;
+      } else {
+        console.error(
+          "❌ ADMIN AI WALLET :",
+          walletResult.reason
+        );
+      }
+
+      // ============================
+      // ON CONSERVE CE QUI FONCTIONNE
+      // ============================
+
+      setAI((previous) => ({
+        settings:
+          settings ??
+          previous?.settings ??
+          null,
+
+        user:
+          user ??
+          previous?.user ??
+          null,
+      }));
 
       return {
         settings,
-        user: wallet?.user ?? wallet,
+        user,
+        walletError:
+          walletResult.status === "rejected"
+            ? walletResult.reason
+            : null,
       };
+
     } catch (error) {
-      console.error("❌ ADMIN AI :", error);
+      console.error(
+        "❌ ADMIN AI :",
+        error
+      );
+
       throw error;
+
     } finally {
       setAILoading(false);
     }
   }, []);
 
-  const saveSettings = useCallback(async (settings) => {
-    try {
-      setAILoading(true);
+    const saveSettings = useCallback(async (settings) => {
+      try {
+        setAILoading(true);
 
-      const response = await updateAISettings(settings);
+        const response = await updateAISettings(settings);
 
-      console.log("🤖 ADMIN AI SETTINGS UPDATED :", response);
+        console.log("🤖 ADMIN AI SETTINGS UPDATED :", response);
 
-      await refreshAI();
+        await refreshAI();
 
-      return response;
-    } catch (error) {
-      console.error("❌ ADMIN AI SETTINGS UPDATE :", error);
-      throw error;
-    } finally {
-      setAILoading(false);
-    }
-  }, [refreshAI]);
+        return response;
+      } catch (error) {
+        console.error("❌ ADMIN AI SETTINGS UPDATE :", error);
+        throw error;
+      } finally {
+        setAILoading(false);
+      }
+    }, [refreshAI]);
 
   // ==========================================================
   // CHANGEMENT DE SECTION
