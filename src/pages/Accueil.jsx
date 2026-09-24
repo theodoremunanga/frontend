@@ -39,7 +39,7 @@ const games = [
     icon: "♟️",
     id: "dames",
     available: true,
-    image: "/assets/login/hero-gaming.PNG",
+    image: "./assets/login/hero-gaming.PNG",
     description:
       "Le jeu de Réflexion.",
     players: "2 Joueurs",
@@ -936,7 +936,7 @@ const handleCreateChallenge =
           <div style={topBar}>
             <div>
               <h1 style={title}>
-                6BetBall, ICI ON JOUE; ON NE PARIE PAS !
+                  ICI ON JOUE, ON NE PARIE PAS !
               </h1>
 
               <p style={subtitle}>
