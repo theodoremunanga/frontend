@@ -14,6 +14,7 @@ import { API_URL } from "../services/api";
 import SponsoredBanner from "../components/ads/SponsoredBanner";
 import AdCarousel from "../components/ads/AdCarousel";
 import AdComments from "../components/ads/AdComments";
+import Casino from "../components/Casino";
 
 import {
   getHomeFeedAds,
@@ -1352,9 +1353,13 @@ const handleCreateChallenge =
                     title="Jeux disponibles"
                   />
 
-                  <div
-                    style={grid}
-                  >
+                  {/* ================= CASINO ================= */}
+                  <div style={{ marginBottom: 24 }}>
+                    <Casino />
+                  </div>
+
+                  {/* ================= AUTRES JEUX ================= */}
+                  <div style={grid}>
                     {games.map(
                       (game) => {
                         const disabled =
