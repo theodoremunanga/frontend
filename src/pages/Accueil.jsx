@@ -69,7 +69,7 @@ const games = [
         id: "football",
         name: "Football",
         icon: "⚽",
-        available: true,
+        available: false,
         description:
             "Affronte un autre joueur dans le lobby Football.",
         players: "2 Joueurs",
@@ -88,7 +88,7 @@ const games = [
         id: "ludo",
         name: "Ludo",
         icon: "🎲",
-        available: true,
+        available: false,
         description:
             "Course, stratégie et suspense autour du dé.",
         players: "2 Joueurs",
