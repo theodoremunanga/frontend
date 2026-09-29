@@ -47,7 +47,7 @@ import Ambassade from "./components/ambassade/Ambassade";
 import BravmanPage from "./sac/games/bravman/Bravman";
 import Dames from "./sac/games/checkers/Dames";
 import FootballPage from "./sac/games/football/Football";
-
+import Ludo from "./sac/games/ludo/Ludo";
 // ============================================================
 // CONFIGURATION
 // ============================================================
@@ -90,6 +90,7 @@ const KNOWN_PAGES = new Set([
   "ads",
   "game",
   "football",
+  "ludo",
   "bravman",
   "profile",
   "admin",
@@ -144,6 +145,16 @@ function normalizeGame(value) {
     game === "brav_man"
   ) {
     return "bravman";
+  }
+
+  if (
+    game === "ludo" ||
+    game === "ludo6" ||
+    game === "ludo-6" ||
+    game === "ludo_6"
+  
+  ) {
+    return "ludo";
   }
 
   return game;
@@ -1389,6 +1400,19 @@ export default function App() {
                     resetGame
                   }
                 />
+              ) : safeGame === "ludo" ? (
+                <Ludo
+                  gameConfig={
+                    gameConfig
+                  }
+                  setPage={
+                    setPage
+                  }
+                  resetGame={
+                    resetGame
+                  }
+                />  
+                
               ) : (
                 <div className="app-empty-state">
                   <h2>
