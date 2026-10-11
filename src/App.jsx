@@ -43,6 +43,7 @@ import TermsOfUse from "./legal/TermsOfUse";
 import ProfileRadar from "./components/Profile/ProfileRadar";
 import AdsPage from "./pages/AdsPage";
 import Ambassade from "./components/ambassade/Ambassade";
+import RetraitMarchand from "./pages/RetraitMarchand";
 
 import BravmanPage from "./sac/games/bravman/Bravman";
 import Dames from "./sac/games/checkers/Dames";
@@ -1167,6 +1168,28 @@ export default function App() {
     );
   }
 
+  
+function RetraitMarchandGlobal() {
+  const [visible, setVisible] = useState(true);
+
+  if (!visible) return null;
+
+  return (
+    <aside className="retrait-marchand-global">
+      <RetraitMarchand />
+      <button
+        type="button"
+        className="retrait-marchand-global-close"
+        onClick={() => setVisible(false)}
+        aria-label="Masquer le panneau de retrait"
+      >
+        Masquer
+      </button>
+    </aside>
+  );
+}
+
+
   // ==========================================================
   // SAFE GAME
   // ==========================================================
@@ -1195,6 +1218,13 @@ export default function App() {
               setPage={setPage}
             />
           )}
+
+        
+        {/* DEMANDES DE RETRAIT — DISPONIBLES SUR TOUTES LES PAGES */}
+
+        {isAuth && getStoredRole() !== "ADMIN" && (
+          <RetraitMarchandGlobal />
+        )}
 
         {/* ==================================================
             CONTENT
@@ -1400,19 +1430,7 @@ export default function App() {
                     resetGame
                   }
                 />
-              ) : safeGame === "ludo" ? (
-                <Ludo
-                  gameConfig={
-                    gameConfig
-                  }
-                  setPage={
-                    setPage
-                  }
-                  resetGame={
-                    resetGame
-                  }
-                />  
-                
+                              
               ) : (
                 <div className="app-empty-state">
                   <h2>
@@ -1454,6 +1472,10 @@ export default function App() {
                 resetGame
               }
             />
+          )}
+
+          {page === "ludo" && (
+              <Ludo />
           )}
 
           {/* ================================================
@@ -1624,6 +1646,32 @@ function GlobalAppStyles() {
           flex: 1 1 auto;
           overflow-x: hidden;
         }
+
+          
+        .retrait-marchand-global {
+          width: min(100% - 24px, 560px);
+          margin: 12px auto;
+          position: relative;
+          z-index: 20;
+        }
+
+        .retrait-marchand-global-close {
+          display: block;
+          margin: 8px 0 0 auto;
+          padding: 8px 12px;
+          border: 1px solid rgba(128, 128, 128, 0.35);
+          border-radius: 8px;
+          background: transparent;
+          cursor: pointer;
+        }
+
+        @media (max-width: 600px) {
+          .retrait-marchand-global {
+            width: calc(100% - 16px);
+            margin: 8px auto;
+          }
+        }
+
 
         /* ==================================================
            EMPTY / ERROR STATES

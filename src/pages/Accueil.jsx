@@ -28,6 +28,7 @@ import SponsoredBanner from "../components/ads/SponsoredBanner";
 import AdCarousel from "../components/ads/AdCarousel";
 import AdComments from "../components/ads/AdComments";
 import Casino from "../components/Casino";
+import WalletActions from "../components/WalletActions";
 
 import {
     getHomeFeedAds,
@@ -94,7 +95,7 @@ const games = [
         players: "2 Joueurs",
         difficulty: "PRO",
         actionLabel: "Créer une partie",
-        directLobby: false,
+        directLobby: true,
 
         imageCandidates: [
             "/games/ludo.png",
@@ -212,6 +213,8 @@ export default function Accueil({
 
     const [loading, setLoading] =
         useState(true);
+
+    const [showRechargeForm, setShowRechargeForm] = useState(false);
 
     // ========================================================
     // ADS
@@ -642,20 +645,21 @@ export default function Accueil({
     );
 
     // ========================================================
-    // RECHARGER
-    //
-    // Le nom "wallet" correspond à la page Wallet.
-    // Si ton App.jsx utilise un autre nom de page,
-    // change uniquement cette valeur.
+    // RECHARGER — OUVRIR DIRECTEMENT LE FORMULAIRE
     // ========================================================
 
-    const handleRecharge = () => {
+    const handleRecharge = useCallback(() => {
         setError("");
 
-        setTimeout(() => {
-            setPage("wallet");
-        }, 0);
-    };
+        if (!token) {
+            setError(
+                "🔒 Connectez-vous pour recharger votre portefeuille."
+            );
+            return;
+        }
+
+        setShowRechargeForm(true);
+    }, [token]);
 
     // ========================================================
     // OUVERTURE DIRECTE DES LOBBIES
@@ -957,125 +961,9 @@ export default function Accueil({
             // LUDO
             // ==================================================
 
-            if (
-                gameId ===
-                "ludo"
-            ) {
-                if (isOffline) {
-                    setError(
-                        "📡 Hors ligne."
-                    );
-
-                    return;
-                }
-
-                const mode =
-                    getMode(
-                        gameId
-                    );
-
-                const raw =
-                    getAmount(
-                        gameId
-                    );
-
-                const amount =
-                    mode ===
-                    "training"
-                        ? 0
-                        : raw
-                        ? Number(
-                              raw
-                          )
-                        : null;
-
-                if (
-                    mode !==
-                        "training" &&
-                    (!amount ||
-                        amount <
-                            500)
-                ) {
-                    setError(
-                        "⚠️ Mise minimum Ludo : 500 CDF."
-                    );
-
-                    return;
-                }
-
-                try {
-                    const created =
-                        await createSacMatch(
-                            {
-                                game: "ludo",
-                                stake:
-                                    amount ||
-                                    0,
-                            }
-                        );
-
-                    console.log(
-                        "🎲 LUDO SAC MATCH CREATED:",
-                        created
-                    );
-
-                    const matchId =
-                        created?.matchId ||
-                        created?.id ||
-                        created?.match?.id;
-
-                    if (!matchId) {
-                        console.error(
-                            "❌ Réponse SAC Ludo invalide:",
-                            created
-                        );
-
-                        setError(
-                            "❌ Le serveur n'a pas retourné de matchId."
-                        );
-
-                        return;
-                    }
-
-                    setGameConfig({
-                        matchId:
-                            Number(
-                                matchId
-                            ),
-
-                        game: "ludo",
-
-                        mode,
-
-                        bet:
-                            amount ||
-                            0,
-                    });
-
-                    setTimeout(() => {
-                        setPage("ludo");
-                    }, 0);
-
-                    return;
-                } catch (err) {
-                    console.error(
-                        "❌ LUDO SAC CREATE ERROR:",
-                        err
-                    );
-
-                    setError(
-                        err?.response
-                            ?.data
-                            ?.error ||
-                            err?.response
-                                ?.data
-                                ?.message ||
-                            err?.message ||
-                            "❌ Impossible de créer la partie Ludo."
-                    );
-
-                    return;
-                }
+            if (gameId === "ludo") {
+                openDirectLobby("ludo");
+                return;
             }
 
             // ==================================================
@@ -1601,6 +1489,22 @@ export default function Accueil({
                 <div className="home-glow home-glow-two" />
                 <div className="home-grid" />
             </div>
+
+            {/* ==================================================
+                FORMULAIRE DE RECHARGE / PORTEFEUILLE
+            ================================================== */}
+
+            {showRechargeForm && (
+                <WalletActions
+                    autoOpen={true}
+                    initialAction="deposit"
+                    onClose={() => setShowRechargeForm(false)}
+                    onSuccess={() => {
+                        setShowRechargeForm(false);
+                        fetchData(true);
+                    }}
+                />
+            )}
 
             <div className="home-content">
                 {/* ==================================================

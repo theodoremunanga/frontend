@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import PrivacyPolicy from "../legal/PrivacyPolicy";
 import TermsOfUse from "../legal/TermsOfUse";
 import Formation from "./Formation";
+import Marchands from "./Marchands";
 
 import "./Menu.css";
 
@@ -86,6 +87,13 @@ export default function Menu({ setPage }) {
     useState(null);
 
   // ----------------------------------------------------------
+  // MARCHANDS
+  // ----------------------------------------------------------
+
+  const [showMarchands, setShowMarchands] =
+    useState(false);
+
+  // ----------------------------------------------------------
   // UI
   // ----------------------------------------------------------
 
@@ -153,6 +161,26 @@ export default function Menu({ setPage }) {
     }
 
     navigate("ambassade");
+  };
+
+  // ==========================================================
+  // MARCHANDS — RÉSERVÉ AUX AMBASSADEURS
+  // ==========================================================
+
+  const openMarchands = () => {
+    setMobileMenuOpen(false);
+    setLegalPage(null);
+    setAmbassadorPage(null);
+
+    if (role !== "AMBASSADOR") {
+      return;
+    }
+
+    setShowMarchands(true);
+  };
+
+  const closeMarchands = () => {
+    setShowMarchands(false);
   };
 
   // ==========================================================
@@ -288,6 +316,38 @@ export default function Menu({ setPage }) {
       {children}
     </span>
   );
+
+  // ==========================================================
+  // PAGE MARCHANDS
+  // ==========================================================
+
+  if (showMarchands && role === "AMBASSADOR") {
+    return (
+      <div className="menu-legal-page">
+        <div className="menu-legal-page__topbar">
+          <button
+            type="button"
+            className="menu-legal-page__back"
+            onClick={closeMarchands}
+          >
+            ← Retour au menu
+          </button>
+
+          <div className="menu-legal-page__brand">
+            <span className="menu-brand-mark">6</span>
+
+            <span>
+              Bet<span>Ball</span>
+            </span>
+          </div>
+        </div>
+
+        <main className="menu-legal-page__content">
+          <Marchands />
+        </main>
+      </div>
+    );
+  }
 
   // ==========================================================
   // FORMATION AMBASSADEUR
@@ -740,6 +800,8 @@ export default function Menu({ setPage }) {
               variant="profile"
             />
 
+                    
+
             {/* ==================================================
                 AMBASSADEUR
                 ==================================================
@@ -768,6 +830,19 @@ export default function Menu({ setPage }) {
                 badge="FORMATION"
               />
             )}
+
+            
+            {role === "AMBASSADOR" && (
+              <MenuButton
+                icon="💳"
+                title="Services Marchands"
+                subtitle="Effectuez les dépôts et retraits, consultez votre solde et suivez vos opérations."
+                onClick={openMarchands}
+                variant="merchant"
+                badge="MARCHAND"
+              />
+            )}
+
 
             {/* SUPPORT */}
 

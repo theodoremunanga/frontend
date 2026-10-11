@@ -843,6 +843,30 @@
   border-radius: 13px;
 }
 
+
+/* SERVICES MARCHANDS */
+.menu-button--merchant {
+  --accent: #2ee69a;
+  --accent-soft: rgba(46, 230, 154, .12);
+}
+
+.menu-button--merchant:hover {
+  border-color: rgba(46, 230, 154, .42);
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, .34),
+    0 0 0 1px rgba(46, 230, 154, .12);
+}
+
+.menu-button--merchant .menu-button__icon {
+  background:
+    linear-gradient(
+      145deg,
+      rgba(46, 230, 154, .18),
+      rgba(255, 255, 255, .025)
+    );
+}
+
+
 /* ============================================================
    ADMIN
    ============================================================ */

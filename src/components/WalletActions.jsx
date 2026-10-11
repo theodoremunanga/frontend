@@ -1,6 +1,6 @@
-import { useState } from "react";
+
+import { useEffect, useState } from "react";
 import {
-  Wallet,
   ArrowDownToLine,
   ArrowUpFromLine,
   CreditCard,
@@ -17,13 +17,65 @@ import {
 import api from "../services/api";
 
 // ======================================================
-// WALLET ACTIONS
+// WALLET ACTIONS — ALIGNÉ SUR LE BACKEND
 // ======================================================
 
-export default function WalletActions({ refresh, onSuccess }) {
-  const [open, setOpen] = useState(null);
-  // "deposit" | "withdraw" | null
+const MIN_AMOUNT = 1000;
 
+const METHODS = {
+  airtel: {
+    label: "Airtel Money",
+    number: "0973596027",
+    accountName: "TUADILA GERARD MICHEL",
+    available: true,
+    withdrawAvailable: true,
+  },
+  mpesa: {
+    label: "M-Pesa",
+    number: "Pas encore disponible",
+    accountName: "",
+    available: false,
+    withdrawAvailable: false,
+  },
+  orange: {
+    label: "Orange Money",
+    number: "Pas encore disponible",
+    accountName: "",
+    available: false,
+    withdrawAvailable: false,
+  },
+  usdt: {
+    label: "USDT / Tether",
+    number: "Pas encore disponible",
+    accountName: "",
+    available: false,
+    withdrawAvailable: false,
+  },
+  credit_card: {
+    label: "Virement bancaire",
+    number: "922200340863331",
+    accountName: "NTUMBA THEODORE",
+    available: true,
+    withdrawAvailable: true,
+  },
+};
+
+const getErrorMessage = (err) =>
+  err?.response?.data?.error ||
+  err?.response?.data?.message ||
+  err?.message ||
+  "Une erreur est survenue.";
+
+
+
+ export default function WalletActions({
+    refresh,
+    onSuccess,
+    autoOpen = false,
+    initialAction = "deposit",
+    onClose,
+  }) {
+  const [open, setOpen] = useState(null);
   const [amount, setAmount] = useState("");
   const [phone, setPhone] = useState("");
   const [method, setMethod] = useState("");
@@ -35,59 +87,15 @@ export default function WalletActions({ refresh, onSuccess }) {
   const [copied, setCopied] = useState(false);
 
   // ======================================================
-  // MOYENS DE PAIEMENT
-  // ======================================================
+// OUVERTURE AUTOMATIQUE DEPUIS L'ACCUEIL
+// ======================================================
 
-  const methods = {
-  airtel: {
-    label: "Airtel Money",
-    number: "0973596027",
-    accountName: "TUADILA GERARD MICHEL",
-    icon: <Smartphone size={20} />,
-    available: true,
-    withdrawAvailable: true,
-  },
+useEffect(() => {
+  if (!autoOpen) return;
 
-  mpesa: {
-    label: "M-Pesa",
-    number: "Pas encore disponible",
-    accountName: "",
-    icon: <Smartphone size={20} />,
-    available: false,
-    withdrawAvailable: false,
-  },
-
-  orange: {
-    label: "Orange Money",
-    number: "Pas encore disponible",
-    accountName: "",
-    icon: <Smartphone size={20} />,
-    available: false,
-    withdrawAvailable: false,
-  },
-
-  usdt: {
-    label: "USDT / Tether",
-    number: "Pas encore disponible",
-    accountName: "",
-    icon: <CoinsIcon />,
-    available: false,
-    withdrawAvailable: false,
-  },
-
-  credit_card: {
-    label: "Virement bancaire",
-    number: "922200340863331",
-    accountName: "NTUMBA THEODORE",
-    icon: <CreditCard size={20} />,
-    available: true,
-    withdrawAvailable: true,
-  },
-};
-
-  // ======================================================
-  // RESET
-  // ======================================================
+  reset();
+  setOpen(initialAction);
+}, [autoOpen, initialAction]);
 
   const reset = () => {
     setAmount("");
@@ -99,79 +107,54 @@ export default function WalletActions({ refresh, onSuccess }) {
     setCopied(false);
   };
 
-  // ======================================================
-  // OPEN
-  // ======================================================
-
   const openAction = (action) => {
     reset();
     setOpen(action);
   };
 
-  // ======================================================
-  // CLOSE
-  // ======================================================
-
-  const close = () => {
-    if (loading) return;
+  // force=true permet de fermer la fenêtre après le succès,
+  // même si la requête vient de terminer son traitement.
+  const close = (force = false) => {
+    if (loading && !force) return;
 
     setOpen(null);
     reset();
-  };
 
-  // ======================================================
-  // COPY NUMBER
-  // ======================================================
+    if (typeof onClose === "function") {
+      onClose();
+    }
+  };
 
   const copyNumber = async () => {
-    if (!method) return;
-
-    const selected = methods[method];
-
-    if (
-      !selected ||
-      !selected.available
-    ) {
-      return;
-    }
+    if (!method || !METHODS[method]?.available) return;
 
     try {
-      await navigator.clipboard.writeText(
-        selected.number
-      );
-
+      await navigator.clipboard.writeText(METHODS[method].number);
       setCopied(true);
-
-      setTimeout(() => {
-        setCopied(false);
-      }, 2000);
+      setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error(
-        "COPY ERROR:",
-        err
-      );
+      console.error("COPY ERROR:", err);
+      setError("Impossible de copier le numéro.");
     }
   };
 
   // ======================================================
-  // VALIDATION
+  // VALIDATION FRONTEND
   // ======================================================
 
   const validate = () => {
-    const numericAmount =
-      Number(amount);
+    const numericAmount = Number(amount);
 
     if (
-      !amount ||
-      !Number.isFinite(
-        numericAmount
-      )
+      amount.trim() === "" ||
+      !Number.isFinite(numericAmount) ||
+      !Number.isInteger(numericAmount)
     ) {
-      return "Veuillez saisir un montant valide.";
+      return "Veuillez saisir un montant entier valide.";
     }
 
-    if (numericAmount < 500) {
-      return "Le montant minimum est de 500 CDF.";
+    if (numericAmount < MIN_AMOUNT) {
+      return `Le montant minimum est de ${MIN_AMOUNT} CDF.`;
     }
 
     if (open === "deposit") {
@@ -179,17 +162,12 @@ export default function WalletActions({ refresh, onSuccess }) {
         return "Veuillez choisir un moyen de paiement.";
       }
 
-      const selected =
-        methods[method];
-
-      if (
-        !selected?.available
-      ) {
+      if (!METHODS[method]?.available) {
         return "Ce moyen de paiement n'est pas encore disponible.";
       }
 
       if (!reference.trim()) {
-        return "La référence de transaction est obligatoire.";
+        return "La référence TID est obligatoire.";
       }
     }
 
@@ -198,31 +176,26 @@ export default function WalletActions({ refresh, onSuccess }) {
         return "Veuillez choisir un moyen de retrait.";
       }
 
-      const selected =
-        methods[withdrawMethod];
-
-      if (!selected?.withdrawAvailable) {
+      if (!METHODS[withdrawMethod]?.withdrawAvailable) {
         return "Ce moyen de retrait n'est pas encore disponible.";
       }
 
       if (!phone.trim()) {
-        return "Veuillez saisir les coordonnées de retrait.";
+        return "Veuillez saisir vos coordonnées de retrait.";
       }
 
       if (
-        withdrawMethod === "airtel" ||
-        withdrawMethod === "mpesa" ||
-        withdrawMethod === "orange"
+        ["airtel", "mpesa", "orange"].includes(withdrawMethod) &&
+        phone.trim().replace(/\s/g, "").length < 9
       ) {
-        if (phone.trim().length < 9) {
-          return "Le numéro de téléphone semble invalide.";
-        }
+        return "Le numéro de téléphone semble invalide.";
       }
 
-      if (withdrawMethod === "credit_card") {
-        if (phone.trim().length < 5) {
-          return "Veuillez saisir un numéro de compte bancaire valide.";
-        }
+      if (
+        withdrawMethod === "credit_card" &&
+        phone.trim().length < 5
+      ) {
+        return "Veuillez saisir un numéro de compte bancaire valide.";
       }
     }
 
@@ -230,20 +203,19 @@ export default function WalletActions({ refresh, onSuccess }) {
   };
 
   // ======================================================
-  // SUBMIT
+  // SUBMIT — CONTRAT BACKEND
   // ======================================================
 
   const submit = async () => {
-    const validationError =
-      validate();
+    const validationError = validate();
 
     if (validationError) {
-      setError(
-        validationError
-      );
-
+      setError(validationError);
       return;
     }
+
+    const action = open;
+    const numericAmount = Number(amount);
 
     try {
       setLoading(true);
@@ -251,87 +223,77 @@ export default function WalletActions({ refresh, onSuccess }) {
 
       let response;
 
-      // ==================================================
-      // DEPOT
-      // ==================================================
+      // --------------------------------------------------
+      // DÉPÔT : vérification du TID puis création
+      // --------------------------------------------------
 
-      if (
-        open === "deposit"
-      ) {
-        response =
-          await api.post(
-            "/payment/deposit",
-            {
-              amount:
-                Number(amount),
+      if (action === "deposit") {
+        const tid = reference.trim();
 
-              method,
+        // Backend :
+        // GET /payment/tid/check?tid=...&amount=...&method=...
+        const checkResponse = await api.get("/wallet/tid/check", {
+          params: {
+            tid,
+            amount: numericAmount,
+            method,
+          },
+        });
 
-              reference:
-                reference.trim(),
-            }
+        if (checkResponse?.data?.valid !== true) {
+          throw new Error(
+            checkResponse?.data?.error ||
+              "Ce TID n'est pas valide ou disponible."
           );
+        }
+
+        // Backend attend { amount, phone, reference }.
+        // Ici phone contient le code du moyen de paiement.
+        response = await api.post("/wallet/deposit", {
+          amount: numericAmount,
+          phone: method,
+          reference: tid,
+        });
       }
 
-      // ==================================================
+      // --------------------------------------------------
       // RETRAIT
-      // ==================================================
+      // --------------------------------------------------
 
-      if (
-        open === "withdraw"
-      ) {
-        response = await api.post(
-          "/wallet/withdraw",
-          {
-            amount: Number(amount),
-            method: withdrawMethod,
-            phone: phone.trim(),
-          }
-        );
+      if (action === "withdraw") {
+        // Le backend fourni attend { amount, phone }.
+        // On transmet le moyen et les coordonnées ensemble,
+        // car le backend ne possède pas de champ method dédié.
+        response = await api.post("/wallet/withdraw", {
+          amount: numericAmount,
+          phone: `${withdrawMethod}: ${phone.trim()}`,
+        });
       }
 
-      // ==================================================
-      // SUCCESS
-      // ==================================================
+      // --------------------------------------------------
+      // SUCCÈS
+      // --------------------------------------------------
 
       const message =
         response?.data?.message ||
-        (
-          open === "deposit"
-            ? "Demande de dépôt envoyée avec succès."
-            : "Demande de retrait envoyée avec succès."
-        );
+        (action === "deposit"
+          ? "Demande de dépôt envoyée pour vérification administrative."
+          : "Demande de retrait envoyée.");
 
-      // On garde alert pour rester
-      // compatible avec le comportement
-      // actuel du projet.
-      alert(
-        `✅ ${message}`
-      );
+      alert(`✅ ${message}`);
 
-      close();
+      close(true);
 
-      if (refresh) {
-        refresh();
+      if (typeof refresh === "function") {
+        await refresh();
       }
 
-      if (onSuccess) {
-        onSuccess();
+      if (typeof onSuccess === "function") {
+        await onSuccess();
       }
-
     } catch (err) {
-      console.error(
-        "WALLET ACTION ERROR:",
-        err
-      );
-
-      setError(
-        err?.response?.data?.error ||
-        err?.response?.data?.message ||
-        err?.message ||
-        "Une erreur est survenue."
-      );
-
+      console.error("WALLET ACTION ERROR:", err);
+      setError(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -342,329 +304,211 @@ export default function WalletActions({ refresh, onSuccess }) {
   // ======================================================
 
   return (
-    <div style={container}>
-
-      {/* ==================================================
-          ACTION BUTTONS
-      ================================================== */}
-
-      <div style={actionsGrid}>
-
+    <div style={styles.container}>
+      <div style={styles.actionsGrid}>
         <button
           type="button"
-          onClick={() =>
-            openAction("deposit")
-          }
-          style={depositButton}
+          onClick={() => openAction("deposit")}
+          style={styles.depositButton}
         >
-          <div style={buttonIcon}>
-            <ArrowDownToLine
-              size={22}
-            />
+          <div style={styles.buttonIcon}>
+            <ArrowDownToLine size={22} />
           </div>
-
-          <div style={buttonText}>
-            <strong>
-              Déposer
-            </strong>
-
-            <span>
-              Ajouter de l'argent
-            </span>
+          <div style={styles.buttonText}>
+            <strong>Déposer</strong>
+            <span>Ajouter de l'argent</span>
           </div>
         </button>
 
-
         <button
           type="button"
-          onClick={() =>
-            openAction("withdraw")
-          }
-          style={withdrawButton}
+          onClick={() => openAction("withdraw")}
+          style={styles.withdrawButton}
         >
-          <div style={buttonIcon}>
-            <ArrowUpFromLine
-              size={22}
-            />
+          <div style={styles.buttonIcon}>
+            <ArrowUpFromLine size={22} />
           </div>
-
-          <div style={buttonText}>
-            <strong>
-              Retirer
-            </strong>
-
-            <span>
-              Retirer vos fonds
-            </span>
+          <div style={styles.buttonText}>
+            <strong>Retirer</strong>
+            <span>Retirer vos fonds</span>
           </div>
         </button>
-
       </div>
 
-
-      {/* ==================================================
-          MODAL
-      ================================================== */}
-
       {open && (
-        <div style={overlay}>
-
-          <div style={modal}>
-
+        <div style={styles.overlay}>
+          <div style={styles.modal}>
             {/* HEADER */}
-
-            <div style={modalHeader}>
-
-              <div style={modalTitleWrapper}>
-
+            <div style={styles.modalHeader}>
+              <div style={styles.modalTitleWrapper}>
                 <div
                   style={
                     open === "deposit"
-                      ? modalIconDeposit
-                      : modalIconWithdraw
+                      ? styles.modalIconDeposit
+                      : styles.modalIconWithdraw
                   }
                 >
                   {open === "deposit" ? (
-                    <ArrowDownToLine
-                      size={24}
-                    />
+                    <ArrowDownToLine size={24} />
                   ) : (
-                    <ArrowUpFromLine
-                      size={24}
-                    />
+                    <ArrowUpFromLine size={24} />
                   )}
                 </div>
 
                 <div>
-
-                  <h3 style={modalTitle}>
+                  <h3 style={styles.modalTitle}>
                     {open === "deposit"
                       ? "Effectuer un dépôt"
                       : "Effectuer un retrait"}
                   </h3>
-
-                  <p style={modalSubtitle}>
+                  <p style={styles.modalSubtitle}>
                     {open === "deposit"
                       ? "Ajoutez des fonds à votre portefeuille."
-                      : "Recevez vos fonds directement sur votre numéro."}
+                      : "Recevez vos fonds sur vos coordonnées de retrait."}
                   </p>
-
                 </div>
-
               </div>
-
 
               <button
                 type="button"
-                onClick={close}
+                onClick={() => close()}
                 disabled={loading}
-                style={closeButton}
+                style={styles.closeButton}
+                aria-label="Fermer"
               >
                 <X size={20} />
               </button>
-
             </div>
 
+            {/* CONTENU */}
+            <div style={styles.modalContent}>
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Montant</label>
 
-            {/* CONTENT */}
-
-            <div style={modalContent}>
-
-              {/* MONTANT */}
-
-              <div style={fieldGroup}>
-
-                <label style={label}>
-                  Montant
-                </label>
-
-                <div style={inputWrapper}>
-
-                  <Banknote
-                    size={19}
-                    style={inputIcon}
-                  />
-
+                <div style={styles.inputWrapper}>
+                  <Banknote size={19} style={styles.inputIcon} />
                   <input
                     type="number"
-                    min="500"
+                    min={MIN_AMOUNT}
                     step="1"
-                    placeholder="Ex : 5000"
+                    placeholder="Ex. : 5000"
                     value={amount}
-                    onChange={(e) =>
-                      setAmount(
-                        e.target.value
-                      )
-                    }
-                    style={input}
+                    onChange={(e) => setAmount(e.target.value)}
+                    style={styles.input}
+                    disabled={loading}
                   />
-
-                  <span
-                    style={currency}
-                  >
-                    CDF
-                  </span>
-
+                  <span style={styles.currency}>CDF</span>
                 </div>
 
-                <small style={hint}>
-                  Minimum : 500 CDF
+                <small style={styles.hint}>
+                  Minimum : {MIN_AMOUNT} CDF
                 </small>
-
               </div>
 
-
-              {/* ==================================================
-                  DEPOT
-              ================================================== */}
-
+              {/* DÉPÔT */}
               {open === "deposit" && (
                 <>
-
-                  {/* MOYEN DE PAIEMENT */}
-
-                  <div style={fieldGroup}>
-
-                    <label style={label}>
+                  <div style={styles.fieldGroup}>
+                    <label style={styles.label}>
                       Moyen de paiement
                     </label>
 
-                    <div style={methodsGrid}>
+                    <div style={styles.methodsGrid}>
+                      {Object.entries(METHODS).map(([key, item]) => {
+                        const selected = method === key;
+                        const Icon =
+                          key === "credit_card" ? CreditCard : Smartphone;
 
-                      {Object.entries(
-                        methods
-                      ).map(
-                        ([
-                          key,
-                          item,
-                        ]) => {
-
-                          const selected =
-                            method ===
-                            key;
-
-                          return (
-                            <button
-                              key={key}
-                              type="button"
-                              disabled={
-                                !item.available
-                              }
-                              onClick={() =>
-                                item.available &&
-                                setMethod(
-                                  key
-                                )
-                              }
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            disabled={!item.available || loading}
+                            onClick={() => {
+                              setMethod(key);
+                              setError("");
+                            }}
+                            style={{
+                              ...styles.methodCard,
+                              ...(selected
+                                ? styles.methodCardSelected
+                                : {}),
+                              ...(!item.available
+                                ? styles.methodCardDisabled
+                                : {}),
+                            }}
+                          >
+                            <div
                               style={{
-                                ...methodCard,
-
+                                ...styles.methodIcon,
                                 ...(selected
-                                  ? methodCardSelected
-                                  : {}),
-
-                                ...(!item.available
-                                  ? methodCardDisabled
+                                  ? styles.methodIconSelected
                                   : {}),
                               }}
                             >
-
-                              <div
-                                style={{
-                                  ...methodIcon,
-                                  ...(selected
-                                    ? methodIconSelected
-                                    : {}),
-                                }}
-                              >
-                                {item.icon}
-                              </div>
-
-                              <div
-                                style={
-                                  methodText
-                                }
-                              >
-                                <strong>
-                                  {item.label}
-                                </strong>
-
-                                <span>
-                                  {item.available
-                                    ? "Disponible"
-                                    : "Bientôt disponible"}
-                                </span>
-                              </div>
-
-                              {selected && (
-                                <Check
-                                  size={18}
-                                  style={
-                                    checkIcon
-                                  }
-                                />
+                              {key === "usdt" ? (
+                                <span style={{ fontWeight: 900 }}>₮</span>
+                              ) : (
+                                <Icon size={20} />
                               )}
+                            </div>
 
-                            </button>
-                          );
-                        }
-                      )}
+                            <div style={styles.methodText}>
+                              <strong>{item.label}</strong>
+                              <span>
+                                {item.available
+                                  ? "Disponible"
+                                  : "Bientôt disponible"}
+                              </span>
+                            </div>
 
+                            {selected && (
+                              <Check size={18} style={styles.checkIcon} />
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
-
                   </div>
 
-
-                  {/* NUMERO AGENT */}
-
-                  {method &&
-                    methods[method]?.available && (
-
-                    <div style={paymentInfo}>
-
-                      <div style={paymentInfoHeader}>
+                  {method && METHODS[method]?.available && (
+                    <div style={styles.paymentInfo}>
+                      <div style={styles.paymentInfoHeader}>
                         <ShieldCheck size={19} />
-
-                        <strong>
-                          Informations de paiement
-                        </strong>
+                        <strong>Informations de paiement</strong>
                       </div>
 
-                      <p style={paymentInstruction}>
+                      <p style={styles.paymentInstruction}>
                         {method === "credit_card"
-                          ? "Effectuez votre virement vers notre compte bancaire, puis saisissez la référence de l'opération afin que votre dépôt puisse être vérifié."
-                          : "Envoyez exactement le montant indiqué ci-dessus au numéro Airtel Money indiqué, puis saisissez la référence de la transaction."
-                        }
+                          ? "Effectuez le virement vers le compte indiqué. Saisissez ensuite le TID fourni par le système de paiement."
+                          : "Envoyez le montant exact au numéro indiqué. Saisissez ensuite le TID de votre transaction."}
                       </p>
 
-                      <div style={numberBox}>
-
-                        <div style={paymentRecipient}>
-                          <span style={recipientLabel}>
+                      <div style={styles.numberBox}>
+                        <div style={styles.paymentRecipient}>
+                          <span style={styles.recipientLabel}>
                             Bénéficiaire
                           </span>
-
-                          <strong style={recipientName}>
-                            {methods[method].accountName}
+                          <strong style={styles.recipientName}>
+                            {METHODS[method].accountName}
                           </strong>
                         </div>
 
-                        <div style={paymentAccount}>
-                          <span style={recipientLabel}>
+                        <div style={styles.paymentAccount}>
+                          <span style={styles.recipientLabel}>
                             {method === "credit_card"
                               ? "Compte bancaire"
-                              : "Numéro Airtel Money"}
+                              : "Numéro de paiement"}
                           </span>
-
-                          <strong style={accountNumber}>
-                            {methods[method].number}
+                          <strong style={styles.accountNumber}>
+                            {METHODS[method].number}
                           </strong>
                         </div>
 
                         <button
                           type="button"
                           onClick={copyNumber}
-                          style={copyButton}
+                          style={styles.copyButton}
                         >
                           {copied ? (
                             <>
@@ -678,762 +522,614 @@ export default function WalletActions({ refresh, onSuccess }) {
                             </>
                           )}
                         </button>
-
                       </div>
-
                     </div>
                   )}
 
-
-                  {/* REFERENCE */}
-
-                  <div style={fieldGroup}>
-
-                    <label style={label}>
-                      Référence de transaction
+                  <div style={styles.fieldGroup}>
+                    <label style={styles.label}>
+                      Référence TID
                     </label>
-
                     <input
                       type="text"
-                      placeholder="Ex : TXN123456789"
+                      placeholder="Saisissez votre TID"
                       value={reference}
-                      onChange={(e) =>
-                        setReference(
-                          e.target.value
-                        )
-                      }
-                      style={plainInput}
+                      onChange={(e) => setReference(e.target.value)}
+                      style={styles.plainInput}
+                      disabled={loading}
                     />
-
-                    <small style={hint}>
-                      Saisissez la référence
-                      reçue après votre paiement.
+                    <small style={styles.hint}>
+                      Le TID sera vérifié avant la création de la demande.
+                      Le crédit du portefeuille nécessite ensuite la validation
+                      administrative.
                     </small>
-
                   </div>
-
                 </>
               )}
 
+              {/* RETRAIT */}
+              {open === "withdraw" && (
+                <>
+                  <div style={styles.fieldGroup}>
+                    <label style={styles.label}>
+                      Moyen de retrait
+                    </label>
 
-              {/* ==================================================
-                  RETRAIT
-              ================================================== */}
-
-            {open === "withdraw" && (
-              <>
-                {/* MOYEN DE RETRAIT */}
-
-                <div style={fieldGroup}>
-
-                  <label style={label}>
-                    Moyen de retrait
-                  </label>
-
-                  <div style={methodsGrid}>
-
-                    {Object.entries(methods).map(
-                      ([key, item]) => {
-
-                        const selected =
-                          withdrawMethod === key;
+                    <div style={styles.methodsGrid}>
+                      {Object.entries(METHODS).map(([key, item]) => {
+                        const selected = withdrawMethod === key;
+                        const Icon =
+                          key === "credit_card" ? CreditCard : Smartphone;
 
                         return (
                           <button
                             key={key}
                             type="button"
-                            disabled={
-                              !item.withdrawAvailable
-                            }
+                            disabled={!item.withdrawAvailable || loading}
                             onClick={() => {
-                              if (
-                                item.withdrawAvailable
-                              ) {
-                                setWithdrawMethod(key);
-                                setPhone("");
-                                setError("");
-                              }
+                              if (!item.withdrawAvailable) return;
+                              setWithdrawMethod(key);
+                              setPhone("");
+                              setError("");
                             }}
                             style={{
-                              ...methodCard,
-
+                              ...styles.methodCard,
                               ...(selected
-                                ? methodCardSelected
+                                ? styles.methodCardSelected
                                 : {}),
-
                               ...(!item.withdrawAvailable
-                                ? methodCardDisabled
+                                ? styles.methodCardDisabled
                                 : {}),
                             }}
                           >
-
                             <div
                               style={{
-                                ...methodIcon,
-
+                                ...styles.methodIcon,
                                 ...(selected
-                                  ? methodIconSelected
+                                  ? styles.methodIconSelected
                                   : {}),
                               }}
                             >
-                              {item.icon}
+                              {key === "usdt" ? (
+                                <span style={{ fontWeight: 900 }}>₮</span>
+                              ) : (
+                                <Icon size={20} />
+                              )}
                             </div>
 
-                            <div style={methodText}>
-
-                              <strong>
-                                {item.label}
-                              </strong>
-
+                            <div style={styles.methodText}>
+                              <strong>{item.label}</strong>
                               <span>
                                 {item.withdrawAvailable
                                   ? "Disponible"
                                   : "Bientôt disponible"}
                               </span>
-
                             </div>
 
                             {selected && (
-                              <Check
-                                size={18}
-                                style={checkIcon}
-                              />
+                              <Check size={18} style={styles.checkIcon} />
                             )}
-
                           </button>
                         );
-                      }
-                    )}
-
-                  </div>
-
-                </div>
-
-
-                {/* COORDONNÉE DE RETRAIT */}
-
-                {withdrawMethod && (
-                  <div style={fieldGroup}>
-
-                    <label style={label}>
-                      {withdrawMethod === "credit_card"
-                        ? "Numéro de compte bancaire"
-                        : `Numéro ${methods[withdrawMethod]?.label || ""}`
-                      }
-                    </label>
-
-                    <div style={inputWrapper}>
-
-                      {withdrawMethod === "credit_card" ? (
-                        <CreditCard
-                          size={19}
-                          style={inputIcon}
-                        />
-                      ) : (
-                        <Smartphone
-                          size={19}
-                          style={inputIcon}
-                        />
-                      )}
-
-                      <input
-                        type={
-                          withdrawMethod === "credit_card"
-                            ? "text"
-                            : "tel"
-                        }
-                        placeholder={
-                          withdrawMethod === "credit_card"
-                            ? "Ex : votre numéro de compte"
-                            : "Ex : 0999999999"
-                        }
-                        value={phone}
-                        onChange={(e) =>
-                          setPhone(e.target.value)
-                        }
-                        style={input}
-                      />
-
+                      })}
                     </div>
-
-                    <small style={hint}>
-                      {withdrawMethod === "credit_card"
-                        ? "Le transfert bancaire sera effectué vers ce compte."
-                        : "Le retrait sera envoyé sur ce numéro."
-                      }
-                    </small>
-
                   </div>
-                )}
-              </>
-            )}
 
+                  {withdrawMethod && (
+                    <div style={styles.fieldGroup}>
+                      <label style={styles.label}>
+                        {withdrawMethod === "credit_card"
+                          ? "Numéro de compte bancaire"
+                          : `Numéro ${METHODS[withdrawMethod].label}`}
+                      </label>
 
-              {/* ERROR */}
+                      <div style={styles.inputWrapper}>
+                        {withdrawMethod === "credit_card" ? (
+                          <CreditCard size={19} style={styles.inputIcon} />
+                        ) : (
+                          <Smartphone size={19} style={styles.inputIcon} />
+                        )}
 
-              {error && (
-                <div style={errorBox}>
+                        <input
+                          type={
+                            withdrawMethod === "credit_card" ? "text" : "tel"
+                          }
+                          placeholder={
+                            withdrawMethod === "credit_card"
+                              ? "Votre numéro de compte"
+                              : "Ex. : 0999999999"
+                          }
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          style={styles.input}
+                          disabled={loading}
+                        />
+                      </div>
 
-                  <AlertCircle
-                    size={18}
-                  />
-
-                  <span>
-                    {error}
-                  </span>
-
-                </div>
+                      <small style={styles.hint}>
+                        Vérifiez les coordonnées avant de soumettre votre
+                        demande de retrait.
+                      </small>
+                    </div>
+                  )}
+                </>
               )}
 
+              {/* ERREUR */}
+              {error && (
+                <div style={styles.errorBox} role="alert">
+                  <AlertCircle size={18} />
+                  <span>{error}</span>
+                </div>
+              )}
             </div>
 
-
             {/* FOOTER */}
-
-            <div style={modalFooter}>
-
+            <div style={styles.modalFooter}>
               <button
                 type="button"
-                onClick={close}
+                onClick={() => close()}
                 disabled={loading}
-                style={cancelButton}
+                style={styles.cancelButton}
               >
                 Annuler
               </button>
 
-
               <button
                 type="button"
                 onClick={submit}
-                disabled={
-                  loading ||
-                  (
-                    open ===
-                      "deposit" &&
-                    method &&
-                    !methods[
-                      method
-                    ]?.available
-                  )
-                }
+                disabled={loading}
                 style={
                   open === "deposit"
-                    ? confirmDepositButton
-                    : confirmWithdrawButton
+                    ? styles.confirmDepositButton
+                    : styles.confirmWithdrawButton
                 }
               >
-
                 {loading ? (
                   <>
-                    <Loader2
-                      size={18}
-                      style={{
-                        animation:
-                          "spin 1s linear infinite",
-                      }}
-                    />
-
+                    <Loader2 size={18} style={styles.spinner} />
                     Traitement...
                   </>
+                ) : open === "deposit" ? (
+                  "Confirmer le dépôt"
                 ) : (
-                  <>
-                    {open === "deposit"
-                      ? "Confirmer le dépôt"
-                      : "Confirmer le retrait"}
-                  </>
+                  "Confirmer le retrait"
                 )}
-
               </button>
-
             </div>
 
-
-            {/* SECURITE */}
-
-            <div style={securityNotice}>
-
-              <ShieldCheck
-                size={16}
-              />
-
+            <div style={styles.securityNotice}>
+              <ShieldCheck size={16} />
               <span>
-                Vos opérations sont
-                sécurisées et enregistrées
-                dans votre portefeuille.
+                Les demandes sont enregistrées côté serveur. Ne partagez
+                jamais vos identifiants.
               </span>
-
             </div>
-
           </div>
-
         </div>
       )}
 
+      <style>{`
+        @keyframes wallet-spin {
+          to { transform: rotate(360deg); }
+        }
+        .wallet-actions-unused {}
+      `}</style>
     </div>
   );
 }
-
-
-// ======================================================
-// PETIT ICONE USDT
-// ======================================================
-
-function CoinsIcon() {
-  return (
-    <div
-      style={{
-        fontWeight: 900,
-        fontSize: 17,
-      }}
-    >
-      ₮
-    </div>
-  );
-}
-
 
 // ======================================================
 // STYLES
 // ======================================================
 
-const container = {
-  width: "100%",
-};
+const styles = {
+  container: { width: "100%" },
 
-const actionsGrid = {
-  display: "grid",
-  gridTemplateColumns:
-    "repeat(2,minmax(0,1fr))",
-  gap: 14,
-};
+  actionsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2,minmax(0,1fr))",
+    gap: 14,
+  },
 
-const baseActionButton = {
-  border: "1px solid",
-  borderRadius: 18,
-  padding: "16px",
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
-  gap: 13,
-  color: "white",
-  textAlign: "left",
-  transition: "transform .2s ease, box-shadow .2s ease",
-};
+  baseActionButton: {
+    border: "1px solid",
+    borderRadius: 18,
+    padding: 16,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: 13,
+    color: "white",
+    textAlign: "left",
+    transition: "transform .2s ease, box-shadow .2s ease",
+  },
 
-const depositButton = {
-  ...baseActionButton,
-  background:
-    "linear-gradient(135deg,#14532d,#166534)",
-  borderColor: "#22c55e",
-};
+  depositButton: {
+    border: "1px solid #22c55e",
+    borderRadius: 18,
+    padding: 16,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: 13,
+    color: "white",
+    textAlign: "left",
+    background: "linear-gradient(135deg,#14532d,#166534)",
+  },
 
-const withdrawButton = {
-  ...baseActionButton,
-  background:
-    "linear-gradient(135deg,#7f1d1d,#991b1b)",
-  borderColor: "#ef4444",
-};
+  withdrawButton: {
+    border: "1px solid #ef4444",
+    borderRadius: 18,
+    padding: 16,
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: 13,
+    color: "white",
+    textAlign: "left",
+    background: "linear-gradient(135deg,#7f1d1d,#991b1b)",
+  },
 
-const buttonIcon = {
-  width: 44,
-  height: 44,
-  borderRadius: 14,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  background:
-    "rgba(255,255,255,.12)",
-  flexShrink: 0,
-};
+  buttonIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "rgba(255,255,255,.12)",
+    flexShrink: 0,
+  },
 
-const buttonText = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 4,
-};
+  buttonText: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+  },
 
-const overlay = {
-  position: "fixed",
-  inset: 0,
-  zIndex: 9999,
-  background:
-    "rgba(2,6,23,.78)",
-  backdropFilter: "blur(8px)",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: 18,
-};
+  overlay: {
+    position: "fixed",
+    inset: 0,
+    zIndex: 9999,
+    background: "rgba(2,6,23,.78)",
+    backdropFilter: "blur(8px)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 18,
+  },
 
-const modal = {
-  width: "100%",
-  maxWidth: 620,
-  maxHeight: "92vh",
-  overflowY: "auto",
-  background:
-    "linear-gradient(145deg,#111827,#020617)",
-  border:
-    "1px solid rgba(255,255,255,.1)",
-  borderRadius: 26,
-  boxShadow:
-    "0 30px 80px rgba(0,0,0,.55)",
-};
+  modal: {
+    width: "100%",
+    maxWidth: 620,
+    maxHeight: "92vh",
+    overflowY: "auto",
+    background: "linear-gradient(145deg,#111827,#020617)",
+    border: "1px solid rgba(255,255,255,.1)",
+    borderRadius: 26,
+    boxShadow: "0 30px 80px rgba(0,0,0,.55)",
+  },
 
-const modalHeader = {
-  display: "flex",
-  alignItems: "flex-start",
-  justifyContent: "space-between",
-  gap: 15,
-  padding: 22,
-  borderBottom:
-    "1px solid rgba(255,255,255,.07)",
-};
+  modalHeader: {
+    display: "flex",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 15,
+    padding: 22,
+    borderBottom: "1px solid rgba(255,255,255,.07)",
+  },
 
-const modalTitleWrapper = {
-  display: "flex",
-  alignItems: "center",
-  gap: 13,
-};
+  modalTitleWrapper: {
+    display: "flex",
+    alignItems: "center",
+    gap: 13,
+  },
 
-const modalIconDeposit = {
-  width: 48,
-  height: 48,
-  borderRadius: 15,
-  background:
-    "rgba(34,197,94,.15)",
-  color: "#4ade80",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
+  modalIconDeposit: {
+    width: 48,
+    height: 48,
+    borderRadius: 15,
+    background: "rgba(34,197,94,.15)",
+    color: "#4ade80",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-const modalIconWithdraw = {
-  width: 48,
-  height: 48,
-  borderRadius: 15,
-  background:
-    "rgba(239,68,68,.15)",
-  color: "#f87171",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
+  modalIconWithdraw: {
+    width: 48,
+    height: 48,
+    borderRadius: 15,
+    background: "rgba(239,68,68,.15)",
+    color: "#f87171",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-const modalTitle = {
-  margin: 0,
-  color: "white",
-  fontSize: 20,
-};
+  modalTitle: { margin: 0, color: "white", fontSize: 20 },
 
-const modalSubtitle = {
-  margin: "5px 0 0",
-  color: "#94a3b8",
-  fontSize: 13,
-};
+  modalSubtitle: {
+    margin: "5px 0 0",
+    color: "#94a3b8",
+    fontSize: 13,
+  },
 
-const closeButton = {
-  width: 38,
-  height: 38,
-  border: "none",
-  borderRadius: 12,
-  cursor: "pointer",
-  background:
-    "rgba(255,255,255,.07)",
-  color: "#cbd5e1",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
+  closeButton: {
+    width: 38,
+    height: 38,
+    border: "none",
+    borderRadius: 12,
+    cursor: "pointer",
+    background: "rgba(255,255,255,.07)",
+    color: "#cbd5e1",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  },
 
-const modalContent = {
-  padding: 22,
-  display: "flex",
-  flexDirection: "column",
-  gap: 20,
-};
+  modalContent: {
+    padding: 22,
+    display: "flex",
+    flexDirection: "column",
+    gap: 20,
+  },
 
-const fieldGroup = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 8,
-};
+  fieldGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+  },
 
-const label = {
-  color: "#e2e8f0",
-  fontSize: 14,
-  fontWeight: 700,
-};
+  label: { color: "#e2e8f0", fontSize: 14, fontWeight: 700 },
 
-const inputWrapper = {
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  background: "#0f172a",
-  border:
-    "1px solid #334155",
-  borderRadius: 14,
-  padding: "0 13px",
-};
+  inputWrapper: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    background: "#0f172a",
+    border: "1px solid #334155",
+    borderRadius: 14,
+    padding: "0 13px",
+  },
 
-const inputIcon = {
-  color: "#64748b",
-  flexShrink: 0,
-};
+  inputIcon: { color: "#64748b", flexShrink: 0 },
 
-const input = {
-  width: "100%",
-  border: "none",
-  outline: "none",
-  background: "transparent",
-  color: "white",
-  padding: "14px 0",
-  fontSize: 15,
-};
+  input: {
+    width: "100%",
+    minWidth: 0,
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    color: "white",
+    padding: "14px 0",
+    fontSize: 15,
+  },
 
-const plainInput = {
-  width: "100%",
-  boxSizing: "border-box",
-  background: "#0f172a",
-  color: "white",
-  border:
-    "1px solid #334155",
-  borderRadius: 14,
-  padding: "14px",
-  outline: "none",
-  fontSize: 15,
-};
+  plainInput: {
+    width: "100%",
+    boxSizing: "border-box",
+    background: "#0f172a",
+    color: "white",
+    border: "1px solid #334155",
+    borderRadius: 14,
+    padding: 14,
+    outline: "none",
+    fontSize: 15,
+  },
 
-const currency = {
-  color: "#64748b",
-  fontWeight: 700,
-  fontSize: 13,
-};
+  currency: { color: "#64748b", fontWeight: 700, fontSize: 13 },
 
-const hint = {
-  color: "#64748b",
-  fontSize: 12,
-};
+  hint: { color: "#94a3b8", fontSize: 12, lineHeight: 1.5 },
 
-const methodsGrid = {
-  display: "grid",
-  gridTemplateColumns:
-    "repeat(2,minmax(0,1fr))",
-  gap: 10,
-};
+  methodsGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2,minmax(0,1fr))",
+    gap: 10,
+  },
 
-const methodCard = {
-  position: "relative",
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  padding: 13,
-  borderRadius: 15,
-  border:
-    "1px solid #334155",
-  background: "#0f172a",
-  color: "white",
-  textAlign: "left",
-  cursor: "pointer",
-};
+  methodCard: {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: 13,
+    borderRadius: 15,
+    border: "1px solid #334155",
+    background: "#0f172a",
+    color: "white",
+    textAlign: "left",
+    cursor: "pointer",
+    minWidth: 0,
+  },
 
-const methodCardSelected = {
-  borderColor: "#3b82f6",
-  background:
-    "rgba(37,99,235,.13)",
-};
+  methodCardSelected: {
+    borderColor: "#3b82f6",
+    background: "rgba(37,99,235,.13)",
+  },
 
-const methodCardDisabled = {
-  opacity: 0.48,
-  cursor: "not-allowed",
-};
+  methodCardDisabled: { opacity: 0.48, cursor: "not-allowed" },
 
-const methodIcon = {
-  width: 38,
-  height: 38,
-  borderRadius: 11,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  background:
-    "rgba(255,255,255,.06)",
-  color: "#94a3b8",
-  flexShrink: 0,
-};
+  methodIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "rgba(255,255,255,.06)",
+    color: "#94a3b8",
+    flexShrink: 0,
+  },
 
-const methodIconSelected = {
-  background:
-    "rgba(59,130,246,.18)",
-  color: "#60a5fa",
-};
+  methodIconSelected: {
+    background: "rgba(59,130,246,.18)",
+    color: "#60a5fa",
+  },
 
-const methodText = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 3,
-  fontSize: 12,
-};
+  methodText: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 3,
+    fontSize: 12,
+    minWidth: 0,
+    overflowWrap: "anywhere",
+  },
 
-const checkIcon = {
-  position: "absolute",
-  right: 10,
-  top: 10,
-  color: "#60a5fa",
-};
+  checkIcon: {
+    position: "absolute",
+    right: 7,
+    top: 7,
+    color: "#60a5fa",
+  },
 
-const paymentInfo = {
-  padding: 16,
-  borderRadius: 17,
-  background:
-    "rgba(234,179,8,.08)",
-  border:
-    "1px solid rgba(234,179,8,.25)",
-};
+  paymentInfo: {
+    padding: 16,
+    borderRadius: 17,
+    background: "rgba(234,179,8,.08)",
+    border: "1px solid rgba(234,179,8,.25)",
+  },
 
-const paymentInfoHeader = {
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-  color: "#facc15",
-};
+  paymentInfoHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    color: "#facc15",
+  },
 
-const paymentInstruction = {
-  color: "#cbd5e1",
-  fontSize: 13,
-  lineHeight: 1.6,
-};
+  paymentInstruction: {
+    color: "#cbd5e1",
+    fontSize: 13,
+    lineHeight: 1.6,
+  },
 
-const numberBox = {
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  padding: 12,
-  borderRadius: 13,
-  background:
-    "rgba(0,0,0,.2)",
-  flexWrap: "wrap",
-};
+  numberBox: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: 12,
+    borderRadius: 13,
+    background: "rgba(0,0,0,.2)",
+    flexWrap: "wrap",
+  },
 
-const copyButton = {
-  marginLeft: "auto",
-  border: "none",
-  borderRadius: 10,
-  padding: "8px 11px",
-  background: "#2563eb",
-  color: "white",
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
-  gap: 6,
-  fontWeight: 700,
-};
+  paymentRecipient: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    minWidth: 0,
+  },
 
-const errorBox = {
-  display: "flex",
-  alignItems: "flex-start",
-  gap: 9,
-  padding: 13,
-  borderRadius: 13,
-  background:
-    "rgba(239,68,68,.1)",
-  border:
-    "1px solid rgba(239,68,68,.3)",
-  color: "#fca5a5",
-  fontSize: 13,
-};
+  paymentAccount: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    minWidth: 0,
+    flex: 1,
+  },
 
-const modalFooter = {
-  display: "flex",
-  gap: 10,
-  padding: 22,
-  borderTop:
-    "1px solid rgba(255,255,255,.07)",
-};
+  recipientLabel: {
+    color: "#94a3b8",
+    fontSize: 11,
+    fontWeight: 600,
+    textTransform: "uppercase",
+    letterSpacing: ".04em",
+  },
 
-const cancelButton = {
-  flex: 1,
-  border: "1px solid #334155",
-  borderRadius: 13,
-  padding: "13px 15px",
-  background: "transparent",
-  color: "#cbd5e1",
-  cursor: "pointer",
-  fontWeight: 700,
-};
+  recipientName: { color: "white", fontSize: 14 },
 
-const confirmDepositButton = {
-  flex: 2,
-  border: "none",
-  borderRadius: 13,
-  padding: "13px 15px",
-  background:
-    "linear-gradient(135deg,#16a34a,#22c55e)",
-  color: "white",
-  cursor: "pointer",
-  fontWeight: 800,
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  gap: 8,
-};
+  accountNumber: {
+    color: "#f8fafc",
+    fontSize: 15,
+    letterSpacing: ".03em",
+    wordBreak: "break-word",
+  },
 
-const confirmWithdrawButton = {
-  flex: 2,
-  border: "none",
-  borderRadius: 13,
-  padding: "13px 15px",
-  background:
-    "linear-gradient(135deg,#dc2626,#ef4444)",
-  color: "white",
-  cursor: "pointer",
-  fontWeight: 800,
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-  gap: 8,
-};
+  copyButton: {
+    marginLeft: "auto",
+    border: "none",
+    borderRadius: 10,
+    padding: "8px 11px",
+    background: "#2563eb",
+    color: "white",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    fontWeight: 700,
+  },
 
-const securityNotice = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 7,
-  padding: "0 22px 20px",
-  color: "#64748b",
-  fontSize: 11,
-  textAlign: "center",
-};
+  errorBox: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 9,
+    padding: 13,
+    borderRadius: 13,
+    background: "rgba(239,68,68,.1)",
+    border: "1px solid rgba(239,68,68,.3)",
+    color: "#fca5a5",
+    fontSize: 13,
+  },
 
-const paymentRecipient = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 4,
-  minWidth: 0,
-};
+  modalFooter: {
+    display: "flex",
+    gap: 10,
+    padding: 22,
+    borderTop: "1px solid rgba(255,255,255,.07)",
+  },
 
-const paymentAccount = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 4,
-  minWidth: 0,
-  flex: 1,
-};
+  cancelButton: {
+    flex: 1,
+    border: "1px solid #334155",
+    borderRadius: 13,
+    padding: "13px 15px",
+    background: "transparent",
+    color: "#cbd5e1",
+    cursor: "pointer",
+    fontWeight: 700,
+  },
 
-const recipientLabel = {
-  color: "#94a3b8",
-  fontSize: 11,
-  fontWeight: 600,
-  textTransform: "uppercase",
-  letterSpacing: ".04em",
-};
+  confirmDepositButton: {
+    flex: 2,
+    border: "none",
+    borderRadius: 13,
+    padding: "13px 15px",
+    background: "linear-gradient(135deg,#16a34a,#22c55e)",
+    color: "white",
+    cursor: "pointer",
+    fontWeight: 800,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+  },
 
-const recipientName = {
-  color: "white",
-  fontSize: 14,
-};
+  confirmWithdrawButton: {
+    flex: 2,
+    border: "none",
+    borderRadius: 13,
+    padding: "13px 15px",
+    background: "linear-gradient(135deg,#dc2626,#ef4444)",
+    color: "white",
+    cursor: "pointer",
+    fontWeight: 800,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+  },
 
-const accountNumber = {
-  color: "#f8fafc",
-  fontSize: 15,
-  letterSpacing: ".03em",
-  wordBreak: "break-word",
+  spinner: { animation: "wallet-spin 1s linear infinite" },
+
+  securityNotice: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    padding: "0 22px 20px",
+    color: "#94a3b8",
+    fontSize: 11,
+    textAlign: "center",
+  },
 };

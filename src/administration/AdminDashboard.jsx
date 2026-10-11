@@ -24,6 +24,8 @@ import DashboardStats from "./DashboardStats";
 
 import TransactionsList from "./TransactionsList";
 
+import MarchandManager from "./MarchandManager";
+
 import MatchesList from "./MatchesList";
 
 import MessagesList from "./MessagesList";
@@ -43,6 +45,7 @@ import AdsEditor from "./AdsEditor";
 import GestionTournois from "./GestionTournois";
 
 import Parametres from "./Parametres";
+
 
 // ============================================================
 // SERVICES AI
@@ -88,6 +91,7 @@ const Icons = {
   ads: "📢",
   adsEditor: "📝",
   ambassade: "🤝",
+  merchands: "💼",
   matches: "⚽",
   messages: "💬",
   settings: "⚙️",
@@ -245,6 +249,13 @@ const AdminDashboard = () => {
         icon: Icons.ambassade,
         description:
           "Gestion des ambassadeurs",
+      },
+
+      {
+        id: "marchands",
+        label: "Module économique",
+        icon: Icons.merchant,
+        description: "Gestion des marchands et des commissions",
       },
 
       {
@@ -1137,6 +1148,17 @@ const fetchMatches = useCallback(async () => {
           );
 
         // ====================================================
+        // MODULE ÉCONOMIQUE — SAJCL
+        // ====================================================
+
+        case "marchands":
+          return (
+            <section className="admin-module">
+              <MarchandManager />
+            </section>
+          );
+
+        // ====================================================
         // MATCHS
         // ====================================================
 
@@ -1216,23 +1238,13 @@ const fetchMatches = useCallback(async () => {
 
               </div>
 
-              {/*
-               * IMPORTANT :
-               *
-               * MessagesList ne reçoit PAS
-               * messages en props.
-               *
-               * Le composant possède déjà
-               * son propre loadData() et son
-               * intervalle de 15 secondes.
-               *
-               * On le monte donc simplement.
-               */}
-
               <MessagesList />
+
+              
 
             </section>
           );
+
 
         // ====================================================
         // PARAMETRES
