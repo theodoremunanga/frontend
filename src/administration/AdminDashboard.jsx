@@ -12,6 +12,7 @@ import "./AdminDashboard.css";
 // ============================================================
 
 import adminApi from "./api/adminApi";
+import AssistantManager from "./AssistantManager";
 
 // API générale utilisée notamment pour les utilisateurs
 import api from "../services/api";
@@ -91,7 +92,8 @@ const Icons = {
   ads: "📢",
   adsEditor: "📝",
   ambassade: "🤝",
-  merchands: "💼",
+  chatball: "🧠",
+  merchants: "💼",
   matches: "⚽",
   messages: "💬",
   settings: "⚙️",
@@ -225,6 +227,14 @@ const AdminDashboard = () => {
         icon: Icons.ai,
         description:
           "Contrôle et gestion de l'IA",
+      },
+
+      {
+        id: "chatball",
+        label: "Assistant IA",
+        icon: Icons.chatball,
+        description:
+          "Connaissances, conversations et supervision de l'assistant",
       },
 
       {
@@ -1112,6 +1122,17 @@ const fetchMatches = useCallback(async () => {
               />
             </section>
           );
+
+          // ====================================================
+          // CHATBALL — GESTION DE L'ASSISTANT IA
+          // ====================================================
+
+          case "chatball":
+            return (
+              <section className="admin-module">
+                <AssistantManager />
+              </section>
+            );
 
           
         // ====================================================

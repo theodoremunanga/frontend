@@ -1,22 +1,34 @@
+
 import React, { useEffect, useMemo, useState } from "react";
 import "./Ambassade.css";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
-
-const COMMISSION_RATE = 0.015;
 const MIN_AMOUNT = 500;
+const MAX_COMMISSION_RATE = 50;
 
 // ======================================================
 // FORMAT CDF
 // ======================================================
 
 const formatCDF = (value) => {
-  const amount = Number(value || 0);
+  const amount = Number(value ?? 0);
 
   return (
     new Intl.NumberFormat("fr-FR", {
       maximumFractionDigits: 2,
-    }).format(amount) + " CDF"
+    }).format(Number.isFinite(amount) ? amount : 0) + " CDF"
+  );
+};
+
+const formatRate = (value) => {
+  const rate = Number(value);
+
+  if (!Number.isFinite(rate)) return "Indisponible";
+
+  return (
+    new Intl.NumberFormat("fr-FR", {
+      maximumFractionDigits: 4,
+    }).format(rate) + " %"
   );
 };
 
@@ -24,13 +36,10 @@ const formatCDF = (value) => {
 // TOKEN
 // ======================================================
 
-const getToken = () => {
-  return (
-    localStorage.getItem("token") ||
-    localStorage.getItem("accessToken") ||
-    localStorage.getItem("jwt")
-  );
-};
+const getToken = () =>
+  localStorage.getItem("token") ||
+  localStorage.getItem("accessToken") ||
+  localStorage.getItem("jwt");
 
 // ======================================================
 // API REQUEST
@@ -41,16 +50,9 @@ const apiRequest = async (url, options = {}) => {
 
   const response = await fetch(`${API_BASE}${url}`, {
     ...options,
-
     headers: {
       "Content-Type": "application/json",
-
-      ...(token
-        ? {
-            Authorization: `Bearer ${token}`,
-          }
-        : {}),
-
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {}),
     },
   });
@@ -59,9 +61,7 @@ const apiRequest = async (url, options = {}) => {
 
   if (!response.ok) {
     throw new Error(
-      data.error ||
-        data.message ||
-        "Une erreur est survenue."
+      data.error || data.message || "Une erreur est survenue."
     );
   }
 
@@ -69,134 +69,177 @@ const apiRequest = async (url, options = {}) => {
 };
 
 // ======================================================
+// NORMALISATION DES DONNÉES
+// ======================================================
+
+const normalizeBeneficiary = (data) => {
+  const user =
+    data?.beneficiary ||
+    data?.user ||
+    data?.data?.beneficiary ||
+    data?.data?.user ||
+    null;
+
+  if (!user) return null;
+
+  const id = Number(user.id ?? user.userId);
+
+  if (!Number.isInteger(id) || id <= 0) return null;
+
+  return {
+    ...user,
+    id,
+    username:
+      user.username ||
+      user.name ||
+      user.full_name ||
+      user.fullName ||
+      "",
+    custom_id: user.custom_id || user.customId || "",
+  };
+};
+
+const normalizeHistoryOperation = (operation, index = 0) => ({
+  ...operation,
+  id:
+    operation.id ??
+    operation.transactionId ??
+    `${operation.tid || "operation"}-${index}`,
+  amount: Number(operation.amount ?? 0),
+  commission: Number(operation.commission ?? 0),
+  userId: operation.userId ?? operation.user_id ?? null,
+  username: operation.username || "",
+  customId: operation.customId || operation.custom_id || "",
+  date:
+    operation.date ||
+    operation.recovered_at ||
+    operation.updated_at ||
+    operation.created_at ||
+    null,
+});
+
+// ======================================================
 // COMPONENT
 // ======================================================
 
 export default function Ambassade() {
-  // ======================================================
+  // ====================================================
   // FORMULAIRE
-  // ======================================================
+  // ====================================================
 
   const [tid, setTid] = useState("");
   const [amount, setAmount] = useState("");
   const [userId, setUserId] = useState("");
 
-  // ======================================================
+  // ====================================================
   // DESTINATAIRE
-  // ======================================================
-
-  /*
-   * Le frontend ne connaît pas directement le nom
-   * correspondant à l'ID.
-   *
-   * Exemple :
-   *
-   * ID 25
-   *   ↓
-   * GET /api/ambassade/beneficiary/25
-   *   ↓
-   * KASONGA NTUMBA
-   *
-   * beneficiary contient les informations retournées
-   * par le backend.
-   */
+  // ====================================================
 
   const [beneficiary, setBeneficiary] = useState(null);
-  const [loadingBeneficiary, setLoadingBeneficiary] =
-    useState(false);
+  const [loadingBeneficiary, setLoadingBeneficiary] = useState(false);
 
-  // ======================================================
+  // ====================================================
   // ÉTATS
-  // ======================================================
+  // ====================================================
 
   const [recovering, setRecovering] = useState(false);
-
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  // ======================================================
+  // ====================================================
   // HISTORIQUE
-  // ======================================================
+  // ====================================================
 
   const [history, setHistory] = useState([]);
 
-  // ======================================================
-  // COMMISSION
-  // ======================================================
+  // ====================================================
+  // TAUX RÉEL DU SERVEUR
+  //
+  // Le routeur fourni ne propose pas de route de lecture
+  // du taux. Le taux devient connu après /recover.
+  // null signifie qu'il n'est pas encore connu.
+  // ====================================================
+
+  const [commissionRate, setCommissionRate] = useState(null);
+
+  // ====================================================
+  // APERÇU DE COMMISSION
+  //
+  // Cet aperçu n'est disponible que si le serveur a déjà
+  // communiqué un taux réel.
+  //
+  // Le calcul officiel reste celui du backend.
+  // ====================================================
 
   const commission = useMemo(() => {
     const value = Number(amount);
+    const rate = Number(commissionRate);
 
-    if (!Number.isFinite(value) || value <= 0) {
-      return 0;
+    if (
+      amount === "" ||
+      !Number.isFinite(value) ||
+      value <= 0 ||
+      commissionRate === null ||
+      !Number.isFinite(rate) ||
+      rate < 0 ||
+      rate > MAX_COMMISSION_RATE
+    ) {
+      return null;
     }
 
-    return (
-      Math.round(
-        value * COMMISSION_RATE * 100
-      ) / 100
-    );
-  }, [amount]);
+    // Même règle d'arrondi monétaire que le backend.
+    const amountCents = Math.round(value * 100);
 
-  // ======================================================
+    return Number(
+      (Math.round((amountCents * rate) / 100) / 100).toFixed(2)
+    );
+  }, [amount, commissionRate]);
+
+  // ====================================================
   // STATISTIQUES
-  // ======================================================
+  // ====================================================
 
-  const totalRecovered = useMemo(() => {
-    return history.reduce(
-      (total, operation) =>
-        total + Number(operation.amount || 0),
-      0
-    );
-  }, [history]);
+  const totalRecovered = useMemo(
+    () =>
+      history.reduce(
+        (total, operation) =>
+          total + (Number(operation.amount) || 0),
+        0
+      ),
+    [history]
+  );
 
-  const totalCommission = useMemo(() => {
-    return history.reduce(
-      (total, operation) =>
-        total + Number(operation.commission || 0),
-      0
-    );
-  }, [history]);
+  const totalCommission = useMemo(
+    () =>
+      history.reduce(
+        (total, operation) =>
+          total + (Number(operation.commission) || 0),
+        0
+      ),
+    [history]
+  );
 
-  // ======================================================
-  // CHARGEMENT HISTORIQUE
+  // ====================================================
+  // CHARGEMENT DE L'HISTORIQUE
   //
-  // L'historique est purement informatif.
-  // Il ne bloque jamais une récupération.
-  // ======================================================
+  // Contrat du backend :
+  // { success: true, count: number, history: [...] }
+  // ====================================================
 
   useEffect(() => {
     let cancelled = false;
 
     const loadHistory = async () => {
       try {
-        const data = await apiRequest(
-          "/ambassade/history"
-        );
+        const data = await apiRequest("/ambassade/history");
 
-        /*
-         * IMPORTANT :
-         * Le backend retourne :
-         *
-         * {
-         *   success: true,
-         *   count: ...,
-         *   history: [...]
-         * }
-         *
-         * et non "operations".
-         */
-
-        if (
-          !cancelled &&
-          data &&
-          Array.isArray(data.history)
-        ) {
-          setHistory(data.history);
+        if (!cancelled && Array.isArray(data.history)) {
+          setHistory(
+            data.history.map(normalizeHistoryOperation)
+          );
         }
       } catch {
-        // L'historique ne doit jamais empêcher
-        // l'Ambassadeur d'effectuer une récupération.
+        // L'historique ne bloque jamais une récupération.
       }
     };
 
@@ -207,121 +250,59 @@ export default function Ambassade() {
     };
   }, []);
 
-  // ======================================================
+  // ====================================================
   // MESSAGES
-  // ======================================================
+  // ====================================================
 
   const resetMessages = () => {
     setError("");
     setSuccess("");
   };
 
-  // ======================================================
-  // CHANGEMENT TID
-  // ======================================================
+  // ====================================================
+  // CHANGEMENTS DU FORMULAIRE
+  // ====================================================
 
   const handleTidChange = (event) => {
     setTid(event.target.value);
-    setError("");
-    setSuccess("");
+    resetMessages();
   };
-
-  // ======================================================
-  // CHANGEMENT MONTANT
-  // ======================================================
 
   const handleAmountChange = (event) => {
     setAmount(event.target.value);
-    setError("");
-    setSuccess("");
+    resetMessages();
   };
-
-  // ======================================================
-  // CHANGEMENT DESTINATAIRE
-  // ======================================================
 
   const handleUserIdChange = (event) => {
-    const value = event.target.value;
-
-    setUserId(value);
-
-    /*
-     * Dès que l'ID change, l'ancien destinataire
-     * n'est plus considéré comme valide.
-     *
-     * Exemple :
-     *
-     * 25 → KASONGA NTUMBA
-     *
-     * puis l'ambassadeur modifie :
-     *
-     * 25 → 26
-     *
-     * On efface immédiatement KASONGA NTUMBA.
-     */
-
+    setUserId(event.target.value);
     setBeneficiary(null);
-
-    setError("");
-    setSuccess("");
+    resetMessages();
   };
 
-  // ======================================================
-  // RECHERCHE DU DESTINATAIRE
+  // ====================================================
+  // IDENTIFICATION DU DESTINATAIRE
   //
-  // Cette fonction NE vérifie PAS le fonds.
-  //
-  // Elle sert uniquement à transformer :
-  //
-  // ID utilisateur
-  //      ↓
-  // nom utilisateur
-  //
-  // Exemple :
-  //
-  // 25
-  // ↓
-  // GET /api/ambassade/beneficiary/25
-  // ↓
-  // KASONGA NTUMBA
-  // ======================================================
+  // Route conservée :
+  // GET /ambassade/beneficiary/:userId
+  // ====================================================
 
   const handleBeneficiaryLookup = async () => {
-    const numericUserId = Number(userId);
+    const cleanUserId = userId.trim();
+    const numericUserId = Number(cleanUserId);
 
-    // ----------------------------------------------------
-    // Aucun ID
-    // ----------------------------------------------------
-
-    if (!userId.trim()) {
+    if (!cleanUserId) {
       setBeneficiary(null);
-      return;
+      return null;
     }
 
-    // ----------------------------------------------------
-    // ID invalide
-    // ----------------------------------------------------
-
-    if (
-      !Number.isInteger(numericUserId) ||
-      numericUserId <= 0
-    ) {
+    if (!Number.isInteger(numericUserId) || numericUserId <= 0) {
       setBeneficiary(null);
-      setError(
-        "Veuillez saisir un ID destinataire valide."
-      );
-      return;
+      setError("Veuillez saisir un ID destinataire valide.");
+      return null;
     }
 
-    // ----------------------------------------------------
-    // Protection contre les recherches inutiles
-    // ----------------------------------------------------
-
-    if (
-      beneficiary &&
-      Number(beneficiary.id) === numericUserId
-    ) {
-      return;
+    if (beneficiary && beneficiary.id === numericUserId) {
+      return beneficiary;
     }
 
     setLoadingBeneficiary(true);
@@ -333,21 +314,7 @@ export default function Ambassade() {
         `/ambassade/beneficiary/${numericUserId}`
       );
 
-      /*
-       * Le backend peut retourner les informations
-       * du bénéficiaire sous "beneficiary".
-       *
-       * Les fallback "user" et "data" rendent le frontend
-       * plus tolérant si la structure exacte de la réponse
-       * backend évolue légèrement.
-       */
-
-      const resolvedBeneficiary =
-        data?.beneficiary ||
-        data?.user ||
-        data?.data?.beneficiary ||
-        data?.data?.user ||
-        null;
+      const resolvedBeneficiary = normalizeBeneficiary(data);
 
       if (!resolvedBeneficiary) {
         throw new Error(
@@ -357,23 +324,14 @@ export default function Ambassade() {
         );
       }
 
-      const resolvedId = Number(
-        resolvedBeneficiary.id ??
-          resolvedBeneficiary.userId ??
-          numericUserId
-      );
+      if (resolvedBeneficiary.id !== numericUserId) {
+        throw new Error(
+          "L'identité du destinataire ne correspond pas à l'ID saisi."
+        );
+      }
 
-      /*
-       * Le backend doit normalement retourner un ID.
-       * On conserve l'ID saisi comme fallback.
-       */
-
-      const normalizedBeneficiary = {
-        ...resolvedBeneficiary,
-        id: resolvedId,
-      };
-
-      setBeneficiary(normalizedBeneficiary);
+      setBeneficiary(resolvedBeneficiary);
+      return resolvedBeneficiary;
     } catch (err) {
       setBeneficiary(null);
 
@@ -381,204 +339,104 @@ export default function Ambassade() {
         err.message ||
           "Impossible de récupérer les informations du destinataire."
       );
+
+      return null;
     } finally {
       setLoadingBeneficiary(false);
     }
   };
 
-  // ======================================================
-  // NOM DU DESTINATAIRE
-  // ======================================================
-
-  const getBeneficiaryName = () => {
-    if (!beneficiary) {
-      return "";
-    }
-
-    /*
-     * On privilégie username puisque le backend
-     * retourne normalement :
-     *
-     * username: "KASONGA NTUMBA"
-     */
+  const getBeneficiaryName = (user = beneficiary) => {
+    if (!user) return "";
 
     return (
-      beneficiary.username ||
-      beneficiary.name ||
-      beneficiary.full_name ||
-      beneficiary.fullName ||
+      user.username ||
+      user.name ||
+      user.full_name ||
+      user.fullName ||
       ""
     );
   };
 
-  // ======================================================
-  // VALIDATION AVANT ENVOI
-  //
-  // IMPORTANT :
-  // Le backend reste responsable de la validation
-  // financière réelle.
-  //
-  // Le frontend vérifie uniquement :
-  // - TID
-  // - montant
-  // - ID
-  // - identité du destinataire récupérée
-  // ======================================================
+  // ====================================================
+  // VALIDATION
+  // ====================================================
 
-  const validateOperation = () => {
+  const validateOperation = (resolvedBeneficiary) => {
     const cleanTid = tid.trim();
     const numericAmount = Number(amount);
     const numericUserId = Number(userId);
-
-    // ----------------------------------------------------
-    // TID
-    // ----------------------------------------------------
 
     if (!cleanTid) {
       return "Le TID est obligatoire.";
     }
 
-    // ----------------------------------------------------
-    // MONTANT
-    // ----------------------------------------------------
-
     if (
+      amount.trim() === "" ||
       !Number.isFinite(numericAmount) ||
-      numericAmount <= 0
+      !Number.isInteger(numericAmount) ||
+      numericAmount < MIN_AMOUNT
     ) {
-      return "Veuillez saisir un montant valide.";
-    }
-
-    if (numericAmount < MIN_AMOUNT) {
-      return `Le montant minimum est de ${formatCDF(
+      return `Le montant doit être un nombre entier supérieur ou égal à ${formatCDF(
         MIN_AMOUNT
       )}.`;
     }
 
-    // ----------------------------------------------------
-    // DESTINATAIRE
-    // ----------------------------------------------------
-
-    if (
-      !Number.isInteger(numericUserId) ||
-      numericUserId <= 0
-    ) {
+    if (!Number.isInteger(numericUserId) || numericUserId <= 0) {
       return "Veuillez saisir un ID destinataire valide.";
     }
 
-    // ----------------------------------------------------
-    // DESTINATAIRE NON IDENTIFIÉ
-    // ----------------------------------------------------
-
-    if (!beneficiary) {
-      return (
-        "Veuillez renseigner un ID destinataire valide " +
-        "afin d'identifier le bénéficiaire."
-      );
+    if (!resolvedBeneficiary) {
+      return "Veuillez identifier le destinataire avant de continuer.";
     }
 
-    /*
-     * Vérification importante :
-     * le bénéficiaire chargé doit correspondre
-     * à l'ID actuellement saisi.
-     */
-
-    if (
-      Number(beneficiary.id) !== numericUserId
-    ) {
-      return (
-        "L'identité du destinataire ne correspond pas " +
-        "à l'ID saisi."
-      );
+    if (Number(resolvedBeneficiary.id) !== numericUserId) {
+      return "L'identité du destinataire ne correspond pas à l'ID saisi.";
     }
 
     return null;
   };
 
-  // ======================================================
-  // RÉCUPÉRATION
+  // ====================================================
+  // RÉCUPÉRATION DU FONDS
   //
-  // Flux :
+  // Route conservée :
+  // POST /ambassade/recover
   //
-  // TID
-  // montant
-  // userId
-  //
-  //       ↓
-  //
-  // POST /api/ambassade/recover
-  //
-  //       ↓
-  //
-  // BACKEND
-  //
-  // Le backend vérifie :
-  // - TID
-  // - statut du fonds
-  // - montant réel
-  // - utilisateur
-  // - compte utilisateur
-  // - ambassadeur
-  // - portefeuille
-  // - transaction
-  // - commission
-  // ======================================================
+  // Le serveur calcule et retourne la commission réelle.
+  // ====================================================
 
   const handleRecover = async (event) => {
     event.preventDefault();
 
+    if (recovering) return;
+
     resetMessages();
 
-    /*
-     * Avant toute chose, on s'assure que le destinataire
-     * est bien identifié.
-     */
+    const numericUserId = Number(userId);
+
+    let resolvedBeneficiary = beneficiary;
 
     if (
-      userId.trim() &&
-      !beneficiary &&
-      !loadingBeneficiary
+      !resolvedBeneficiary ||
+      Number(resolvedBeneficiary.id) !== numericUserId
     ) {
-      await handleBeneficiaryLookup();
+      resolvedBeneficiary = await handleBeneficiaryLookup();
     }
 
-    /*
-     * Si une recherche est nécessaire mais n'est pas encore
-     * terminée, on ne lance surtout pas l'opération.
-     */
+    // Ne pas continuer si la recherche a échoué.
+    if (!resolvedBeneficiary) return;
 
-    if (loadingBeneficiary) {
-      setError(
-        "Identification du destinataire en cours. Veuillez patienter."
-      );
-      return;
-    }
-
-    const validationError =
-      validateOperation();
+    const validationError = validateOperation(resolvedBeneficiary);
 
     if (validationError) {
       setError(validationError);
       return;
     }
 
-    // ====================================================
-    // PROTECTION DOUBLE CLIC
-    // ====================================================
-
-    if (recovering) {
-      return;
-    }
-
     const cleanTid = tid.trim();
     const numericAmount = Number(amount);
-    const numericUserId = Number(userId);
-    const beneficiaryName =
-      getBeneficiaryName();
-
-    // ====================================================
-    // CONFIRMATION
-    // ====================================================
+    const beneficiaryName = getBeneficiaryName(resolvedBeneficiary);
 
     const confirmed = window.confirm(
       `Voulez-vous vraiment récupérer ${formatCDF(
@@ -588,65 +446,78 @@ export default function Ambassade() {
         `Montant : ${formatCDF(numericAmount)}\n` +
         `Destinataire : ${beneficiaryName} (#${numericUserId})\n\n` +
         `Le destinataire recevra 100 % du montant.\n` +
-        `Votre commission de 1,5 % sera créditée séparément.\n\n` +
+        `La commission sera calculée selon le taux administré par le serveur.\n\n` +
         `Cette opération est définitive.`
     );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     setRecovering(true);
 
-    // ====================================================
-    // APPEL BACKEND
-    // ====================================================
-
     try {
-      const data = await apiRequest(
-        "/ambassade/recover",
-        {
-          method: "POST",
+      const data = await apiRequest("/ambassade/recover", {
+        method: "POST",
+        body: JSON.stringify({
+          tid: cleanTid,
+          amount: numericAmount,
+          userId: numericUserId,
+        }),
+      });
 
-          body: JSON.stringify({
-            tid: cleanTid,
-            amount: numericAmount,
-            userId: numericUserId,
-          }),
-        }
-      );
+      const operation = data?.operation;
 
-      // ==================================================
-      // RÉCUPÉRATION DE L'OPÉRATION
-      // ==================================================
+      if (!data?.success || !operation) {
+        throw new Error(
+          data?.error ||
+            data?.message ||
+            "Le serveur n'a pas confirmé la récupération."
+        );
+      }
 
-      const operation =
-        data.operation || {};
+      // ------------------------------------------------
+      // MONTANT RÉEL
+      // ------------------------------------------------
 
-      const recoveredAmount =
-        Number(operation.amount) ||
-        numericAmount;
+      const recoveredAmount = Number(operation.amount);
 
-      const recoveredCommission =
-        Number(
-          operation.ambassador?.commission
-        ) ||
-        Number(operation.commission) ||
-        Math.round(
-          recoveredAmount *
-            COMMISSION_RATE *
-            100
-        ) / 100;
+      if (!Number.isFinite(recoveredAmount)) {
+        throw new Error(
+          "Le serveur a retourné un montant de récupération invalide."
+        );
+      }
 
-      const operationUser =
-        operation.user || {};
-
-      // ==================================================
-      // NOM FINAL DU DESTINATAIRE
+      // ------------------------------------------------
+      // COMMISSION ET TAUX RÉELS
       //
-      // Le backend devient la source officielle après
-      // la récupération.
-      // ==================================================
+      // Contrat du routeur :
+      // operation.ambassador.commissionRate
+      // operation.ambassador.commission
+      // ------------------------------------------------
+
+      const serverAmbassador = operation.ambassador || {};
+
+      const serverRate = Number(serverAmbassador.commissionRate);
+      const serverCommission = Number(serverAmbassador.commission);
+
+      if (
+        !Number.isFinite(serverRate) ||
+        serverRate < 0 ||
+        serverRate > MAX_COMMISSION_RATE
+      ) {
+        throw new Error(
+          "Le serveur n'a pas retourné un taux de commission valide."
+        );
+      }
+
+      if (!Number.isFinite(serverCommission) || serverCommission < 0) {
+        throw new Error(
+          "Le serveur n'a pas retourné une commission valide."
+        );
+      }
+
+      setCommissionRate(serverRate);
+
+      const operationUser = operation.user || {};
 
       const finalBeneficiaryName =
         operationUser.username ||
@@ -654,168 +525,109 @@ export default function Ambassade() {
         beneficiaryName ||
         `#${numericUserId}`;
 
-      // ==================================================
-      // OPÉRATION POUR L'HISTORIQUE LOCAL
-      // ==================================================
+      // ------------------------------------------------
+      // HISTORIQUE LOCAL
+      // ------------------------------------------------
 
-      const historyOperation = {
+      const historyOperation = normalizeHistoryOperation({
         id:
           operation.transactionId ||
-          operation.id ||
           `${cleanTid}-${Date.now()}`,
-
-        transactionId:
-          operation.transactionId || "",
-
-        tid:
-          operation.tid ||
-          cleanTid,
-
+        transactionId: operation.transactionId || null,
+        tid: operation.tid || cleanTid,
         amount: recoveredAmount,
-
-        commission:
-          recoveredCommission,
-
-        userId:
-          operationUser.id ||
-          numericUserId,
-
+        commission: serverCommission,
+        userId: operationUser.id ?? numericUserId,
         username:
           operationUser.username ||
           operationUser.name ||
           finalBeneficiaryName,
-
         customId:
           operationUser.custom_id ||
           operationUser.customId ||
           "",
-
-        status:
-          operation.status ||
-          "completed",
-
+        status: operation.status || "completed",
         date:
           operation.createdAt ||
           operation.created_at ||
           new Date().toISOString(),
-      };
-
-      // ==================================================
-      // HISTORIQUE LOCAL TEMPORAIRE
-      //
-      // Le backend reste la source officielle.
-      // ==================================================
+      });
 
       setHistory((previous) =>
-        [
-          historyOperation,
-          ...previous,
-        ].slice(0, 20)
+        [historyOperation, ...previous].slice(0, 100)
       );
-
-      // ==================================================
-      // SUCCÈS
-      // ==================================================
 
       setSuccess(
-        data.message ||
-          `${formatCDF(
-            recoveredAmount
-          )} ont été crédités avec succès à ${finalBeneficiaryName}.`
+        `${data.message || "Récupération effectuée avec succès."} ` +
+          `Commission réelle : ${formatCDF(serverCommission)} ` +
+          `(${formatRate(serverRate)}).`
       );
 
-      // ==================================================
-      // RESET FORMULAIRE
-      // ==================================================
+      // ------------------------------------------------
+      // RÉINITIALISATION DU FORMULAIRE
+      // ------------------------------------------------
 
       setTid("");
       setAmount("");
       setUserId("");
       setBeneficiary(null);
 
-      // ==================================================
-      // RAFRAÎCHISSEMENT HISTORIQUE
-      // ==================================================
+      // ------------------------------------------------
+      // RAFRAÎCHISSEMENT DE L'HISTORIQUE OFFICIEL
+      // ------------------------------------------------
 
       try {
-        const historyData =
-          await apiRequest(
-            "/ambassade/history"
-          );
+        const historyData = await apiRequest("/ambassade/history");
 
-        /*
-         * IMPORTANT :
-         * Le backend retourne "history".
-         */
-
-        if (
-          historyData &&
-          Array.isArray(
-            historyData.history
-          )
-        ) {
+        if (Array.isArray(historyData.history)) {
           setHistory(
-            historyData.history
+            historyData.history.map(normalizeHistoryOperation)
           );
         }
       } catch {
-        // La récupération est déjà réussie.
-        // Une erreur d'historique ne l'annule pas.
+        // La récupération est déjà confirmée par le serveur.
       }
     } catch (err) {
       setError(
-        err.message ||
-          "La récupération du fonds a échoué."
+        err.message || "La récupération du fonds a échoué."
       );
     } finally {
       setRecovering(false);
     }
   };
 
-  // ======================================================
+  // ====================================================
   // RÉINITIALISATION
-  // ======================================================
+  // ====================================================
 
   const clearForm = () => {
-    if (recovering) {
-      return;
-    }
+    if (recovering) return;
 
     setTid("");
     setAmount("");
     setUserId("");
     setBeneficiary(null);
-
     setLoadingBeneficiary(false);
-
     resetMessages();
   };
 
-  // ======================================================
+  // ====================================================
   // RENDU
-  // ======================================================
+  // ====================================================
 
   return (
     <div className="ambassade-page">
-
-      {/* ==================================================
-          HEADER
-      ================================================== */}
-
       <header className="ambassade-header">
         <div>
           <span className="ambassade-kicker">
             SAJCL • FINANCEMENT
           </span>
 
-          <h1>
-            Espace Ambassadeur
-          </h1>
+          <h1>Espace Ambassadeur</h1>
 
           <p>
-            Créditez les comptes de vos recrues à
-            partir des fonds validés par
-            l'administration.
+            Créditez les comptes de vos recrues à partir des fonds
+            validés par l'administration.
           </p>
         </div>
 
@@ -825,169 +637,93 @@ export default function Ambassade() {
         </div>
       </header>
 
-      {/* ==================================================
-          KPI PERSONNELS
-      ================================================== */}
+      {/* STATISTIQUES PERSONNELLES */}
 
       <section className="ambassade-stats">
-
         <div className="ambassade-stat-card">
           <div className="stat-icon">💰</div>
-
           <div>
             <span>Fonds récupérés</span>
-
-            <strong>
-              {formatCDF(totalRecovered)}
-            </strong>
+            <strong>{formatCDF(totalRecovered)}</strong>
           </div>
         </div>
 
         <div className="ambassade-stat-card">
           <div className="stat-icon">📈</div>
-
           <div>
             <span>Mes commissions</span>
-
-            <strong>
-              {formatCDF(totalCommission)}
-            </strong>
+            <strong>{formatCDF(totalCommission)}</strong>
           </div>
         </div>
 
         <div className="ambassade-stat-card">
           <div className="stat-icon">🔄</div>
-
           <div>
             <span>Mes opérations</span>
-
-            <strong>
-              {history.length}
-            </strong>
+            <strong>{history.length}</strong>
           </div>
         </div>
 
         <div className="ambassade-stat-card commission-card">
-          <div className="stat-icon">
-            1,5%
-          </div>
-
+          <div className="stat-icon">%</div>
           <div>
             <span>Taux ambassadeur</span>
-
-            <strong>
-              Commission
-            </strong>
+            <strong>{formatRate(commissionRate)}</strong>
           </div>
         </div>
-
       </section>
 
-      {/* ==================================================
-          CIRCUIT
-      ================================================== */}
+      {/* CIRCUIT */}
 
       <section className="ambassade-flow">
-
         <div className="flow-step">
-          <div className="flow-number">
-            1
-          </div>
-
+          <div className="flow-number">1</div>
           <div>
-            <strong>
-              Votre recrue
-            </strong>
-
-            <span>
-              Verse à la caisse officielle C.O.6
-            </span>
+            <strong>Votre recrue</strong>
+            <span>Verse à la caisse officielle C.O.6</span>
           </div>
         </div>
 
         <div className="flow-line" />
 
         <div className="flow-step">
-          <div className="flow-number">
-            2
-          </div>
-
+          <div className="flow-number">2</div>
           <div>
-            <strong>
-              Administration
-            </strong>
-
-            <span>
-              Valide et enregistre le TID
-            </span>
+            <strong>Administration</strong>
+            <span>Valide et enregistre le TID</span>
           </div>
         </div>
 
         <div className="flow-line" />
 
         <div className="flow-step">
-          <div className="flow-number">
-            3
-          </div>
-
+          <div className="flow-number">3</div>
           <div>
-            <strong>
-              Ambassadeur
-            </strong>
-
-            <span>
-              Crédite le compte du destinataire
-            </span>
+            <strong>Ambassadeur</strong>
+            <span>Crédite le compte du destinataire</span>
           </div>
         </div>
-
       </section>
 
       <main className="ambassade-content">
-
-        {/* ==================================================
-            RÉCUPÉRATION
-        ================================================== */}
+        {/* FORMULAIRE DE RÉCUPÉRATION */}
 
         <section className="recovery-card">
-
           <div className="card-heading">
-
             <div>
-              <span className="section-label">
-                OPÉRATION
-              </span>
-
-              <h2>
-                Récupérer un fonds
-              </h2>
-
-              <p>
-                Saisissez le TID, le montant et
-                l'ID du destinataire.
-              </p>
+              <span className="section-label">OPÉRATION</span>
+              <h2>Récupérer un fonds</h2>
+              <p>Saisissez le TID, le montant et l'ID du destinataire.</p>
             </div>
 
             <div className="secure-badge">
               🔐 Opération sécurisée
             </div>
-
           </div>
 
-          <form
-            onSubmit={handleRecover}
-            className="recovery-form"
-          >
-
-            {/* ==================================================
-                TID
-            ================================================== */}
-
+          <form onSubmit={handleRecover} className="recovery-form">
             <div className="field-group tid-field">
-
-              <label htmlFor="tid">
-                TID du fonds
-              </label>
+              <label htmlFor="tid">TID du fonds</label>
 
               <input
                 id="tid"
@@ -997,33 +733,20 @@ export default function Ambassade() {
                 placeholder="Ex. CO260821.1659.T32121"
                 autoComplete="off"
                 disabled={recovering}
+                required
               />
 
               <small>
-                Saisissez le TID communiqué après
-                validation du fonds par l'administration.
+                Saisissez le TID communiqué après validation du fonds
+                par l'administration.
               </small>
-
             </div>
 
-            {/* ==================================================
-                MONTANT + DESTINATAIRE
-            ================================================== */}
-
             <div className="form-grid">
-
-              {/* ==================================================
-                  MONTANT
-              ================================================== */}
-
               <div className="field-group">
-
-                <label htmlFor="amount">
-                  Montant
-                </label>
+                <label htmlFor="amount">Montant</label>
 
                 <div className="amount-input">
-
                   <input
                     id="amount"
                     type="number"
@@ -1033,30 +756,16 @@ export default function Ambassade() {
                     onChange={handleAmountChange}
                     placeholder="Montant en CDF"
                     disabled={recovering}
+                    required
                   />
-
-                  <span>
-                    CDF
-                  </span>
-
+                  <span>CDF</span>
                 </div>
 
-                <small>
-                  Minimum :{" "}
-                  {formatCDF(MIN_AMOUNT)}
-                </small>
-
+                <small>Minimum : {formatCDF(MIN_AMOUNT)}</small>
               </div>
 
-              {/* ==================================================
-                  DESTINATAIRE
-              ================================================== */}
-
               <div className="field-group">
-
-                <label htmlFor="userId">
-                  ID du destinataire
-                </label>
+                <label htmlFor="userId">ID du destinataire</label>
 
                 <input
                   id="userId"
@@ -1069,16 +778,12 @@ export default function Ambassade() {
                   placeholder="Ex. 25"
                   autoComplete="off"
                   disabled={recovering}
+                  required
                 />
 
                 <small>
-                  ID du compte qui recevra
-                  100 % du fonds.
+                  ID du compte qui recevra 100 % du fonds.
                 </small>
-
-                {/* ==================================================
-                    IDENTITÉ DU DESTINATAIRE
-                ================================================== */}
 
                 {loadingBeneficiary && (
                   <div className="beneficiary-status">
@@ -1086,121 +791,75 @@ export default function Ambassade() {
                   </div>
                 )}
 
-                {!loadingBeneficiary &&
-                  beneficiary && (
-                    <div className="beneficiary-found">
-                      <span className="beneficiary-icon">
-                        ✓
-                      </span>
-
-                      <div>
+                {!loadingBeneficiary && beneficiary && (
+                  <div className="beneficiary-found">
+                    <span className="beneficiary-icon">✓</span>
+                    <div>
+                      <small>Destinataire identifié</small>
+                      <strong>
+                        {getBeneficiaryName() || `#${beneficiary.id}`}
+                      </strong>
+                      {beneficiary.custom_id && (
                         <small>
-                          Destinataire identifié
+                          Identifiant : {beneficiary.custom_id}
                         </small>
-
-                        <strong>
-                          {getBeneficiaryName()}
-                        </strong>
-                      </div>
+                      )}
                     </div>
-                  )}
-
+                  </div>
+                )}
               </div>
-
             </div>
 
-            {/* ==================================================
-                RÉCAPITULATIF FINANCIER
-            ================================================== */}
+            {/* RÉCAPITULATIF FINANCIER */}
 
             <div className="commission-box">
-
               <div className="commission-row">
-
-                <span>
-                  Crédit destinataire
-                </span>
-
-                <strong>
-                  {formatCDF(
-                    Number(amount) || 0
-                  )}
-                </strong>
-
+                <span>Crédit destinataire</span>
+                <strong>{formatCDF(Number(amount) || 0)}</strong>
               </div>
 
               <div className="commission-row">
-
                 <span>
                   Votre commission
-                  <small>
-                    1,5 %
-                  </small>
+                  <small>{formatRate(commissionRate)}</small>
                 </span>
 
                 <strong className="commission-value">
-                  +{" "}
-                  {formatCDF(
-                    commission
-                  )}
+                  {commission === null
+                    ? "Taux non encore communiqué"
+                    : `+ ${formatCDF(commission)}`}
                 </strong>
-
               </div>
 
               <div className="commission-separator" />
 
               <div className="commission-info">
-
-                <span>
-                  ℹ️
-                </span>
-
+                <span>ℹ️</span>
                 <p>
-                  Le destinataire reçoit
-                  l'intégralité du montant.
-                  Votre commission de 1,5 % est
-                  générée séparément dans votre
-                  portefeuille ambassadeur.
+                  Le destinataire reçoit l'intégralité du montant.
+                  La commission est financée séparément par le compte
+                  système PLT777. Le taux appliqué est celui configuré
+                  par l'administration. Le montant officiel est celui
+                  confirmé par le serveur après récupération.
                 </p>
-
               </div>
-
             </div>
-
-            {/* ==================================================
-                ALERTES
-            ================================================== */}
 
             {error && (
               <div className="ambassade-alert error">
-
-                <span>
-                  ⚠
-                </span>
-
+                <span>⚠</span>
                 {error}
-
               </div>
             )}
 
             {success && (
               <div className="ambassade-alert success">
-
-                <span>
-                  ✓
-                </span>
-
+                <span>✓</span>
                 {success}
-
               </div>
             )}
 
-            {/* ==================================================
-                ACTIONS
-            ================================================== */}
-
             <div className="form-actions">
-
               <button
                 type="button"
                 className="clear-button"
@@ -1219,169 +878,106 @@ export default function Ambassade() {
                   !tid.trim() ||
                   !amount ||
                   !userId ||
-                  !beneficiary
+                  !beneficiary ||
+                  Number(beneficiary?.id) !== Number(userId)
                 }
               >
                 {recovering
                   ? "Récupération en cours..."
                   : "Récupérer et créditer"}
               </button>
-
             </div>
-
           </form>
-
         </section>
 
-        {/* ==================================================
-            HISTORIQUE PERSONNEL
-        ================================================== */}
+        {/* HISTORIQUE PERSONNEL */}
 
         <section className="history-card">
-
           <div className="card-heading">
-
             <div>
-              <span className="section-label">
-                JOURNAL
-              </span>
-
-              <h2>
-                Mes dernières récupérations
-              </h2>
+              <span className="section-label">JOURNAL</span>
+              <h2>Mes dernières récupérations</h2>
             </div>
-
           </div>
 
           {history.length === 0 ? (
-
             <div className="empty-history">
-
-              <div className="empty-icon">
-                📋
-              </div>
-
-              <strong>
-                Aucune récupération
-              </strong>
-
+              <div className="empty-icon">📋</div>
+              <strong>Aucune récupération</strong>
               <p>
-                Vos opérations apparaîtront ici
-                après chaque récupération réussie.
+                Vos opérations apparaîtront ici après chaque
+                récupération réussie.
               </p>
-
             </div>
-
           ) : (
-
             <div className="history-list">
+              {history.map((operation, index) => (
+                <div
+                  className="history-item"
+                  key={
+                    operation.id ||
+                    operation.transactionId ||
+                    `${operation.tid}-${index}`
+                  }
+                >
+                  <div className="history-main">
+                    <div className="history-icon">✓</div>
 
-              {history.map(
-                (operation, index) => (
+                    <div>
+                      <strong>{formatCDF(operation.amount)}</strong>
 
-                  <div
-                    className="history-item"
-                    key={
-                      operation.id ||
-                      operation.transactionId ||
-                      `${operation.tid}-${index}`
-                    }
-                  >
-
-                    <div className="history-main">
-
-                      <div className="history-icon">
-                        ✓
-                      </div>
-
-                      <div>
-
-                        <strong>
-                          {formatCDF(
-                            operation.amount
-                          )}
-                        </strong>
-
-                        <span>
-                          TID :{" "}
-                          {operation.tid}
-                        </span>
-
-                        <span>
-                          Destinataire{" "}
-                          #{operation.userId}
-
-                          {operation.username
-                            ? ` • ${operation.username}`
-                            : ""}
-                        </span>
-
-                      </div>
-
-                    </div>
-
-                    <div className="history-commission">
+                      <span>TID : {operation.tid || "—"}</span>
 
                       <span>
-                        Commission
+                        Destinataire #{operation.userId ?? "—"}
+                        {operation.username
+                          ? ` • ${operation.username}`
+                          : ""}
                       </span>
 
-                      <strong>
-                        +{" "}
-                        {formatCDF(
-                          operation.commission
-                        )}
-                      </strong>
+                      {operation.customId && (
+                        <span>Identifiant : {operation.customId}</span>
+                      )}
 
+                      {operation.date && (
+                        <span>
+                          Date :{" "}
+                          {new Date(operation.date).toLocaleString("fr-FR")}
+                        </span>
+                      )}
                     </div>
-
                   </div>
 
-                )
-              )}
-
+                  <div className="history-commission">
+                    <span>Commission</span>
+                    <strong>
+                      + {formatCDF(operation.commission)}
+                    </strong>
+                  </div>
+                </div>
+              ))}
             </div>
-
           )}
-
         </section>
-
       </main>
 
-      {/* ==================================================
-          RAPPEL
-      ================================================== */}
+      {/* RAPPEL */}
 
       <footer className="ambassade-footer">
-
         <div>
-
-          <strong>
-            🛡️ Responsabilité Ambassadeur
-          </strong>
-
+          <strong>🛡️ Responsabilité Ambassadeur</strong>
           <p>
-            Vérifiez toujours le TID, le montant
-            et l'identité du destinataire avant de confirmer.
-            Une récupération validée est définitive.
+            Vérifiez toujours le TID, le montant et l'identité du
+            destinataire avant de confirmer. Une récupération validée
+            est définitive.
           </p>
-
         </div>
 
         <div className="footer-rule">
-
-          <span>
-            Règle financière
-          </span>
-
-          <strong>
-            100% utilisateur + 1,5% ambassadeur
-          </strong>
-
+          <span>Règle financière</span>
+          <strong>100 % utilisateur + commission administrée</strong>
         </div>
-
       </footer>
-
     </div>
   );
 }

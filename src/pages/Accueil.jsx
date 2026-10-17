@@ -29,6 +29,8 @@ import AdCarousel from "../components/ads/AdCarousel";
 import AdComments from "../components/ads/AdComments";
 import Casino from "../components/Casino";
 import WalletActions from "../components/WalletActions";
+import Assistant from "../components/Assistant";
+
 
 import {
     getHomeFeedAds,
@@ -1478,13 +1480,31 @@ export default function Accueil({
     // RENDER
     // ========================================================
 
-    return (
-        <div className="home-page">
-            {/* ==================================================
-                BACKGROUND DECORATION
-            ================================================== */}
+    
+        return (
+            <div className="home-page">
 
-            <div className="home-background">
+                {/* ==================================================
+                    ASSISTANCE IA 6BETBALL
+                    Bouton flottant disponible sur l'accueil
+                ================================================== */}
+
+                <Assistant
+                    user={{
+                        id:
+                            typeof localStorage !== "undefined"
+                                ? localStorage.getItem("userId")
+                                : null,
+
+                        username,
+                    }}
+                />
+
+                {/* ==================================================
+                    BACKGROUND DECORATION
+                ================================================== */}
+
+                <div className="home-background">
                 <div className="home-glow home-glow-one" />
                 <div className="home-glow home-glow-two" />
                 <div className="home-grid" />

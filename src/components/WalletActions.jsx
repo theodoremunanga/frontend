@@ -17,10 +17,10 @@ import {
 import api from "../services/api";
 
 // ======================================================
-// WALLET ACTIONS — ALIGNÉ SUR LE BACKEND
+// WALLET ACTIONS — ALIGNÉ SUR wallet.js
 // ======================================================
 
-const MIN_AMOUNT = 1000;
+const MIN_AMOUNT = 500;
 
 const METHODS = {
   airtel: {
@@ -66,15 +66,17 @@ const getErrorMessage = (err) =>
   err?.message ||
   "Une erreur est survenue.";
 
+// ======================================================
+// COMPOSANT
+// ======================================================
 
-
- export default function WalletActions({
-    refresh,
-    onSuccess,
-    autoOpen = false,
-    initialAction = "deposit",
-    onClose,
-  }) {
+export default function WalletActions({
+  refresh,
+  onSuccess,
+  autoOpen = false,
+  initialAction = "deposit",
+  onClose,
+}) {
   const [open, setOpen] = useState(null);
   const [amount, setAmount] = useState("");
   const [phone, setPhone] = useState("");
@@ -86,16 +88,9 @@ const getErrorMessage = (err) =>
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
 
-  // ======================================================
-// OUVERTURE AUTOMATIQUE DEPUIS L'ACCUEIL
-// ======================================================
-
-useEffect(() => {
-  if (!autoOpen) return;
-
-  reset();
-  setOpen(initialAction);
-}, [autoOpen, initialAction]);
+  // --------------------------------------------------
+  // RESET
+  // --------------------------------------------------
 
   const reset = () => {
     setAmount("");
@@ -112,8 +107,6 @@ useEffect(() => {
     setOpen(action);
   };
 
-  // force=true permet de fermer la fenêtre après le succès,
-  // même si la requête vient de terminer son traitement.
   const close = (force = false) => {
     if (loading && !force) return;
 
@@ -125,12 +118,30 @@ useEffect(() => {
     }
   };
 
+  // --------------------------------------------------
+  // OUVERTURE AUTOMATIQUE
+  // --------------------------------------------------
+
+  useEffect(() => {
+    if (!autoOpen) return;
+
+    reset();
+    setOpen(initialAction);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpen, initialAction]);
+
+  // --------------------------------------------------
+  // COPIER LE NUMÉRO DE PAIEMENT
+  // --------------------------------------------------
+
   const copyNumber = async () => {
     if (!method || !METHODS[method]?.available) return;
 
     try {
       await navigator.clipboard.writeText(METHODS[method].number);
       setCopied(true);
+      setError("");
+
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error("COPY ERROR:", err);
@@ -138,9 +149,9 @@ useEffect(() => {
     }
   };
 
-  // ======================================================
-  // VALIDATION FRONTEND
-  // ======================================================
+  // --------------------------------------------------
+  // VALIDATION DU FORMULAIRE
+  // --------------------------------------------------
 
   const validate = () => {
     const numericAmount = Number(amount);
@@ -154,7 +165,7 @@ useEffect(() => {
     }
 
     if (numericAmount < MIN_AMOUNT) {
-      return `Le montant minimum est de ${MIN_AMOUNT} CDF.`;
+      return `Le montant minimum est de ${MIN_AMOUNT} FC.`;
     }
 
     if (open === "deposit") {
@@ -167,7 +178,7 @@ useEffect(() => {
       }
 
       if (!reference.trim()) {
-        return "La référence TID est obligatoire.";
+        return "La référence de votre transaction est obligatoire.";
       }
     }
 
@@ -202,9 +213,9 @@ useEffect(() => {
     return null;
   };
 
-  // ======================================================
-  // SUBMIT — CONTRAT BACKEND
-  // ======================================================
+  // --------------------------------------------------
+  // SOUMISSION
+  // --------------------------------------------------
 
   const submit = async () => {
     const validationError = validate();
@@ -223,61 +234,59 @@ useEffect(() => {
 
       let response;
 
-      // --------------------------------------------------
-      // DÉPÔT : vérification du TID puis création
-      // --------------------------------------------------
+      // ================================================
+      // DÉPÔT NORMAL
+      // ================================================
+      //
+      // POST /wallet/deposit
+      //
+      // {
+      //   amount: 1000,
+      //   method: "Airtel Money",
+      //   reference: "REFERENCE_TRANSACTION"
+      // }
+      //
+      // IMPORTANT :
+      // - Aucun contrôle préalable obligatoire du TID.
+      // - Un TID inconnu peut être soumis.
+      // - Un TID réservé ou consommé est refusé par le backend.
+      // - Aucun crédit immédiat du portefeuille.
+      // - Le crédit intervient après validation administrative.
+      // ================================================
 
       if (action === "deposit") {
-        const tid = reference.trim();
-
-        // Backend :
-        // GET /payment/tid/check?tid=...&amount=...&method=...
-        const checkResponse = await api.get("/wallet/tid/check", {
-          params: {
-            tid,
-            amount: numericAmount,
-            method,
-          },
-        });
-
-        if (checkResponse?.data?.valid !== true) {
-          throw new Error(
-            checkResponse?.data?.error ||
-              "Ce TID n'est pas valide ou disponible."
-          );
-        }
-
-        // Backend attend { amount, phone, reference }.
-        // Ici phone contient le code du moyen de paiement.
         response = await api.post("/wallet/deposit", {
           amount: numericAmount,
-          phone: method,
-          reference: tid,
+          method: METHODS[method].label,
+          reference: reference.trim(),
         });
       }
 
-      // --------------------------------------------------
+      // ================================================
       // RETRAIT
-      // --------------------------------------------------
+      // ================================================
+      //
+      // Le backend wallet.js reçoit :
+      // { amount, phone }
+      //
+      // On conserve ce contrat pour le retrait.
+      // ================================================
 
       if (action === "withdraw") {
-        // Le backend fourni attend { amount, phone }.
-        // On transmet le moyen et les coordonnées ensemble,
-        // car le backend ne possède pas de champ method dédié.
         response = await api.post("/wallet/withdraw", {
           amount: numericAmount,
-          phone: `${withdrawMethod}: ${phone.trim()}`,
+          phone: `${METHODS[withdrawMethod].label}: ${phone.trim()}`,
         });
       }
 
-      // --------------------------------------------------
+      // ================================================
       // SUCCÈS
-      // --------------------------------------------------
+      // ================================================
 
       const message =
         response?.data?.message ||
         (action === "deposit"
-          ? "Demande de dépôt envoyée pour vérification administrative."
+          ? "Demande de dépôt envoyée à l'administration."
           : "Demande de retrait envoyée.");
 
       alert(`✅ ${message}`);
@@ -299,9 +308,9 @@ useEffect(() => {
     }
   };
 
-  // ======================================================
-  // RENDER
-  // ======================================================
+  // --------------------------------------------------
+  // RENDU
+  // --------------------------------------------------
 
   return (
     <div style={styles.container}>
@@ -314,6 +323,7 @@ useEffect(() => {
           <div style={styles.buttonIcon}>
             <ArrowDownToLine size={22} />
           </div>
+
           <div style={styles.buttonText}>
             <strong>Déposer</strong>
             <span>Ajouter de l'argent</span>
@@ -328,6 +338,7 @@ useEffect(() => {
           <div style={styles.buttonIcon}>
             <ArrowUpFromLine size={22} />
           </div>
+
           <div style={styles.buttonText}>
             <strong>Retirer</strong>
             <span>Retirer vos fonds</span>
@@ -338,7 +349,7 @@ useEffect(() => {
       {open && (
         <div style={styles.overlay}>
           <div style={styles.modal}>
-            {/* HEADER */}
+            {/* EN-TÊTE */}
             <div style={styles.modalHeader}>
               <div style={styles.modalTitleWrapper}>
                 <div
@@ -361,9 +372,10 @@ useEffect(() => {
                       ? "Effectuer un dépôt"
                       : "Effectuer un retrait"}
                   </h3>
+
                   <p style={styles.modalSubtitle}>
                     {open === "deposit"
-                      ? "Ajoutez des fonds à votre portefeuille."
+                      ? "Effectuez votre paiement, puis soumettez sa référence."
                       : "Recevez vos fonds sur vos coordonnées de retrait."}
                   </p>
                 </div>
@@ -382,35 +394,44 @@ useEffect(() => {
 
             {/* CONTENU */}
             <div style={styles.modalContent}>
+              {/* MONTANT */}
               <div style={styles.fieldGroup}>
-                <label style={styles.label}>Montant</label>
+                <label style={styles.label} htmlFor="wallet-amount">
+                  Montant
+                </label>
 
                 <div style={styles.inputWrapper}>
                   <Banknote size={19} style={styles.inputIcon} />
+
                   <input
+                    id="wallet-amount"
                     type="number"
                     min={MIN_AMOUNT}
                     step="1"
-                    placeholder="Ex. : 5000"
+                    placeholder="Ex. : 1000"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     style={styles.input}
                     disabled={loading}
                   />
-                  <span style={styles.currency}>CDF</span>
+
+                  <span style={styles.currency}>FC</span>
                 </div>
 
                 <small style={styles.hint}>
-                  Minimum : {MIN_AMOUNT} CDF
+                  Montant minimum : {MIN_AMOUNT} FC
                 </small>
               </div>
 
-              {/* DÉPÔT */}
+              {/* ========================================
+                  DÉPÔT
+              ======================================== */}
+
               {open === "deposit" && (
                 <>
                   <div style={styles.fieldGroup}>
                     <label style={styles.label}>
-                      Moyen de paiement
+                      Mode de paiement
                     </label>
 
                     <div style={styles.methodsGrid}>
@@ -463,7 +484,10 @@ useEffect(() => {
                             </div>
 
                             {selected && (
-                              <Check size={18} style={styles.checkIcon} />
+                              <Check
+                                size={18}
+                                style={styles.checkIcon}
+                              />
                             )}
                           </button>
                         );
@@ -471,6 +495,7 @@ useEffect(() => {
                     </div>
                   </div>
 
+                  {/* COORDONNÉES DU BÉNÉFICIAIRE */}
                   {method && METHODS[method]?.available && (
                     <div style={styles.paymentInfo}>
                       <div style={styles.paymentInfoHeader}>
@@ -480,8 +505,8 @@ useEffect(() => {
 
                       <p style={styles.paymentInstruction}>
                         {method === "credit_card"
-                          ? "Effectuez le virement vers le compte indiqué. Saisissez ensuite le TID fourni par le système de paiement."
-                          : "Envoyez le montant exact au numéro indiqué. Saisissez ensuite le TID de votre transaction."}
+                          ? "Effectuez le virement vers le compte indiqué. Conservez la référence de la transaction réellement effectuée."
+                          : "Envoyez le montant au numéro indiqué. Conservez la référence de la transaction réellement effectuée."}
                       </p>
 
                       <div style={styles.numberBox}>
@@ -489,6 +514,7 @@ useEffect(() => {
                           <span style={styles.recipientLabel}>
                             Bénéficiaire
                           </span>
+
                           <strong style={styles.recipientName}>
                             {METHODS[method].accountName}
                           </strong>
@@ -500,6 +526,7 @@ useEffect(() => {
                               ? "Compte bancaire"
                               : "Numéro de paiement"}
                           </span>
+
                           <strong style={styles.accountNumber}>
                             {METHODS[method].number}
                           </strong>
@@ -526,28 +553,40 @@ useEffect(() => {
                     </div>
                   )}
 
+                  {/* RÉFÉRENCE DU PAIEMENT */}
                   <div style={styles.fieldGroup}>
-                    <label style={styles.label}>
-                      Référence TID
+                    <label
+                      style={styles.label}
+                      htmlFor="wallet-deposit-reference"
+                    >
+                      Référence de la transaction (TID)
                     </label>
+
                     <input
+                      id="wallet-deposit-reference"
                       type="text"
-                      placeholder="Saisissez votre TID"
+                      placeholder="Saisissez la référence de votre paiement"
                       value={reference}
                       onChange={(e) => setReference(e.target.value)}
                       style={styles.plainInput}
                       disabled={loading}
+                      autoComplete="off"
                     />
+
                     <small style={styles.hint}>
-                      Le TID sera vérifié avant la création de la demande.
-                      Le crédit du portefeuille nécessite ensuite la validation
-                      administrative.
+                      Un TID non enregistré peut être soumis à l'administration.
+                      Une référence déjà réservée ou utilisée sera refusée.
+                      Votre portefeuille sera crédité uniquement après
+                      validation administrative.
                     </small>
                   </div>
                 </>
               )}
 
-              {/* RETRAIT */}
+              {/* ========================================
+                  RETRAIT
+              ======================================== */}
+
               {open === "withdraw" && (
                 <>
                   <div style={styles.fieldGroup}>
@@ -568,6 +607,7 @@ useEffect(() => {
                             disabled={!item.withdrawAvailable || loading}
                             onClick={() => {
                               if (!item.withdrawAvailable) return;
+
                               setWithdrawMethod(key);
                               setPhone("");
                               setError("");
@@ -607,7 +647,10 @@ useEffect(() => {
                             </div>
 
                             {selected && (
-                              <Check size={18} style={styles.checkIcon} />
+                              <Check
+                                size={18}
+                                style={styles.checkIcon}
+                              />
                             )}
                           </button>
                         );
@@ -617,7 +660,10 @@ useEffect(() => {
 
                   {withdrawMethod && (
                     <div style={styles.fieldGroup}>
-                      <label style={styles.label}>
+                      <label
+                        style={styles.label}
+                        htmlFor="wallet-withdraw-phone"
+                      >
                         {withdrawMethod === "credit_card"
                           ? "Numéro de compte bancaire"
                           : `Numéro ${METHODS[withdrawMethod].label}`}
@@ -625,12 +671,19 @@ useEffect(() => {
 
                       <div style={styles.inputWrapper}>
                         {withdrawMethod === "credit_card" ? (
-                          <CreditCard size={19} style={styles.inputIcon} />
+                          <CreditCard
+                            size={19}
+                            style={styles.inputIcon}
+                          />
                         ) : (
-                          <Smartphone size={19} style={styles.inputIcon} />
+                          <Smartphone
+                            size={19}
+                            style={styles.inputIcon}
+                          />
                         )}
 
                         <input
+                          id="wallet-withdraw-phone"
                           type={
                             withdrawMethod === "credit_card" ? "text" : "tel"
                           }
@@ -664,7 +717,7 @@ useEffect(() => {
               )}
             </div>
 
-            {/* FOOTER */}
+            {/* PIED DE FENÊTRE */}
             <div style={styles.modalFooter}>
               <button
                 type="button"
@@ -691,7 +744,7 @@ useEffect(() => {
                     Traitement...
                   </>
                 ) : open === "deposit" ? (
-                  "Confirmer le dépôt"
+                  "Soumettre la demande"
                 ) : (
                   "Confirmer le retrait"
                 )}
@@ -701,8 +754,8 @@ useEffect(() => {
             <div style={styles.securityNotice}>
               <ShieldCheck size={16} />
               <span>
-                Les demandes sont enregistrées côté serveur. Ne partagez
-                jamais vos identifiants.
+                Votre demande est enregistrée côté serveur. Ne partagez jamais
+                vos identifiants.
               </span>
             </div>
           </div>
@@ -711,9 +764,10 @@ useEffect(() => {
 
       <style>{`
         @keyframes wallet-spin {
-          to { transform: rotate(360deg); }
+          to {
+            transform: rotate(360deg);
+          }
         }
-        .wallet-actions-unused {}
       `}</style>
     </div>
   );
@@ -724,25 +778,14 @@ useEffect(() => {
 // ======================================================
 
 const styles = {
-  container: { width: "100%" },
+  container: {
+    width: "100%",
+  },
 
   actionsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(2,minmax(0,1fr))",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
     gap: 14,
-  },
-
-  baseActionButton: {
-    border: "1px solid",
-    borderRadius: 18,
-    padding: 16,
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: 13,
-    color: "white",
-    textAlign: "left",
-    transition: "transform .2s ease, box-shadow .2s ease",
   },
 
   depositButton: {
@@ -755,7 +798,7 @@ const styles = {
     gap: 13,
     color: "white",
     textAlign: "left",
-    background: "linear-gradient(135deg,#14532d,#166534)",
+    background: "linear-gradient(135deg, #14532d, #166534)",
   },
 
   withdrawButton: {
@@ -768,7 +811,7 @@ const styles = {
     gap: 13,
     color: "white",
     textAlign: "left",
-    background: "linear-gradient(135deg,#7f1d1d,#991b1b)",
+    background: "linear-gradient(135deg, #7f1d1d, #991b1b)",
   },
 
   buttonIcon: {
@@ -805,7 +848,7 @@ const styles = {
     maxWidth: 620,
     maxHeight: "92vh",
     overflowY: "auto",
-    background: "linear-gradient(145deg,#111827,#020617)",
+    background: "linear-gradient(145deg, #111827, #020617)",
     border: "1px solid rgba(255,255,255,.1)",
     borderRadius: 26,
     boxShadow: "0 30px 80px rgba(0,0,0,.55)",
@@ -848,7 +891,11 @@ const styles = {
     justifyContent: "center",
   },
 
-  modalTitle: { margin: 0, color: "white", fontSize: 20 },
+  modalTitle: {
+    margin: 0,
+    color: "white",
+    fontSize: 20,
+  },
 
   modalSubtitle: {
     margin: "5px 0 0",
@@ -882,7 +929,11 @@ const styles = {
     gap: 8,
   },
 
-  label: { color: "#e2e8f0", fontSize: 14, fontWeight: 700 },
+  label: {
+    color: "#e2e8f0",
+    fontSize: 14,
+    fontWeight: 700,
+  },
 
   inputWrapper: {
     display: "flex",
@@ -894,7 +945,10 @@ const styles = {
     padding: "0 13px",
   },
 
-  inputIcon: { color: "#64748b", flexShrink: 0 },
+  inputIcon: {
+    color: "#64748b",
+    flexShrink: 0,
+  },
 
   input: {
     width: "100%",
@@ -919,13 +973,21 @@ const styles = {
     fontSize: 15,
   },
 
-  currency: { color: "#64748b", fontWeight: 700, fontSize: 13 },
+  currency: {
+    color: "#64748b",
+    fontWeight: 700,
+    fontSize: 13,
+  },
 
-  hint: { color: "#94a3b8", fontSize: 12, lineHeight: 1.5 },
+  hint: {
+    color: "#94a3b8",
+    fontSize: 12,
+    lineHeight: 1.5,
+  },
 
   methodsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(2,minmax(0,1fr))",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
     gap: 10,
   },
 
@@ -949,7 +1011,10 @@ const styles = {
     background: "rgba(37,99,235,.13)",
   },
 
-  methodCardDisabled: { opacity: 0.48, cursor: "not-allowed" },
+  methodCardDisabled: {
+    opacity: 0.48,
+    cursor: "not-allowed",
+  },
 
   methodIcon: {
     width: 38,
@@ -1037,7 +1102,10 @@ const styles = {
     letterSpacing: ".04em",
   },
 
-  recipientName: { color: "white", fontSize: 14 },
+  recipientName: {
+    color: "white",
+    fontSize: 14,
+  },
 
   accountNumber: {
     color: "#f8fafc",
@@ -1095,7 +1163,7 @@ const styles = {
     border: "none",
     borderRadius: 13,
     padding: "13px 15px",
-    background: "linear-gradient(135deg,#16a34a,#22c55e)",
+    background: "linear-gradient(135deg, #16a34a, #22c55e)",
     color: "white",
     cursor: "pointer",
     fontWeight: 800,
@@ -1110,7 +1178,7 @@ const styles = {
     border: "none",
     borderRadius: 13,
     padding: "13px 15px",
-    background: "linear-gradient(135deg,#dc2626,#ef4444)",
+    background: "linear-gradient(135deg, #dc2626, #ef4444)",
     color: "white",
     cursor: "pointer",
     fontWeight: 800,
@@ -1120,7 +1188,9 @@ const styles = {
     gap: 8,
   },
 
-  spinner: { animation: "wallet-spin 1s linear infinite" },
+  spinner: {
+    animation: "wallet-spin 1s linear infinite",
+  },
 
   securityNotice: {
     display: "flex",
