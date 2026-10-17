@@ -1169,25 +1169,11 @@ export default function App() {
   }
 
   
+
 function RetraitMarchandGlobal() {
-  const [visible, setVisible] = useState(true);
-
-  if (!visible) return null;
-
-  return (
-    <aside className="retrait-marchand-global">
-      <RetraitMarchand />
-      <button
-        type="button"
-        className="retrait-marchand-global-close"
-        onClick={() => setVisible(false)}
-        aria-label="Masquer le panneau de retrait"
-      >
-        Masquer
-      </button>
-    </aside>
-  );
+  return <RetraitMarchand />;
 }
+
 
 
   // ==========================================================
@@ -1222,9 +1208,7 @@ function RetraitMarchandGlobal() {
         
         {/* DEMANDES DE RETRAIT — DISPONIBLES SUR TOUTES LES PAGES */}
 
-        {isAuth && getStoredRole() !== "ADMIN" && (
-          <RetraitMarchandGlobal />
-        )}
+        {isAuth && <RetraitMarchandGlobal />}
 
         {/* ==================================================
             CONTENT

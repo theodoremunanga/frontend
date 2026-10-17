@@ -1,1242 +1,481 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-  useRef,
-} from "react";
-
-import {
-  User,
-  Wallet as WalletIcon,
-  RefreshCw,
-  Trophy,
-  ShieldCheck,
-  Phone,
-  Mail,
-  Globe,
-  TrendingUp,
-  Clock3,
-  Star,
-  Swords,
-  Coins,
-  BadgeCheck,
-  WifiOff,
+  User, Wallet as WalletIcon, RefreshCw, Trophy, ShieldCheck, Phone, Mail,
+  Globe, TrendingUp, Clock3, Star, Swords, Coins, BadgeCheck, WifiOff,
+  Pencil, Save, X, CheckCircle2, AlertCircle, Copy
 } from "lucide-react";
-
 import WalletActions from "../WalletActions";
+import "./ProfileRadar.css";
 
-// ======================================================
-// API CONFIG
-// ======================================================
+const API_URL = import.meta.env.VITE_API_URL;
 
-const API_URL =
-  import.meta.env.VITE_API_URL;
+function getToken() {
+  return localStorage.getItem("token");
+}
 
-if (!API_URL) {
-  throw new Error(
-    "❌ VITE_API_URL is missing"
+function getProfileId(profile) {
+  return (
+    profile?.custom_id ||
+    profile?.customId ||
+    profile?.customID ||
+    profile?.id ||
+    profile?.user_id ||
+    null
   );
 }
 
-const PROFILE_ENDPOINT =
-  `${API_URL}/user/profile`;
+function getInternalId(profile) {
+  return profile?.user_id ?? profile?.id ?? null;
+}
 
-// ======================================================
-// COMPONENT
-// ======================================================
+function getErrorMessage(data, fallback) {
+  return data?.message || data?.error || fallback;
+}
+
+function SectionTitle({ icon, title, action }) {
+  return (
+    <div className="pr-section-title">
+      <div className="pr-section-heading">{icon}<span>{title}</span></div>
+      {action}
+    </div>
+  );
+}
+
+function InfoRow({ icon, label, value }) {
+  return (
+    <div className="pr-info-row">
+      <div className="pr-info-label">{icon}<span>{label}</span></div>
+      <strong>{value || "Non renseigné"}</strong>
+    </div>
+  );
+}
+
+function StatCard({ icon, value, label }) {
+  return (
+    <div className="pr-stat-card">
+      <div className="pr-stat-icon">{icon}</div>
+      <div className="pr-stat-value">{value}</div>
+      <div className="pr-stat-label">{label}</div>
+    </div>
+  );
+}
+
+function MiniStat({ icon, label, value }) {
+  return (
+    <div className="pr-mini-stat">
+      <div className="pr-mini-label">{icon}<span>{label}</span></div>
+      <strong>{value}</strong>
+    </div>
+  );
+}
+
+function ProfileField({ label, name, value, onChange, type = "text", placeholder = "" }) {
+  return (
+    <label className="pr-field">
+      <span>{label}</span>
+      <input
+        type={type}
+        name={name}
+        value={value ?? ""}
+        onChange={(event) => onChange(name, event.target.value)}
+        placeholder={placeholder}
+        autoComplete={name === "email" ? "email" : name === "phone" ? "tel" : "off"}
+      />
+    </label>
+  );
+}
 
 export default function ProfileRadar() {
-  // ====================================================
-  // STATES
-  // ====================================================
-
-  const [user, setUser] =
-    useState(null);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [error, setError] =
-    useState("");
-
-  const [refreshing, setRefreshing] =
-    useState(false);
-
-  const [offline, setOffline] =
-    useState(!navigator.onLine);
-
-  // ====================================================
-  // REFS
-  // ====================================================
-
-  const mountedRef =
-    useRef(true);
-
-  // ====================================================
-  // LOAD PROFILE
-  // ====================================================
-
-  const load = useCallback(
-    async (
-      silent = false
-    ) => {
-      try {
-        // offline
-        if (
-          !navigator.onLine
-        ) {
-          setOffline(true);
-
-          setError(
-            "Connexion internet indisponible"
-          );
-
-          return;
-        }
-
-        setOffline(false);
-
-        const token =
-          localStorage.getItem(
-            "token"
-          );
-
-        // no token
-        if (!token) {
-          setError(
-            "Utilisateur non authentifié"
-          );
-
-          setUser(null);
-
-          return;
-        }
-
-        if (!silent) {
-          setLoading(true);
-        }
-
-        setRefreshing(true);
-
-        setError("");
-
-        const res =
-          await fetch(
-            PROFILE_ENDPOINT,
-            {
-              method:
-                "GET",
-
-              headers: {
-                Authorization:
-                  `Bearer ${token}`,
-
-                "Content-Type":
-                  "application/json",
-              },
-            }
-          );
-
-        // session expired
-        if (
-          res.status === 401
-        ) {
-          localStorage.clear();
-
-          setUser(null);
-
-          setError(
-            "Session expirée"
-          );
-
-          setTimeout(() => {
-            window.location.reload();
-          }, 1200);
-
-          return;
-        }
-
-        // invalid server response
-        const contentType =
-          res.headers.get(
-            "content-type"
-          );
-
-        if (
-          !contentType?.includes(
-            "application/json"
-          )
-        ) {
-          throw new Error(
-            "Réponse serveur invalide"
-          );
-        }
-
-        const data =
-          await res.json();
-
-        if (!res.ok) {
-          throw new Error(
-            data?.error ||
-              data?.message ||
-              "Erreur serveur"
-          );
-        }
-
-        // safe mounted check
-        if (
-          mountedRef.current
-        ) {
-          setUser(data);
-        }
-      } catch (err) {
-        console.error(
-          "❌ PROFILE ERROR:",
-          err
-        );
-
-        if (
-          mountedRef.current
-        ) {
-          setError(
-            err.message ||
-              "Erreur chargement profil"
-          );
-        }
-      } finally {
-        if (
-          mountedRef.current
-        ) {
-          setLoading(false);
-
-          setRefreshing(false);
-        }
-      }
-    },
-    []
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [offline, setOffline] = useState(
+    typeof navigator !== "undefined" ? !navigator.onLine : false
   );
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ email: "", phone: "", country: "" });
+  const mountedRef = useRef(false);
+  const requestRef = useRef(null);
 
-  // ====================================================
-  // INIT
-  // ====================================================
+  const loadProfile = useCallback(async ({ silent = false } = {}) => {
+    if (!API_URL) {
+      setError("La variable VITE_API_URL n'est pas configurée.");
+      setLoading(false);
+      return;
+    }
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setOffline(true);
+      setError("Connexion internet indisponible.");
+      setLoading(false);
+      return;
+    }
+
+    const token = getToken();
+    if (!token) {
+      setUser(null);
+      setError("Utilisateur non authentifié. Veuillez vous reconnecter.");
+      setLoading(false);
+      return;
+    }
+
+    requestRef.current?.abort();
+    const controller = new AbortController();
+    requestRef.current = controller;
+
+    if (!silent) setLoading(true);
+    setRefreshing(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch(`${API_URL}/user/profile`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        signal: controller.signal,
+      });
+
+      if (response.status === 401) {
+        setUser(null);
+        setError("Session expirée. Veuillez vous reconnecter.");
+        return;
+      }
+
+      const contentType = response.headers.get("content-type") || "";
+      const data = contentType.includes("application/json") ? await response.json() : null;
+      if (!response.ok) throw new Error(getErrorMessage(data, "Impossible de charger le profil."));
+      if (!data || typeof data !== "object") throw new Error("Réponse serveur invalide.");
+
+      // Certaines API renvoient { user: {...} }, d'autres directement l'objet utilisateur.
+      const profile = data.user && typeof data.user === "object" ? data.user : data;
+      if (mountedRef.current) {
+        setUser(profile);
+        setForm({
+          email: profile.email ?? "",
+          phone: profile.phone ?? "",
+          country: profile.country ?? "",
+        });
+        setOffline(false);
+      }
+    } catch (err) {
+      if (err.name !== "AbortError" && mountedRef.current) {
+        setError(err.message || "Erreur lors du chargement du profil.");
+      }
+    } finally {
+      if (mountedRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
-
-    load();
-
+    loadProfile();
     return () => {
-      mountedRef.current =
-        false;
+      mountedRef.current = false;
+      requestRef.current?.abort();
     };
-  }, [load]);
-
-  // ====================================================
-  // ONLINE / OFFLINE
-  // ====================================================
+  }, [loadProfile]);
 
   useEffect(() => {
-    const handleOnline =
-      () => {
-        setOffline(false);
-
-        load(true);
-      };
-
-    const handleOffline =
-      () => {
-        setOffline(true);
-      };
-
-    window.addEventListener(
-      "online",
-      handleOnline
-    );
-
-    window.addEventListener(
-      "offline",
-      handleOffline
-    );
-
-    return () => {
-      window.removeEventListener(
-        "online",
-        handleOnline
-      );
-
-      window.removeEventListener(
-        "offline",
-        handleOffline
-      );
+    const onOnline = () => {
+      setOffline(false);
+      loadProfile({ silent: true });
     };
-  }, [load]);
-
-  // ====================================================
-  // WINDOW FOCUS REFRESH
-  // ====================================================
-
-  useEffect(() => {
-    const handleFocus =
-      () => {
-        if (
-          navigator.onLine
-        ) {
-          load(true);
-        }
-      };
-
-    window.addEventListener(
-      "focus",
-      handleFocus
-    );
-
-    return () => {
-      window.removeEventListener(
-        "focus",
-        handleFocus
-      );
+    const onOffline = () => setOffline(true);
+    const onFocus = () => {
+      if (navigator.onLine) loadProfile({ silent: true });
     };
-  }, [load]);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [loadProfile]);
 
-  // ====================================================
-  // DERIVED DATA
-  // ====================================================
+  const updateForm = useCallback((name, value) => {
+    setForm((previous) => ({ ...previous, [name]: value }));
+    setNotice("");
+  }, []);
 
-  const balance = Number(
-    user?.wallet?.balance ??
-      user?.balance ??
-      0
-  );
+  const startEditing = () => {
+    setForm({
+      email: user?.email ?? "",
+      phone: user?.phone ?? "",
+      country: user?.country ?? "",
+    });
+    setNotice("");
+    setError("");
+    setEditing(true);
+  };
 
-  const locked = Number(
-    user?.wallet
-      ?.balance_locked ?? 0
-  );
+  const cancelEditing = () => {
+    setForm({
+      email: user?.email ?? "",
+      phone: user?.phone ?? "",
+      country: user?.country ?? "",
+    });
+    setEditing(false);
+    setError("");
+    setNotice("");
+  };
 
-  const wins = Number(
-    user?.wins || 0
-  );
+  const saveProfile = async (event) => {
+    event.preventDefault();
+    if (!API_URL) {
+      setError("La variable VITE_API_URL n'est pas configurée.");
+      return;
+    }
+    const token = getToken();
+    if (!token) {
+      setError("Utilisateur non authentifié. Veuillez vous reconnecter.");
+      return;
+    }
 
-  const losses = Number(
-    user?.losses || 0
-  );
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      // Seuls les champs autorisés sont envoyés. Nom, âge et identifiants sont exclus.
+      const payload = {
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+        country: form.country.trim(),
+      };
+      const response = await fetch(`${API_URL}/user/profile`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-  const matches = Number(
-    user?.matches || 0
-  );
+      const contentType = response.headers.get("content-type") || "";
+      const data = contentType.includes("application/json") ? await response.json() : null;
+      if (response.status === 401) throw new Error("Session expirée. Veuillez vous reconnecter.");
+      if (!response.ok) throw new Error(getErrorMessage(data, "La mise à jour du profil a échoué."));
 
-  const level = Number(
-    user?.level || 1
-  );
-
-  const customId =
-    user?.custom_id ||
-    (user?.id
-      ? `PLAYER-${String(
-          user.id
-        ).padStart(6, "0")}`
-      : "UNKNOWN");
-
-  // ====================================================
-  // WIN RATE
-  // ====================================================
-
-  const winRate = useMemo(
-    () => {
-      const total =
-        wins + losses;
-
-      if (total <= 0) {
-        return 0;
+      const updated = data?.user && typeof data.user === "object" ? data.user : data;
+      if (updated && typeof updated === "object") {
+        setUser((previous) => ({ ...previous, ...updated }));
+        setForm({
+          email: updated.email ?? payload.email,
+          phone: updated.phone ?? payload.phone,
+          country: updated.country ?? payload.country,
+        });
+      } else {
+        setUser((previous) => ({ ...previous, ...payload }));
       }
+      setEditing(false);
+      setNotice("Profil mis à jour avec succès.");
+    } catch (err) {
+      setError(err.message || "Erreur lors de la mise à jour du profil.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-      return Number(
-        (
-          (wins / total) *
-          100
-        ).toFixed(1)
-      );
-    },
-    [wins, losses]
-  );
+  const balance = Number(user?.wallet?.balance ?? user?.balance ?? 0);
+  const locked = Number(user?.wallet?.balance_locked ?? 0);
+  const wins = Number(user?.wins ?? 0);
+  const losses = Number(user?.losses ?? 0);
+  const matches = Number(user?.matches ?? 0);
+  const level = Number(user?.level ?? 1);
+  const customId = getProfileId(user);
+  const internalId = getInternalId(user);
+  const winRate = useMemo(() => {
+    const total = wins + losses;
+    return total ? Number(((wins / total) * 100).toFixed(1)) : 0;
+  }, [wins, losses]);
 
-  // ====================================================
-  // RANK
-  // ====================================================
+  const rank = useMemo(() => {
+    if (wins >= 200) return "Grand Maître";
+    if (wins >= 100) return "Maître";
+    if (wins >= 50) return "Expert";
+    if (wins >= 20) return "Confirmé";
+    return "Débutant";
+  }, [wins]);
 
-  const rank = useMemo(
-    () => {
-      if (wins >= 200)
-        return "🔥 Grand Maître";
-
-      if (wins >= 100)
-        return "👑 Maître";
-
-      if (wins >= 50)
-        return "⚔️ Expert";
-
-      if (wins >= 20)
-        return "🥈 Confirmé";
-
-      return "🥉 Débutant";
-    },
-    [wins]
-  );
-
-  // ====================================================
-  // LOADING
-  // ====================================================
+  const copyId = async (value) => {
+    if (value === null || value === undefined || value === "") return;
+    try {
+      await navigator.clipboard.writeText(String(value));
+      setNotice("Identifiant copié.");
+    } catch {
+      setNotice("Copie impossible dans ce navigateur.");
+    }
+  };
 
   if (loading) {
     return (
-      <div
-        style={
-          loadingContainer
-        }
-      >
-        <div style={loader} />
-
-        <h2>
-          Chargement du
-          profil...
-        </h2>
-      </div>
+      <main className="pr-page pr-centered">
+        <div className="pr-loader" aria-hidden="true" />
+        <h2>Chargement du profil…</h2>
+        <p className="pr-muted">Récupération de vos informations</p>
+      </main>
     );
   }
 
-  // ====================================================
-  // ERROR
-  // ====================================================
-
-  if (error) {
+  if (!user && error) {
     return (
-      <div style={container}>
-        <div style={errorCard}>
-          <h2>
-            ❌ Une erreur
-            est survenue
-          </h2>
-
+      <main className="pr-page">
+        <div className="pr-state-card pr-error-card">
+          <AlertCircle size={26} />
+          <h2>Impossible d'afficher le profil</h2>
           <p>{error}</p>
-
-          <button
-            onClick={() =>
-              load()
-            }
-            style={retryBtn}
-          >
-            Réessayer
+          <button className="pr-button pr-button-primary" onClick={() => loadProfile()}>
+            <RefreshCw size={16} /> Réessayer
           </button>
         </div>
-      </div>
+      </main>
     );
   }
-
-  // ====================================================
-  // EMPTY
-  // ====================================================
 
   if (!user) {
-    return (
-      <div style={container}>
-        <div style={emptyCard}>
-          Aucun utilisateur
-          trouvé
-        </div>
-      </div>
-    );
+    return <main className="pr-page"><div className="pr-state-card">Aucun utilisateur trouvé.</div></main>;
   }
 
-  // ====================================================
-  // UI
-  // ====================================================
-
   return (
-    <div style={container}>
-      {/* HERO */}
-
-      <div style={hero}>
-        <div style={heroLeft}>
-          <div style={avatar}>
-            {user?.username
-              ?.charAt(0)
-              ?.toUpperCase() ||
-              "U"}
+    <main className="pr-page">
+      <header className="pr-hero">
+        <div className="pr-hero-person">
+          <div className="pr-avatar" aria-hidden="true">
+            {(user.username || user.name || user.email || "U").charAt(0).toUpperCase()}
           </div>
-
-          <div>
-            <div style={verified}>
-              <BadgeCheck
-                size={14}
-              />
-
-              Joueur vérifié
+          <div className="pr-hero-copy">
+            <div className="pr-verified"><BadgeCheck size={15} /> Profil joueur</div>
+            <h1>{user.username || user.name || "Utilisateur"}</h1>
+            <div className="pr-hero-meta">
+              {customId !== null && customId !== "" && <span>Custom ID : {String(customId)}</span>}
+              {internalId !== null && internalId !== "" && <span>ID : {String(internalId)}</span>}
+              <span>Niveau {level}</span>
+              <span>{rank}</span>
             </div>
-
-            <h1 style={username}>
-              {user?.username ||
-                "Utilisateur"}
-            </h1>
-
-            <div
-              style={heroMeta}
-            >
-              <span>
-                {customId}
-              </span>
-
-              <span>
-                Niveau{" "}
-                {level}
-              </span>
-
-              <span>
-                {rank}
-              </span>
-            </div>
-
-            {offline && (
-              <div
-                style={
-                  offlineBadge
-                }
-              >
-                <WifiOff
-                  size={14}
-                />
-                Hors ligne
-              </div>
-            )}
+            {offline && <span className="pr-offline"><WifiOff size={14} /> Hors ligne</span>}
           </div>
         </div>
-
-        <button
-          onClick={() =>
-            load(true)
-          }
-          disabled={
-            refreshing
-          }
-          style={refreshBtn}
-        >
-          <RefreshCw
-            size={18}
-            style={{
-              animation:
-                refreshing
-                  ? "spin 1s linear infinite"
-                  : "none",
-            }}
-          />
-
-          {refreshing
-            ? "Actualisation..."
-            : "Actualiser"}
+        <button className="pr-button pr-button-glass" onClick={() => loadProfile({ silent: true })} disabled={refreshing}>
+          <RefreshCw size={16} className={refreshing ? "pr-spin" : ""} />
+          {refreshing ? "Actualisation…" : "Actualiser"}
         </button>
-      </div>
+      </header>
 
-      {/* GRID */}
-
-      <div style={grid}>
-        {/* WALLET */}
-
-        <div style={card}>
-          <SectionTitle
-            icon={
-              <WalletIcon
-                size={18}
-              />
-            }
-            title="Portefeuille"
-          />
-
-          <div
-            style={walletBox}
-          >
-            <div
-              style={
-                walletLabel
-              }
-            >
-              Solde disponible
-            </div>
-
-            <div
-              style={
-                walletAmount
-              }
-            >
-              {balance.toLocaleString()}{" "}
-              CDF
-            </div>
-          </div>
-
-          <div
-            style={
-              miniContainer
-            }
-          >
-            <MiniStat
-              icon={
-                <ShieldCheck
-                  size={15}
-                />
-              }
-              label="Bloqué"
-              value={`${locked.toLocaleString()} CDF`}
-            />
-
-            <MiniStat
-              icon={
-                <Coins
-                  size={15}
-                />
-              }
-              label="Winrate"
-              value={`${winRate}%`}
-            />
-          </div>
-
-          <div
-            style={{
-              marginTop: 20,
-            }}
-          >
-            <WalletActions
-              onSuccess={() =>
-                load(true)
-              }
-            />
-          </div>
+      {(error || notice) && (
+        <div className={`pr-notice ${error ? "pr-notice-error" : "pr-notice-success"}`} role="status">
+          {error ? <AlertCircle size={17} /> : <CheckCircle2 size={17} />}
+          <span>{error || notice}</span>
+          <button type="button" className="pr-icon-button" onClick={() => { setError(""); setNotice(""); }} aria-label="Fermer le message"><X size={16} /></button>
         </div>
+      )}
 
-        {/* PROFILE */}
-
-        <div style={card}>
-          <SectionTitle
-            icon={
-              <User
-                size={18}
-              />
-            }
-            title="Informations"
-          />
-
-          <InfoRow
-            icon={
-              <User
-                size={15}
-              />
-            }
-            label="Nom"
-            value={
-              user?.username ||
-              "N/A"
-            }
-          />
-
-          <InfoRow
-            icon={
-              <Mail
-                size={15}
-              />
-            }
-            label="Email"
-            value={
-              user?.email ||
-              "N/A"
-            }
-          />
-
-          <InfoRow
-            icon={
-              <Phone
-                size={15}
-              />
-            }
-            label="Téléphone"
-            value={
-              user?.phone ||
-              "N/A"
-            }
-          />
-
-          <InfoRow
-            icon={
-              <Globe
-                size={15}
-              />
-            }
-            label="Pays"
-            value={
-              user?.country ||
-              "N/A"
-            }
-          />
-        </div>
-
-        {/* STATS */}
-
-        <div style={card}>
-          <SectionTitle
-            icon={
-              <Trophy
-                size={18}
-              />
-            }
-            title="Statistiques"
-          />
-
-          <div
-            style={
-              statsGrid
-            }
-          >
-            <StatCard
-              icon={
-                <TrendingUp
-                  size={18}
-                />
-              }
-              value={wins}
-              label="Victoires"
-            />
-
-            <StatCard
-              icon={
-                <Swords
-                  size={18}
-                />
-              }
-              value={losses}
-              label="Défaites"
-            />
-
-            <StatCard
-              icon={
-                <Clock3
-                  size={18}
-                />
-              }
-              value={matches}
-              label="Matchs"
-            />
-
-            <StatCard
-              icon={
-                <Star
-                  size={18}
-                />
-              }
-              value={`${winRate}%`}
-              label="Winrate"
-            />
+      <div className="pr-grid">
+        <section className="pr-card">
+          <SectionTitle icon={<WalletIcon size={19} />} title="Portefeuille" />
+          <div className="pr-wallet-box">
+            <span className="pr-wallet-label">Solde disponible</span>
+            <strong>{balance.toLocaleString()} <small>CDF</small></strong>
           </div>
-
-          <div
-            style={
-              progressWrap
-            }
-          >
-            <div
-              style={
-                progressTop
-              }
-            >
-              <span>
-                Progression
-              </span>
-
-              <strong>
-                {winRate}%
-              </strong>
-            </div>
-
-            <div
-              style={
-                progressBar
-              }
-            >
-              <div
-                style={{
-                  ...progressFill,
-
-                  width: `${winRate}%`,
-                }}
-              />
-            </div>
+          <div className="pr-mini-list">
+            <MiniStat icon={<ShieldCheck size={15} />} label="Solde bloqué" value={`${locked.toLocaleString()} CDF`} />
+            <MiniStat icon={<Coins size={15} />} label="Winrate" value={`${winRate}%`} />
           </div>
-        </div>
+          <div className="pr-wallet-actions">
+            <WalletActions onSuccess={() => loadProfile({ silent: true })} />
+          </div>
+        </section>
 
-        {/* TRANSACTIONS */}
-
-        <div style={card}>
+        <section className="pr-card">
           <SectionTitle
-            icon={
-              <Clock3
-                size={18}
-              />
-            }
-            title="Transactions"
+            icon={<User size={19} />}
+            title="Informations du profil"
+            action={!editing && <button className="pr-button pr-button-secondary" onClick={startEditing}><Pencil size={15} /> Modifier</button>}
           />
-
-          {!user
-            ?.transactions_list
-            ?.length && (
-            <div
-              style={
-                emptyTransactions
-              }
-            >
-              Aucune
-              transaction
-            </div>
+          {editing ? (
+            <form className="pr-profile-form" onSubmit={saveProfile}>
+              <p className="pr-form-help">Vous pouvez modifier les coordonnées ci-dessous. Le nom, l'âge et les identifiants restent inchangés.</p>
+              <ProfileField label="Adresse e-mail" name="email" type="email" value={form.email} onChange={updateForm} placeholder="exemple@domaine.com" />
+              <ProfileField label="Téléphone" name="phone" type="tel" value={form.phone} onChange={updateForm} placeholder="+243…" />
+              <ProfileField label="Pays" name="country" value={form.country} onChange={updateForm} placeholder="Votre pays" />
+              <div className="pr-form-actions">
+                <button type="button" className="pr-button pr-button-secondary" onClick={cancelEditing} disabled={saving}><X size={16} /> Annuler</button>
+                <button type="submit" className="pr-button pr-button-primary" disabled={saving}>
+                  {saving ? <RefreshCw size={16} className="pr-spin" /> : <Save size={16} />}
+                  {saving ? "Enregistrement…" : "Enregistrer"}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <>
+              <InfoRow icon={<Mail size={15} />} label="E-mail" value={user.email} />
+              <InfoRow icon={<Phone size={15} />} label="Téléphone" value={user.phone} />
+              <InfoRow icon={<Globe size={15} />} label="Pays" value={user.country} />
+              <InfoRow icon={<User size={15} />} label="Nom" value={user.username || user.name} />
+              {user.age !== undefined && user.age !== null && <InfoRow icon={<Clock3 size={15} />} label="Âge" value={user.age} />}
+              {customId !== null && customId !== "" && (
+                <div className="pr-info-row">
+                  <div className="pr-info-label"><BadgeCheck size={15} /><span>Custom ID</span></div>
+                  <div className="pr-id-value"><strong>{String(customId)}</strong><button className="pr-copy-button" onClick={() => copyId(customId)} title="Copier le Custom ID" aria-label="Copier le Custom ID"><Copy size={14} /></button></div>
+                </div>
+              )}
+              {internalId !== null && internalId !== "" && (
+                <div className="pr-info-row">
+                  <div className="pr-info-label"><ShieldCheck size={15} /><span>ID interne</span></div>
+                  <div className="pr-id-value"><strong>{String(internalId)}</strong><button className="pr-copy-button" onClick={() => copyId(internalId)} title="Copier l'ID interne" aria-label="Copier l'ID interne"><Copy size={14} /></button></div>
+                </div>
+              )}
+            </>
           )}
+        </section>
 
-          {user?.transactions_list
-            ?.slice(0, 8)
-            .map(
-              (t, i) => {
-                const positive =
-                  Number(
-                    t?.amount ||
-                      0
-                  ) > 0;
+        <section className="pr-card">
+          <SectionTitle icon={<Trophy size={19} />} title="Statistiques de jeu" />
+          <div className="pr-stats-grid">
+            <StatCard icon={<TrendingUp size={18} />} value={wins} label="Victoires" />
+            <StatCard icon={<Swords size={18} />} value={losses} label="Défaites" />
+            <StatCard icon={<Clock3 size={18} />} value={matches} label="Matchs" />
+            <StatCard icon={<Star size={18} />} value={`${winRate}%`} label="Winrate" />
+          </div>
+          <div className="pr-progress-wrap">
+            <div className="pr-progress-top"><span>Taux de victoire</span><strong>{winRate}%</strong></div>
+            <div className="pr-progress-track" role="progressbar" aria-label="Taux de victoire" aria-valuenow={winRate} aria-valuemin={0} aria-valuemax={100}>
+              <div className="pr-progress-fill" style={{ width: `${Math.min(100, Math.max(0, winRate))}%` }} />
+            </div>
+          </div>
+        </section>
 
+        <section className="pr-card">
+          <SectionTitle icon={<Clock3 size={19} />} title="Transactions récentes" />
+          {!user.transactions_list?.length ? (
+            <div className="pr-empty-transactions">Aucune transaction à afficher.</div>
+          ) : (
+            <div className="pr-transactions">
+              {user.transactions_list.slice(0, 8).map((transaction, index) => {
+                const amount = Number(transaction?.amount ?? 0);
+                const positive = amount > 0;
                 return (
-                  <div
-                    key={i}
-                    style={
-                      transactionRow
-                    }
-                  >
-                    <div>
-                      <div
-                        style={
-                          transactionType
-                        }
-                      >
-                        {t?.type ||
-                          "Transaction"}
-                      </div>
-
-                      <div
-                        style={
-                          transactionDate
-                        }
-                      >
-                        {t?.created_at
-                          ? new Date(
-                              t.created_at
-                            ).toLocaleString()
-                          : "—"}
-                      </div>
+                  <div className="pr-transaction-row" key={transaction?.id ?? transaction?._id ?? `${transaction?.created_at ?? "transaction"}-${index}`}>
+                    <div className="pr-transaction-main">
+                      <strong>{transaction?.type || "Transaction"}</strong>
+                      <span>{transaction?.created_at ? new Date(transaction.created_at).toLocaleString() : "Date inconnue"}</span>
                     </div>
-
-                    <div
-                      style={{
-                        fontWeight: 800,
-
-                        color:
-                          positive
-                            ? "#22c55e"
-                            : "#ef4444",
-                      }}
-                    >
-                      {positive
-                        ? "+"
-                        : ""}
-
-                      {Number(
-                        t?.amount ||
-                          0
-                      ).toLocaleString()}{" "}
-                      CDF
-                    </div>
+                    <strong className={positive ? "pr-amount-positive" : "pr-amount-negative"}>
+                      {positive ? "+" : ""}{amount.toLocaleString()} CDF
+                    </strong>
                   </div>
                 );
-              }
-            )}
-        </div>
+              })}
+            </div>
+          )}
+        </section>
       </div>
-    </div>
+    </main>
   );
 }
-
-// ======================================================
-// COMPONENTS
-// ======================================================
-
-function SectionTitle({
-  icon,
-  title,
-}) {
-  return (
-    <div style={sectionTitle}>
-      {icon}
-      <span>{title}</span>
-    </div>
-  );
-}
-
-function InfoRow({
-  icon,
-  label,
-  value,
-}) {
-  return (
-    <div style={infoRow}>
-      <div style={infoLeft}>
-        {icon}
-        {label}
-      </div>
-
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function StatCard({
-  icon,
-  value,
-  label,
-}) {
-  return (
-    <div style={statCard}>
-      <div>{icon}</div>
-
-      <div style={statValue}>
-        {value}
-      </div>
-
-      <div style={statLabel}>
-        {label}
-      </div>
-    </div>
-  );
-}
-
-function MiniStat({
-  icon,
-  label,
-  value,
-}) {
-  return (
-    <div style={miniStat}>
-      <div style={miniLeft}>
-        {icon}
-        {label}
-      </div>
-
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-// ======================================================
-// STYLES
-// ======================================================
-
-const container = {
-  minHeight: "100vh",
-  background:
-    "linear-gradient(180deg,#020617,#0f172a)",
-  color: "white",
-  padding: 20,
-  paddingTop: 90,
-};
-
-const hero = {
-  background:
-    "linear-gradient(135deg,#2563eb,#0f172a)",
-  borderRadius: 30,
-  padding: 30,
-  marginBottom: 24,
-  display: "flex",
-  justifyContent:
-    "space-between",
-  alignItems: "center",
-  gap: 20,
-  flexWrap: "wrap",
-};
-
-const heroLeft = {
-  display: "flex",
-  alignItems: "center",
-  gap: 20,
-};
-
-const avatar = {
-  width: 90,
-  height: 90,
-  borderRadius: "50%",
-  background: "white",
-  color: "#0f172a",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: 34,
-  fontWeight: 800,
-};
-
-const verified = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 6,
-  padding: "6px 12px",
-  borderRadius: 999,
-  background:
-    "rgba(255,255,255,0.15)",
-  marginBottom: 10,
-  fontSize: 12,
-};
-
-const offlineBadge = {
-  marginTop: 12,
-  display: "inline-flex",
-  alignItems: "center",
-  gap: 8,
-  padding: "8px 12px",
-  borderRadius: 999,
-  background:
-    "rgba(239,68,68,0.2)",
-  color: "#fecaca",
-  fontSize: 12,
-  fontWeight: 700,
-};
-
-const username = {
-  margin: 0,
-  fontSize: 36,
-};
-
-const heroMeta = {
-  display: "flex",
-  gap: 14,
-  flexWrap: "wrap",
-  marginTop: 10,
-  opacity: 0.85,
-};
-
-const refreshBtn = {
-  border: "none",
-  cursor: "pointer",
-  padding: "14px 18px",
-  borderRadius: 16,
-  background:
-    "rgba(255,255,255,0.15)",
-  color: "white",
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  fontWeight: 700,
-};
-
-const grid = {
-  display: "grid",
-  gridTemplateColumns:
-    "repeat(auto-fit,minmax(320px,1fr))",
-  gap: 22,
-};
-
-const card = {
-  background: "#111827",
-  borderRadius: 24,
-  padding: 22,
-  border:
-    "1px solid rgba(255,255,255,0.06)",
-};
-
-const sectionTitle = {
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  marginBottom: 20,
-  fontSize: 18,
-  fontWeight: 700,
-};
-
-const walletBox = {
-  padding: 20,
-  borderRadius: 20,
-  background:
-    "linear-gradient(135deg,#0f172a,#1e293b)",
-  marginBottom: 18,
-};
-
-const walletLabel = {
-  opacity: 0.7,
-  marginBottom: 8,
-};
-
-const walletAmount = {
-  fontSize: 34,
-  fontWeight: 800,
-};
-
-const miniContainer = {
-  display: "flex",
-  flexDirection: "column",
-  gap: 10,
-};
-
-const miniStat = {
-  display: "flex",
-  justifyContent:
-    "space-between",
-  alignItems: "center",
-  padding: "12px 14px",
-  borderRadius: 14,
-  background:
-    "rgba(255,255,255,0.05)",
-};
-
-const miniLeft = {
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-};
-
-const infoRow = {
-  display: "flex",
-  justifyContent:
-    "space-between",
-  alignItems: "center",
-  padding: "14px 0",
-  borderBottom:
-    "1px solid rgba(255,255,255,0.06)",
-};
-
-const infoLeft = {
-  display: "flex",
-  alignItems: "center",
-  gap: 8,
-};
-
-const statsGrid = {
-  display: "grid",
-  gridTemplateColumns:
-    "repeat(2,1fr)",
-  gap: 14,
-};
-
-const statCard = {
-  padding: 18,
-  borderRadius: 18,
-  textAlign: "center",
-  background:
-    "rgba(255,255,255,0.05)",
-};
-
-const statValue = {
-  fontSize: 28,
-  fontWeight: 800,
-  marginTop: 8,
-};
-
-const statLabel = {
-  marginTop: 6,
-  opacity: 0.7,
-};
-
-const progressWrap = {
-  marginTop: 22,
-};
-
-const progressTop = {
-  display: "flex",
-  justifyContent:
-    "space-between",
-  marginBottom: 10,
-};
-
-const progressBar = {
-  width: "100%",
-  height: 12,
-  borderRadius: 999,
-  background:
-    "rgba(255,255,255,0.08)",
-  overflow: "hidden",
-};
-
-const progressFill = {
-  height: "100%",
-  background:
-    "linear-gradient(90deg,#22c55e,#3b82f6)",
-};
-
-const transactionRow = {
-  display: "flex",
-  justifyContent:
-    "space-between",
-  alignItems: "center",
-  padding: "14px 0",
-  borderBottom:
-    "1px solid rgba(255,255,255,0.06)",
-};
-
-const transactionType = {
-  fontWeight: 700,
-  marginBottom: 4,
-};
-
-const transactionDate = {
-  opacity: 0.6,
-  fontSize: 12,
-};
-
-const emptyTransactions = {
-  textAlign: "center",
-  opacity: 0.6,
-  padding: 20,
-};
-
-const loadingContainer = {
-  minHeight: "100vh",
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-  background: "#020617",
-  color: "white",
-};
-
-const loader = {
-  width: 70,
-  height: 70,
-  borderRadius: "50%",
-  border:
-    "6px solid rgba(255,255,255,0.1)",
-  borderTop:
-    "6px solid #3b82f6",
-  animation:
-    "spin 1s linear infinite",
-};
-
-const errorCard = {
-  background:
-    "rgba(127,29,29,0.25)",
-  padding: 30,
-  borderRadius: 20,
-};
-
-const retryBtn = {
-  marginTop: 16,
-  border: "none",
-  cursor: "pointer",
-  padding: "12px 18px",
-  borderRadius: 12,
-  background:
-    "linear-gradient(135deg,#dc2626,#991b1b)",
-  color: "white",
-  fontWeight: 700,
-};
-
-const emptyCard = {
-  padding: 40,
-  textAlign: "center",
-  borderRadius: 20,
-  background:
-    "rgba(255,255,255,0.05)",
-};
