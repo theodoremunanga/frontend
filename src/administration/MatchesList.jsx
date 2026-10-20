@@ -139,6 +139,26 @@ const stateBox = {
   marginTop: 15,
 };
 
+
+const getMatchGame = (match) => {
+  const game = String(match?.game || "")
+    .trim()
+    .toLowerCase();
+
+  const aliases = {
+    dames: "dames",
+    dame: "dames",
+    checkers: "checkers",
+    "jeu de dames": "dames",
+    football: "football",
+    bravman: "bravman",
+    ludo: "ludo",
+  };
+
+  return aliases[game] || "";
+};
+
+
 // ======================================================
 // COMPONENT
 // ======================================================
@@ -198,83 +218,125 @@ export default function MatchesList({
   // CANCEL MATCH
   // ====================================================
 
-  const cancelMatch = async (id) => {
-    const confirmCancel =
-      window.confirm?.(
-        "Annuler ce match ?"
-      );
+  
+const cancelMatch = async (match) => {
+  const id = match?.id;
+  const game = getMatchGame(match);
 
-    if (!confirmCancel) {
-      return;
-    }
+  if (!id) {
+    window.alert?.("❌ Identifiant du match manquant.");
+    return;
+  }
 
-    try {
-      setLoadingId(id);
+  if (!game) {
+    console.error("❌ Jeu absent ou invalide :", match);
 
-      await api.post(
-        `/admin/match/${id}/cancel`
-      );
+    window.alert?.(
+      "Impossible d'annuler : le jeu de ce match est absent ou invalide."
+    );
+    return;
+  }
 
-      window.alert?.(
-        "✅ Match annulé"
-      );
+  const confirmCancel = window.confirm?.(
+    `Annuler le match #${id} (${game}) ?`
+  );
 
-      await refresh();
-    } catch (err) {
-      console.error(
-        "❌ Cancel error:",
-        err
-      );
+  if (!confirmCancel) return;
 
-      window.alert?.(
-        err?.response?.data?.error ||
-          "❌ Erreur annulation"
-      );
-    } finally {
-      setLoadingId(null);
-    }
-  };
+  try {
+    setLoadingId(id);
+
+    const response = await api.post(
+      `/admin/match/${id}/cancel`,
+      { game }
+    );
+
+    console.log("✅ Match annulé :", response.data);
+
+    window.alert?.(
+      response.data?.message || "✅ Match annulé."
+    );
+
+    await refresh();
+  } catch (err) {
+    console.error(
+      "❌ Cancel error:",
+      err.response?.data || err
+    );
+
+    window.alert?.(
+      err.response?.data?.error ||
+      err.response?.data?.message ||
+      err.message ||
+      "❌ Erreur lors de l'annulation."
+    );
+  } finally {
+    setLoadingId(null);
+  }
+};
+
 
   // ====================================================
   // FORCE FINISH
   // ====================================================
 
-  const finishMatch = async (id) => {
-    const confirmFinish =
-      window.confirm?.(
-        "Terminer ce match ?"
-      );
+  
+const finishMatch = async (match) => {
+  const id = match?.id;
+  const game = getMatchGame(match);
 
-    if (!confirmFinish) {
-      return;
-    }
+  if (!id) {
+    window.alert?.("❌ Identifiant du match manquant.");
+    return;
+  }
 
-    try {
-      setLoadingId(id);
+  if (!game) {
+    console.error("❌ Jeu absent ou invalide :", match);
 
-      await api.post(
-        `/admin/match/${id}/force-finish`
-      );
+    window.alert?.(
+      "Impossible de terminer : le jeu de ce match est absent ou invalide."
+    );
+    return;
+  }
 
-      window.alert?.(
-        "✅ Match terminé"
-      );
+  const confirmFinish = window.confirm?.(
+    `Terminer le match #${id} (${game}) ?`
+  );
 
-      await refresh();
-    } catch (err) {
-      console.error(
-        "❌ Finish error:",
-        err
-      );
+  if (!confirmFinish) return;
 
-      window.alert?.(
-        err?.response?.data?.error ||
-          "❌ Erreur fin match"
-      );
-    } finally {
-      setLoadingId(null);
-    }
-  };
+  try {
+    setLoadingId(id);
+
+    const response = await api.post(
+      `/admin/match/${id}/force-finish`,
+      { game }
+    );
+
+    console.log("✅ Match terminé :", response.data);
+
+    window.alert?.(
+      response.data?.message || "✅ Match terminé."
+    );
+
+    await refresh();
+  } catch (err) {
+    console.error(
+      "❌ Finish error:",
+      err.response?.data || err
+    );
+
+    window.alert?.(
+      err.response?.data?.error ||
+      err.response?.data?.message ||
+      err.message ||
+      "❌ Erreur lors de la fin du match."
+    );
+  } finally {
+    setLoadingId(null);
+  }
+};
+
 
   // ====================================================
   // VIEW PLAYERS
@@ -292,32 +354,48 @@ export default function MatchesList({
   // VIEW MATCH STATE
   // ====================================================
 
-  const viewMatchState =
-    async (match) => {
-      try {
-        setSelectedMatch(match);
+  
+const viewMatchState = async (match) => {
+  const game = getMatchGame(match);
 
-        setLoadingState(true);
+  if (!match?.id || !game) {
+    window.alert?.(
+      "Impossible de consulter l'état : identifiant ou jeu manquant."
+    );
+    return;
+  }
 
-        const res = await api.get(
-          `/admin/match/${match.id}/state`
-        );
+  try {
+    setSelectedMatch(match);
+    setMatchState(null);
+    setLoadingState(true);
 
-        setMatchState(res.data);
-      } catch (err) {
-        console.error(
-          "❌ State error:",
-          err
-        );
-
-        window.alert?.(
-          err?.response?.data?.error ||
-            "❌ Impossible de récupérer l'état du match"
-        );
-      } finally {
-        setLoadingState(false);
+    const res = await api.get(
+      `/admin/match/${match.id}/state`,
+      {
+        params: { game },
       }
-    };
+    );
+
+    setMatchState(res.data);
+  } catch (err) {
+    console.error(
+      "❌ State error:",
+      err.response?.data || err
+    );
+
+    window.alert?.(
+      err.response?.data?.error ||
+      err.response?.data?.message ||
+      "❌ Impossible de récupérer l'état du match."
+    );
+
+    setSelectedMatch(null);
+  } finally {
+    setLoadingState(false);
+  }
+};
+
 
   // ====================================================
   // STATUS COLOR
@@ -411,9 +489,7 @@ export default function MatchesList({
 
               <button
                 style={btnInfo}
-                onClick={() =>
-                  viewMatchState(m)
-                }
+                onClick={() => viewMatchState(m)}
               >
                 📡 Voir état
               </button>
@@ -438,11 +514,7 @@ export default function MatchesList({
                           ? 0.6
                           : 1,
                     }}
-                    onClick={() =>
-                      cancelMatch(
-                        m.id
-                      )
-                    }
+                    onClick={() => cancelMatch(m)}
                   >
                     ⛔ Annuler
                   </button>
@@ -460,11 +532,7 @@ export default function MatchesList({
                           ? 0.6
                           : 1,
                     }}
-                    onClick={() =>
-                      finishMatch(
-                        m.id
-                      )
-                    }
+                    onClick={() => finishMatch(m)}
                   >
                     🏁 Terminer
                   </button>
