@@ -1,0 +1,1606 @@
+
+/* =====================================================
+   GESTION TOURNOIS — DESIGN SPORTIF PREMIUM
+   Palette : bleu nuit, or, blanc et bleu électrique
+   ===================================================== */
+
+.gt-page {
+  --gt-bg: #080d1b;
+  --gt-surface: #10182b;
+  --gt-surface-soft: #131e34;
+  --gt-border: rgba(180, 198, 235, 0.12);
+  --gt-text: #f5f7ff;
+  --gt-muted: #929fba;
+  --gt-gold: #edc66b;
+  --gt-gold-light: #ffe5a0;
+  --gt-blue: #648aff;
+  --gt-green: #53d6a0;
+  --gt-red: #ff7f8d;
+
+  min-height: 100vh;
+  padding: 32px;
+  color: var(--gt-text);
+  background:
+    radial-gradient(ellipse at 10% 0%, rgba(53, 82, 164, 0.14), transparent 36%),
+    radial-gradient(ellipse at 90% 20%, rgba(180, 131, 40, 0.07), transparent 32%),
+    var(--gt-bg);
+  font-family:
+    Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.gt-page *,
+.gt-page *::before,
+.gt-page *::after {
+  box-sizing: border-box;
+}
+
+.gt-page button,
+.gt-page input,
+.gt-page select,
+.gt-page textarea {
+  font: inherit;
+}
+
+.gt-page button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.gt-page button:focus-visible,
+.gt-page input:focus-visible,
+.gt-page select:focus-visible,
+.gt-page textarea:focus-visible {
+  outline: 2px solid var(--gt-gold);
+  outline-offset: 3px;
+}
+
+.gt-shell {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+/* =====================================================
+   BANNIÈRE PRINCIPALE
+   ===================================================== */
+
+.gt-hero {
+  position: relative;
+  isolation: isolate;
+  min-height: 320px;
+  margin-bottom: 26px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid rgba(237, 198, 107, 0.22);
+  border-radius: 25px;
+  background:
+    linear-gradient(100deg, #101a35 0%, #111d3b 46%, #17254b 100%);
+  box-shadow: 0 22px 65px rgba(0, 0, 0, 0.2);
+}
+
+.gt-hero::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  content: "";
+  pointer-events: none;
+  background:
+    linear-gradient(110deg, transparent 35%, rgba(91, 119, 198, 0.09) 70%, transparent),
+    repeating-linear-gradient(
+      125deg,
+      transparent 0,
+      transparent 48px,
+      rgba(255, 255, 255, 0.018) 49px,
+      rgba(255, 255, 255, 0.018) 50px
+    );
+}
+
+.gt-hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 680px;
+  padding: 40px 42px 30px;
+}
+
+.gt-eyebrow,
+.gt-section-kicker {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--gt-gold);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.gt-live-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--gt-green);
+  box-shadow: 0 0 12px rgba(83, 214, 160, 0.8);
+}
+
+.gt-hero h1 {
+  margin: 20px 0 14px;
+  color: #fff;
+  font-size: clamp(32px, 4.2vw, 54px);
+  font-weight: 850;
+  letter-spacing: -2px;
+  line-height: 1.12;
+}
+
+.gt-hero h1 span {
+  display: block;
+  color: var(--gt-gold-light);
+  background: linear-gradient(100deg, #fff0bf, #d9ad4e 75%, #f9e5a7);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.gt-hero-description {
+  max-width: 470px;
+  margin: 0;
+  color: #b4c0db;
+  font-size: 14px;
+  line-height: 1.8;
+}
+
+.gt-hero-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 24px;
+}
+
+.gt-hero-tags span {
+  padding: 7px 11px;
+  color: #dce5ff;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid rgba(191, 208, 255, 0.13);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+/* Illustration sportive en CSS + SVG */
+
+.gt-stadium-art {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  right: 0;
+  width: 44%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 68% 47%, rgba(79, 114, 210, 0.18), transparent 53%);
+}
+
+.gt-stadium-art::before {
+  position: absolute;
+  right: -12%;
+  bottom: -58%;
+  width: 112%;
+  aspect-ratio: 1;
+  content: "";
+  border: 1px solid rgba(237, 198, 107, 0.12);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 18px rgba(237, 198, 107, 0.025),
+    0 0 0 38px rgba(237, 198, 107, 0.025),
+    0 0 0 60px rgba(237, 198, 107, 0.02);
+}
+
+.gt-stadium-art::after {
+  position: absolute;
+  right: -15%;
+  bottom: -30%;
+  width: 125%;
+  height: 65%;
+  content: "";
+  transform: rotate(-14deg);
+  border-top: 1px solid rgba(130, 159, 235, 0.16);
+  background: linear-gradient(
+    180deg,
+    rgba(70, 100, 175, 0.10),
+    transparent
+  );
+}
+
+.gt-stadium-orbit {
+  position: absolute;
+  top: 17%;
+  left: 31%;
+  width: 230px;
+  height: 230px;
+  border: 1px solid rgba(237, 198, 107, 0.19);
+  border-radius: 50%;
+}
+
+.gt-orbit-one {
+  transform: scaleX(1.2) rotate(-30deg);
+}
+
+.gt-orbit-two {
+  transform: scaleX(0.8) rotate(42deg);
+  border-color: rgba(130, 159, 235, 0.18);
+}
+
+.gt-champions-ball {
+  position: absolute;
+  z-index: 2;
+  top: 17%;
+  left: 34%;
+  width: clamp(115px, 15vw, 190px);
+  aspect-ratio: 1;
+  filter: drop-shadow(0 15px 30px rgba(0, 0, 0, 0.32));
+  animation: gt-ball-float 6s ease-in-out infinite;
+}
+
+.gt-champions-ball svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.gt-art-caption {
+  position: absolute;
+  z-index: 3;
+  right: 30px;
+  bottom: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.gt-art-caption span {
+  color: #b6c5e9;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 2.5px;
+}
+
+.gt-art-caption strong {
+  color: var(--gt-gold-light);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+}
+
+.gt-hero-bottom {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 25px;
+  color: #9eaccb;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(4, 10, 25, 0.24);
+}
+
+@keyframes gt-ball-float {
+  0%, 100% {
+    transform: translateY(0) rotate(-4deg);
+  }
+  50% {
+    transform: translateY(-9px) rotate(4deg);
+  }
+}
+
+/* =====================================================
+   MESSAGES
+   ===================================================== */
+
+.gt-alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 14px 16px;
+  border: 1px solid;
+  border-radius: 12px;
+  animation: gt-enter 0.25s ease-out;
+}
+
+.gt-alert > span {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  font-weight: 900;
+}
+
+.gt-alert p {
+  flex: 1;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.gt-alert button {
+  padding: 0 5px;
+  color: inherit;
+  font-size: 22px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.gt-alert-error {
+  color: #ffb8c0;
+  border-color: rgba(255, 127, 141, 0.25);
+  background: rgba(255, 75, 95, 0.09);
+}
+
+.gt-alert-error > span {
+  color: #fff;
+  background: #b8324c;
+}
+
+.gt-alert-success {
+  color: #a5f2d2;
+  border-color: rgba(83, 214, 160, 0.24);
+  background: rgba(83, 214, 160, 0.08);
+}
+
+.gt-alert-success > span {
+  color: #062d20;
+  background: var(--gt-green);
+}
+
+/* =====================================================
+   CARTES STATISTIQUES
+   ===================================================== */
+
+.gt-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px;
+  margin-bottom: 42px;
+}
+
+.gt-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-width: 0;
+  padding: 21px 19px;
+  border: 1px solid var(--gt-border);
+  border-radius: 16px;
+  background: linear-gradient(
+    145deg,
+    rgba(21, 31, 54, 0.96),
+    rgba(13, 21, 39, 0.96)
+  );
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.gt-stat-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(237, 198, 107, 0.25);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.14);
+}
+
+.gt-stat-icon {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid;
+  border-radius: 13px;
+  font-size: 19px;
+}
+
+.gt-icon-gold {
+  color: var(--gt-gold-light);
+  border-color: rgba(237, 198, 107, 0.16);
+  background: rgba(237, 198, 107, 0.09);
+}
+
+.gt-icon-blue {
+  color: #9bb5ff;
+  border-color: rgba(100, 138, 255, 0.18);
+  background: rgba(100, 138, 255, 0.10);
+}
+
+.gt-icon-green {
+  color: #81edc1;
+  border-color: rgba(83, 214, 160, 0.17);
+  background: rgba(83, 214, 160, 0.09);
+}
+
+.gt-icon-purple {
+  color: #d1aaff;
+  border-color: rgba(181, 123, 255, 0.17);
+  background: rgba(181, 123, 255, 0.09);
+}
+
+.gt-stat-card > div:last-child {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.gt-stat-label {
+  color: var(--gt-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.gt-stat-card strong {
+  margin: 2px 0;
+  color: #fff;
+  font-size: 29px;
+  font-weight: 850;
+  letter-spacing: -1px;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+}
+
+.gt-stat-card small {
+  color: #7f8ca8;
+  font-size: 10px;
+}
+
+/* =====================================================
+   TITRES DE SECTIONS
+   ===================================================== */
+
+.gt-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+
+.gt-section-heading h2 {
+  margin: 8px 0 5px;
+  color: var(--gt-text);
+  font-size: clamp(23px, 2.5vw, 30px);
+  font-weight: 800;
+  letter-spacing: -0.8px;
+}
+
+.gt-section-heading p {
+  margin: 0;
+  color: var(--gt-muted);
+  font-size: 13px;
+}
+
+.gt-edit-indicator,
+.gt-total-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  color: var(--gt-gold-light);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  border: 1px solid rgba(237, 198, 107, 0.22);
+  border-radius: 9px;
+  background: rgba(237, 198, 107, 0.07);
+  white-space: nowrap;
+}
+
+/* =====================================================
+   FORMULAIRE
+   ===================================================== */
+
+.gt-form-card {
+  padding: 30px;
+  margin-bottom: 48px;
+  border: 1px solid var(--gt-border);
+  border-radius: 20px;
+  background:
+    linear-gradient(145deg, rgba(19, 29, 50, 0.98), rgba(12, 20, 37, 0.98));
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.12);
+}
+
+.gt-form-topline {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding-bottom: 25px;
+  border-bottom: 1px solid var(--gt-border);
+}
+
+.gt-form-top-icon {
+  display: grid;
+  width: 45px;
+  height: 45px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: var(--gt-gold-light);
+  font-size: 23px;
+  border: 1px solid rgba(237, 198, 107, 0.24);
+  border-radius: 13px;
+  background: rgba(237, 198, 107, 0.08);
+}
+
+.gt-form-topline h3 {
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 750;
+}
+
+.gt-form-topline p {
+  margin: 0;
+  color: var(--gt-muted);
+  font-size: 12px;
+}
+
+.gt-form-section {
+  padding: 28px 0;
+}
+
+.gt-form-section-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.gt-form-section-title > span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: var(--gt-gold);
+  font-size: 11px;
+  font-weight: 900;
+  border: 1px solid rgba(237, 198, 107, 0.2);
+  border-radius: 10px;
+  background: rgba(237, 198, 107, 0.07);
+}
+
+.gt-form-section-title h4 {
+  margin: 1px 0 4px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.gt-form-section-title p {
+  margin: 0;
+  color: var(--gt-muted);
+  font-size: 12px;
+}
+
+.gt-form-divider {
+  height: 1px;
+  background: var(--gt-border);
+}
+
+.gt-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 21px 18px;
+}
+
+.gt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  min-width: 0;
+}
+
+.gt-field-wide {
+  grid-column: 1 / -1;
+}
+
+.gt-field > span {
+  color: #dce4f7;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.gt-field > span b {
+  color: var(--gt-gold);
+}
+
+.gt-field input,
+.gt-field select,
+.gt-field textarea,
+.gt-filters select,
+.gt-search input {
+  width: 100%;
+  min-width: 0;
+  min-height: 47px;
+  padding: 12px 14px;
+  color: #edf2ff;
+  border: 1px solid rgba(177, 195, 234, 0.14);
+  border-radius: 10px;
+  outline: none;
+  background-color: #10192d;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.gt-field input:hover,
+.gt-field select:hover,
+.gt-field textarea:hover {
+  border-color: rgba(177, 195, 234, 0.28);
+}
+
+.gt-field input:focus,
+.gt-field select:focus,
+.gt-field textarea:focus,
+.gt-search input:focus,
+.gt-filters select:focus {
+  border-color: rgba(237, 198, 107, 0.65);
+  box-shadow: 0 0 0 3px rgba(237, 198, 107, 0.07);
+}
+
+.gt-field input::placeholder,
+.gt-field textarea::placeholder,
+.gt-search input::placeholder {
+  color: #75839f;
+}
+
+.gt-field select,
+.gt-filters select {
+  cursor: pointer;
+}
+
+.gt-field select option,
+.gt-filters select option {
+  color: #edf2ff;
+  background: #10192d;
+}
+
+.gt-field textarea {
+  min-height: 105px;
+  resize: vertical;
+  line-height: 1.7;
+}
+
+.gt-field > small {
+  color: #8492ad;
+  font-size: 10px;
+}
+
+.gt-money-input {
+  display: flex;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(177, 195, 234, 0.14);
+  border-radius: 10px;
+  background: #10192d;
+  transition: border-color 0.2s ease;
+}
+
+.gt-money-input:focus-within {
+  border-color: rgba(237, 198, 107, 0.65);
+  box-shadow: 0 0 0 3px rgba(237, 198, 107, 0.07);
+}
+
+.gt-money-input input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none !important;
+}
+
+.gt-money-input > span {
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  color: var(--gt-gold-light);
+  font-size: 11px;
+  font-weight: 800;
+  border-left: 1px solid var(--gt-border);
+  background: rgba(237, 198, 107, 0.045);
+}
+
+/* =====================================================
+   APERÇU
+   ===================================================== */
+
+.gt-preview {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 21px;
+  margin-top: 4px;
+  border: 1px solid rgba(237, 198, 107, 0.2);
+  border-radius: 15px;
+  background:
+    radial-gradient(ellipse at 0% 100%, rgba(237, 198, 107, 0.08), transparent 55%),
+    #0c1428;
+}
+
+.gt-preview-emblem {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  flex: 0 0 auto;
+  place-items: center;
+  font-size: 29px;
+  border: 1px solid rgba(237, 198, 107, 0.24);
+  border-radius: 14px;
+  background: linear-gradient(145deg, #202d4a, #111a30);
+}
+
+.gt-preview-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.gt-preview-info > span,
+.gt-preview-prize > span {
+  color: var(--gt-gold);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.3px;
+}
+
+.gt-preview-info h4 {
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.gt-preview-info p {
+  margin: 0;
+  color: var(--gt-muted);
+  font-size: 11px;
+}
+
+.gt-preview-prize {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+  text-align: right;
+}
+
+.gt-preview-prize strong {
+  color: var(--gt-gold-light);
+  font-size: 17px;
+  font-weight: 850;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.gt-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 25px;
+  margin-top: 26px;
+  border-top: 1px solid var(--gt-border);
+}
+
+.gt-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 12px 19px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.gt-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.gt-button:disabled,
+.gt-refresh-button:disabled,
+.gt-icon-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.gt-button-primary {
+  color: #151b2b;
+  border-color: #f5d990;
+  background: linear-gradient(135deg, #f9e6a9, #d9ad4e);
+  box-shadow: 0 7px 22px rgba(217, 173, 78, 0.12);
+}
+
+.gt-button-primary:hover:not(:disabled) {
+  box-shadow: 0 10px 28px rgba(217, 173, 78, 0.2);
+}
+
+.gt-button-secondary {
+  color: #d6dff4;
+  border-color: rgba(177, 195, 234, 0.2);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.gt-button-secondary:hover:not(:disabled) {
+  border-color: rgba(177, 195, 234, 0.4);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* =====================================================
+   LISTE ET FILTRES
+   ===================================================== */
+
+.gt-tournaments-section {
+  margin-top: 5px;
+}
+
+.gt-list-heading {
+  align-items: flex-end;
+  margin-bottom: 23px;
+}
+
+.gt-total-pill {
+  color: #c8d5f6;
+  border-color: var(--gt-border);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.gt-filters {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.7fr) minmax(150px, 1fr) minmax(150px, 1fr) auto;
+  gap: 11px;
+  margin-bottom: 20px;
+}
+
+.gt-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.gt-search > span {
+  position: absolute;
+  left: 14px;
+  z-index: 1;
+  color: var(--gt-gold);
+  font-size: 23px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.gt-search input {
+  padding-left: 43px;
+  background: var(--gt-surface);
+}
+
+.gt-filters select {
+  min-height: 47px;
+  background-color: var(--gt-surface);
+}
+
+.gt-refresh-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 47px;
+  padding: 10px 15px;
+  color: #dce5fa;
+  border: 1px solid var(--gt-border);
+  border-radius: 10px;
+  background: var(--gt-surface);
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.gt-refresh-button:hover:not(:disabled) {
+  border-color: rgba(237, 198, 107, 0.35);
+  background: var(--gt-surface-soft);
+}
+
+/* =====================================================
+   CARTES DES TOURNOIS
+   ===================================================== */
+
+.gt-tournament-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 17px;
+}
+
+.gt-tournament-card {
+  position: relative;
+  min-width: 0;
+  padding: 23px;
+  overflow: hidden;
+  border: 1px solid var(--gt-border);
+  border-radius: 17px;
+  background: linear-gradient(
+    145deg,
+    rgba(19, 29, 50, 0.97),
+    rgba(12, 20, 37, 0.97)
+  );
+  transition:
+    transform 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
+  animation: gt-enter 0.3s ease both;
+}
+
+.gt-tournament-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(237, 198, 107, 0.25);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.16);
+}
+
+.gt-card-accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 65px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--gt-gold), transparent);
+}
+
+.gt-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.gt-card-game-icon {
+  display: grid;
+  width: 45px;
+  height: 45px;
+  flex: 0 0 auto;
+  place-items: center;
+  font-size: 22px;
+  border: 1px solid rgba(237, 198, 107, 0.16);
+  border-radius: 12px;
+  background: rgba(237, 198, 107, 0.06);
+}
+
+.gt-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  font-size: 10px;
+  font-weight: 800;
+  border: 1px solid;
+  border-radius: 7px;
+}
+
+.gt-status > span {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.gt-status-draft {
+  color: #e8c875;
+  border-color: rgba(232, 200, 117, 0.18);
+  background: rgba(232, 200, 117, 0.07);
+}
+
+.gt-status-open {
+  color: #8bb1ff;
+  border-color: rgba(100, 138, 255, 0.2);
+  background: rgba(100, 138, 255, 0.08);
+}
+
+.gt-status-full {
+  color: #72dfae;
+  border-color: rgba(83, 214, 160, 0.2);
+  background: rgba(83, 214, 160, 0.07);
+}
+
+.gt-status-starting {
+  color: #ffb875;
+  border-color: rgba(255, 184, 117, 0.2);
+  background: rgba(255, 184, 117, 0.07);
+}
+
+.gt-status-in_progress {
+  color: #7ce5c0;
+  border-color: rgba(83, 214, 160, 0.2);
+  background: rgba(83, 214, 160, 0.07);
+}
+
+.gt-status-finished {
+  color: #a8b9d8;
+  border-color: rgba(168, 185, 216, 0.18);
+  background: rgba(168, 185, 216, 0.06);
+}
+
+.gt-status-cancelled {
+  color: #ff929f;
+  border-color: rgba(255, 127, 141, 0.2);
+  background: rgba(255, 127, 141, 0.07);
+}
+
+.gt-card-main {
+  margin: 20px 0 22px;
+}
+
+.gt-card-game {
+  color: var(--gt-gold);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.gt-card-main h3 {
+  margin: 7px 0 0;
+  overflow-wrap: anywhere;
+  color: #f5f7ff;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.45px;
+  line-height: 1.35;
+}
+
+.gt-card-description {
+  display: -webkit-box;
+  margin: 10px 0 0;
+  overflow: hidden;
+  color: var(--gt-muted);
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.gt-card-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
+  padding: 18px 0;
+  border-top: 1px solid var(--gt-border);
+  border-bottom: 1px solid var(--gt-border);
+}
+
+.gt-card-details > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.gt-card-details span {
+  color: #7f8ca8;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.gt-card-details strong {
+  color: #dfe7f9;
+  font-size: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.gt-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 17px;
+}
+
+.gt-card-visibility {
+  color: #96a4c1;
+  font-size: 11px;
+}
+
+.gt-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.gt-icon-button {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  color: #bdcfff;
+  font-size: 18px;
+  border: 1px solid rgba(100, 138, 255, 0.2);
+  border-radius: 9px;
+  background: rgba(100, 138, 255, 0.07);
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.gt-icon-button:hover:not(:disabled) {
+  color: #fff;
+  border-color: rgba(100, 138, 255, 0.5);
+  background: rgba(100, 138, 255, 0.17);
+}
+
+.gt-delete-icon {
+  color: #ff9ca7;
+  border-color: rgba(255, 127, 141, 0.18);
+  background: rgba(255, 127, 141, 0.06);
+}
+
+.gt-delete-icon:hover:not(:disabled) {
+  color: #fff;
+  border-color: rgba(255, 127, 141, 0.45);
+  background: rgba(255, 80, 100, 0.18);
+}
+
+/* =====================================================
+   CHARGEMENT ET ÉTAT VIDE
+   ===================================================== */
+
+.gt-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 270px;
+  padding: 35px 20px;
+  text-align: center;
+  border: 1px dashed rgba(177, 195, 234, 0.18);
+  border-radius: 17px;
+  background: rgba(16, 24, 43, 0.45);
+}
+
+.gt-empty-icon {
+  display: grid;
+  width: 62px;
+  height: 62px;
+  margin-bottom: 13px;
+  place-items: center;
+  color: var(--gt-gold);
+  font-size: 27px;
+  border: 1px solid rgba(237, 198, 107, 0.2);
+  border-radius: 17px;
+  background: rgba(237, 198, 107, 0.07);
+}
+
+.gt-empty-state h3 {
+  margin: 9px 0 5px;
+  font-size: 17px;
+}
+
+.gt-empty-state p {
+  margin: 0 0 19px;
+  color: var(--gt-muted);
+  font-size: 12px;
+}
+
+.gt-loader {
+  width: 36px;
+  height: 36px;
+  margin-bottom: 14px;
+  border: 3px solid rgba(237, 198, 107, 0.15);
+  border-top-color: var(--gt-gold);
+  border-radius: 50%;
+  animation: gt-spin 0.8s linear infinite;
+}
+
+@keyframes gt-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes gt-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =====================================================
+   PIED DE PAGE
+   ===================================================== */
+
+.gt-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 22px 2px 5px;
+  margin-top: 36px;
+  color: #697793;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+  border-top: 1px solid var(--gt-border);
+}
+
+/* =====================================================
+   TABLETTES
+   ===================================================== */
+
+@media (max-width: 1100px) {
+  .gt-page {
+    padding: 24px;
+  }
+
+  .gt-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gt-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gt-search {
+    grid-column: 1 / -1;
+  }
+
+  .gt-refresh-button {
+    min-height: 47px;
+  }
+
+  .gt-hero-content {
+    max-width: 65%;
+  }
+
+  .gt-stadium-art {
+    width: 43%;
+  }
+}
+
+/* =====================================================
+   MOBILES
+   ===================================================== */
+
+@media (max-width: 700px) {
+  .gt-page {
+    padding: 15px;
+  }
+
+  .gt-hero {
+    min-height: 340px;
+    border-radius: 19px;
+  }
+
+  .gt-hero-content {
+    max-width: 100%;
+    padding: 27px 23px 85px;
+  }
+
+  .gt-hero h1 {
+    max-width: 380px;
+    font-size: clamp(31px, 8vw, 43px);
+    letter-spacing: -1.3px;
+  }
+
+  .gt-hero-description {
+    max-width: 390px;
+    font-size: 12px;
+  }
+
+  .gt-hero-tags {
+    gap: 6px;
+    margin-top: 17px;
+  }
+
+  .gt-hero-tags span {
+    padding: 6px 8px;
+    font-size: 9px;
+  }
+
+  .gt-stadium-art {
+    top: auto;
+    right: -8px;
+    bottom: 30px;
+    width: 150px;
+    height: 150px;
+    opacity: 0.55;
+  }
+
+  .gt-stadium-orbit {
+    top: 0;
+    left: 0;
+    width: 150px;
+    height: 150px;
+  }
+
+  .gt-champions-ball {
+    top: 13px;
+    left: 20px;
+    width: 105px;
+  }
+
+  .gt-art-caption {
+    display: none;
+  }
+
+  .gt-hero-bottom {
+    padding: 12px 15px;
+    font-size: 8px;
+    letter-spacing: 0.7px;
+  }
+
+  .gt-stats {
+    gap: 10px;
+    margin-bottom: 32px;
+  }
+
+  .gt-stat-card {
+    gap: 10px;
+    padding: 15px 12px;
+    border-radius: 13px;
+  }
+
+  .gt-stat-icon {
+    width: 37px;
+    height: 37px;
+    font-size: 16px;
+    border-radius: 10px;
+  }
+
+  .gt-stat-label {
+    font-size: 8px;
+    letter-spacing: 0.5px;
+  }
+
+  .gt-stat-card strong {
+    font-size: 24px;
+  }
+
+  .gt-stat-card small {
+    font-size: 9px;
+    line-height: 1.4;
+  }
+
+  .gt-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .gt-section-heading h2 {
+    font-size: 25px;
+  }
+
+  .gt-section-heading p {
+    font-size: 12px;
+  }
+
+  .gt-form-card {
+    padding: 20px 16px;
+    border-radius: 16px;
+    margin-bottom: 36px;
+  }
+
+  .gt-form-topline {
+    gap: 11px;
+    padding-bottom: 20px;
+  }
+
+  .gt-form-topline h3 {
+    font-size: 14px;
+  }
+
+  .gt-form-topline p {
+    font-size: 11px;
+  }
+
+  .gt-form-top-icon {
+    width: 39px;
+    height: 39px;
+    font-size: 20px;
+  }
+
+  .gt-form-section {
+    padding: 23px 0;
+  }
+
+  .gt-form-section-title {
+    gap: 11px;
+    margin-bottom: 17px;
+  }
+
+  .gt-form-section-title h4 {
+    font-size: 13px;
+  }
+
+  .gt-form-section-title p {
+    font-size: 11px;
+    line-height: 1.6;
+  }
+
+  .gt-field-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 17px;
+  }
+
+  .gt-field-wide {
+    grid-column: auto;
+  }
+
+  .gt-field input,
+  .gt-field select,
+  .gt-field textarea {
+    font-size: 13px;
+  }
+
+  .gt-preview {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 15px;
+  }
+
+  .gt-preview-emblem {
+    width: 45px;
+    height: 45px;
+    font-size: 23px;
+  }
+
+  .gt-preview-info {
+    flex-basis: calc(100% - 65px);
+  }
+
+  .gt-preview-info h4 {
+    font-size: 14px;
+  }
+
+  .gt-preview-prize {
+    width: 100%;
+    align-items: flex-start;
+    padding-top: 12px;
+    border-top: 1px solid var(--gt-border);
+    text-align: left;
+  }
+
+  .gt-preview-prize strong {
+    font-size: 16px;
+  }
+
+  .gt-form-actions {
+    flex-direction: column-reverse;
+  }
+
+  .gt-form-actions .gt-button {
+    width: 100%;
+  }
+
+  .gt-filters {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .gt-search {
+    grid-column: auto;
+  }
+
+  .gt-refresh-button {
+    width: 100%;
+  }
+
+  .gt-tournament-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 13px;
+  }
+
+  .gt-tournament-card {
+    padding: 19px 16px;
+  }
+
+  .gt-card-main h3 {
+    font-size: 18px;
+  }
+
+  .gt-card-details {
+    gap: 15px 12px;
+  }
+
+  .gt-card-details strong {
+    font-size: 11px;
+  }
+
+  .gt-card-footer {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .gt-footer {
+    flex-direction: column;
+    gap: 8px;
+    font-size: 8px;
+    letter-spacing: 0.9px;
+  }
+}
+
+/* =====================================================
+   PETITS ÉCRANS
+   ===================================================== */
+
+@media (max-width: 360px) {
+  .gt-page {
+    padding: 10px;
+  }
+
+  .gt-hero-content {
+    padding-right: 15px;
+    padding-left: 15px;
+  }
+
+  .gt-hero h1 {
+    font-size: 30px;
+  }
+
+  .gt-stat-card {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .gt-stat-card strong {
+    font-size: 22px;
+  }
+
+  .gt-form-card {
+    padding: 15px 12px;
+  }
+
+  .gt-status {
+    padding: 5px 7px;
+    font-size: 9px;
+  }
+}
+
+/* =====================================================
+   ACCESSIBILITÉ : ANIMATIONS RÉDUITES
+   ===================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .gt-page *,
+  .gt-page *::before,
+  .gt-page *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
