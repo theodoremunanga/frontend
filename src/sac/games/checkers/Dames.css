@@ -1060,6 +1060,25 @@ textarea:focus-visible {
   animation: damesTargetPulse 1.1s infinite;
 }
 
+
+
+/* ==========================================
+   ROTATION AUTOMATIQUE DU PLATEAU
+========================================== */
+
+.dames-board-frame {
+    transform-origin: center center;
+    transition: transform 0.35s ease-in-out;
+}
+
+/* Joueur 2 : ses pions en bas,
+   adversaire en haut */
+
+.dames-board-frame.rotate-180 {
+    transform: rotate(180deg);
+}
+
+
 /* =========================================================
    PIECES
    ---------------------------------------------------------
